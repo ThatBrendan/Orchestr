@@ -3,14 +3,19 @@ import { config } from "@/config";
 import type { Database } from "@/types/database";
 
 /**
- * Single typed browser client (docs/TECHNICAL_ARCHITECTURE.md §8.1).
- * The anon key is public by design; RLS protects data.
+ * Single typed browser client.
+ * The publishable key is safe for browser use.
+ * Supabase RLS remains the authorization boundary.
  */
-export const supabase = createClient<Database>(config.supabaseUrl, config.supabaseAnonKey, {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-    detectSessionInUrl: true,
-    flowType: "pkce",
+export const supabase = createClient<Database>(
+  config.supabaseUrl,
+  config.supabasePublishableKey,
+  {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true,
+      flowType: "pkce",
+    },
   },
-});
+);

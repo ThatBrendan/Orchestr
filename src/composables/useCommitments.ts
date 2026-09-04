@@ -1,0 +1,114 @@
+import { computed, type MaybeRefOrGetter, toValue } from "vue";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/vue-query";
+import { qk } from "./keys";
+import * as commitmentsService from "@/services/commitments";
+import * as derived from "@/services/derived";
+import type { TablesInsert, TablesUpdate, CommitmentStatus } from "@/types/database";
+
+export function useCommitments(projectId: MaybeRefOrGetter<string>) {
+  const q = useQuery({
+    queryKey: computed(() => qk.project.commitments(toValue(projectId))),
+    queryFn: () => commitmentsService.listCommitments(toValue(projectId)),
+  });
+  return {
+    commitments: computed(() => q.data.value ?? []),
+    isPending: q.isPending,
+    isError: q.isError,
+    error: q.error,
+    refetch: q.refetch,
+  };
+}
+
+export function useCreateCommitment(projectId: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (input: TablesInsert<"commitments">) => commitmentsService.createCommitment(input),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: qk.project.commitments(projectId) });
+      void client.invalidateQueries({ queryKey: qk.project.financials(projectId) });
+      void client.invalidateQueries({ queryKey: qk.project.health(projectId) });
+    },
+  });
+}
+
+export function useUpdateCommitment(projectId: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { id: string; patch: Omit<TablesUpdate<"commitments">, "status" | "deleted_at"> }) =>
+      commitmentsService.updateCommitment(input.id, input.patch),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: qk.project.commitments(projectId) });
+      void client.invalidateQueries({ queryKey: qk.project.financials(projectId) });
+    },
+  });
+}
+
+export function useSetCommitmentStatus(projectId: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { id: string; status: CommitmentStatus }) =>
+      commitmentsService.setCommitmentStatus(input.id, input.status),
+    onSuccess: (_data, input) => {
+      void client.invalidateQueries({ queryKey: qk.project.commitments(projectId) });
+      void client.invalidateQueries({ queryKey: qk.project.financials(projectId) });
+      void client.invalidateQueries({ queryKey: qk.project.health(projectId) });
+      void client.invalidateQueries({ queryKey: qk.project.timeline(projectId) });
+      void client.invalidateQueries({ queryKey: qk.commitment.payments(input.id) });
+    },
+  });
+}
+
+export function useDeleteCommitment(projectId: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => commitmentsService.softDeleteCommitment(id),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: qk.project.commitments(projectId) });
+      void client.invalidateQueries({ queryKey: qk.project.financials(projectId) });
+      void client.invalidateQueries({ queryKey: qk.project.health(projectId) });
+    },
+  });
+}
+
+export function useCommitmentFinancials(commitmentId: MaybeRefOrGetter<string>) {
+  const q = useQuery({
+    queryKey: computed(() => qk.commitment.financials(toValue(commitmentId))),
+    queryFn: () => derived.getCommitmentFinancials(toValue(commitmentId)),
+    staleTime: 0,
+  });
+  return { financials: q.data, isPending: q.isPending, isError: q.isError, error: q.error, refetch: q.refetch };
+}
+
+export function useParticipants(commitmentId: MaybeRefOrGetter<string>) {
+  const q = useQuery({
+    queryKey: computed(() => qk.commitment.participants(toValue(commitmentId))),
+    queryFn: () => commitmentsService.listParticipants(toValue(commitmentId)),
+  });
+  return {
+    participants: computed(() => q.data.value ?? []),
+    isPending: q.isPending,
+    isError: q.isError,
+    error: q.error,
+    refetch: q.refetch,
+  };
+}
+
+export function useAddParticipant(commitmentId: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (input: TablesInsert<"commitment_participants">) => commitmentsService.addParticipant(input),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: qk.commitment.participants(commitmentId) });
+    },
+  });
+}
+
+export function useRemoveParticipant(commitmentId: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (participantId: string) => commitmentsService.removeParticipant(participantId),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: qk.commitment.participants(commitmentId) });
+    },
+  });
+}

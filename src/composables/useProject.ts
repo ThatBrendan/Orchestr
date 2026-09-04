@@ -19,7 +19,7 @@ export function useProjectFinancials(projectId: MaybeRefOrGetter<string>) {
     queryFn: () => derived.getProjectFinancials(toValue(projectId)),
     staleTime: 0,
   });
-  return { financials: q.data, isPending: q.isPending, isError: q.isError, error: q.error };
+  return { financials: q.data, isPending: q.isPending, isError: q.isError, error: q.error, refetch: q.refetch };
 }
 
 export function useProjectHealth(projectId: MaybeRefOrGetter<string>) {
@@ -37,10 +37,49 @@ export function useProjectHealth(projectId: MaybeRefOrGetter<string>) {
   return { findings, needsAttention, isPending: q.isPending, isError: q.isError, error: q.error, refetch: q.refetch };
 }
 
+export function useProjectHealthSummary(projectId: MaybeRefOrGetter<string>) {
+  const q = useQuery({
+    queryKey: computed(() => qk.project.healthSummary(toValue(projectId))),
+    queryFn: () => derived.getProjectHealthSummary(toValue(projectId)),
+    staleTime: 0,
+  });
+  return { summary: q.data, isPending: q.isPending, isError: q.isError, error: q.error, refetch: q.refetch };
+}
+
+export function useBudgetCategoryActuals(projectId: MaybeRefOrGetter<string>) {
+  const q = useQuery({
+    queryKey: computed(() => qk.project.budgetCategories(toValue(projectId))),
+    queryFn: () => derived.getBudgetCategoryActuals(toValue(projectId)),
+    staleTime: 0,
+  });
+  return {
+    categories: computed(() => q.data.value ?? []),
+    isPending: q.isPending,
+    isError: q.isError,
+    error: q.error,
+    refetch: q.refetch,
+  };
+}
+
 export function useUpcoming(projectId: MaybeRefOrGetter<string>) {
   const q = useQuery({
     queryKey: computed(() => qk.project.upcoming(toValue(projectId))),
     queryFn: () => derived.getUpcomingEvents(toValue(projectId)),
+    staleTime: 0,
+  });
+  return {
+    events: computed(() => q.data.value ?? []),
+    isPending: q.isPending,
+    isError: q.isError,
+    error: q.error,
+    refetch: q.refetch,
+  };
+}
+
+export function useFullTimeline(projectId: MaybeRefOrGetter<string>) {
+  const q = useQuery({
+    queryKey: computed(() => qk.project.timeline(toValue(projectId))),
+    queryFn: () => derived.getFullTimeline(toValue(projectId)),
     staleTime: 0,
   });
   return {

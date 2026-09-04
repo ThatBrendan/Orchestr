@@ -1,9 +1,14 @@
 <script setup lang="ts">
+import { computed } from "vue";
 import { Dialog, DialogPanel, DialogTitle, TransitionRoot, TransitionChild } from "@headlessui/vue";
 import AppIcon from "./AppIcon.vue";
 
-const props = defineProps<{ open: boolean; title: string }>();
+const props = withDefaults(defineProps<{ open: boolean; title: string; size?: "md" | "lg" }>(), {
+  size: "md",
+});
 const emit = defineEmits<{ close: [] }>();
+
+const widthClass = computed(() => (props.size === "lg" ? "max-w-2xl" : "max-w-md"));
 </script>
 
 <template>
@@ -28,15 +33,18 @@ const emit = defineEmits<{ close: [] }>();
           enter-from="opacity-0 translate-y-1"
           enter-to="opacity-100 translate-y-0"
         >
-          <DialogPanel class="w-full max-w-md rounded-2xl overflow-hidden bg-surface">
-            <div class="px-6 pt-5 pb-4 border-b border-line flex items-center justify-between">
+          <DialogPanel
+            class="w-full rounded-2xl overflow-hidden bg-surface max-h-[85vh] flex flex-col"
+            :class="widthClass"
+          >
+            <div class="px-6 pt-5 pb-4 border-b border-line flex items-center justify-between shrink-0">
               <DialogTitle class="font-display text-[17px] font-semibold">{{ props.title }}</DialogTitle>
               <button class="text-ink-soft hover:text-ink" @click="emit('close')">
                 <AppIcon name="close" :size="18" />
               </button>
             </div>
-            <div class="px-6 py-5"><slot /></div>
-            <div v-if="$slots.footer" class="px-6 py-4 border-t border-line flex justify-end gap-2">
+            <div class="px-6 py-5 overflow-y-auto"><slot /></div>
+            <div v-if="$slots.footer" class="px-6 py-4 border-t border-line flex justify-end gap-2 shrink-0">
               <slot name="footer" />
             </div>
           </DialogPanel>

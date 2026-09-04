@@ -6,6 +6,8 @@ import type {
   HealthFinding,
   HealthSummary,
   DashboardFinding,
+  CommitmentFinancials,
+  BudgetCategoryActual,
 } from "@/types/derived";
 
 /** Derived read-models — all read-only (docs/DATABASE_SCHEMA.md §5). */
@@ -37,6 +39,39 @@ export async function getMyAttention(): Promise<DashboardFinding[]> {
   const { data, error } = await supabase.rpc("get_my_attention");
   if (error) throw toAppError(error);
   return (data ?? []) as DashboardFinding[];
+}
+
+/** Per-commitment outstanding balance etc. — always read, never recomputed in Vue. */
+export async function getCommitmentFinancials(commitmentId: string): Promise<CommitmentFinancials | null> {
+  const { data, error } = await supabase
+    .from("v_commitment_financials")
+    .select("*")
+    .eq("commitment_id", commitmentId)
+    .maybeSingle();
+  if (error) throw toAppError(error);
+  return data;
+}
+
+/** Per-category budget target vs. actual (BUD-10) — always read, never recomputed in Vue. */
+export async function getBudgetCategoryActuals(projectId: string): Promise<BudgetCategoryActual[]> {
+  const { data, error } = await supabase
+    .from("v_budget_category_actuals")
+    .select("*")
+    .eq("project_id", projectId)
+    .order("kind", { ascending: true });
+  if (error) throw toAppError(error);
+  return data ?? [];
+}
+
+/** Full derived project timeline (no date bound) — commitments, payments, tasks, milestones, boundaries. */
+export async function getFullTimeline(projectId: string): Promise<TimelineEvent[]> {
+  const { data, error } = await supabase
+    .from("v_timeline_events")
+    .select("*")
+    .eq("project_id", projectId)
+    .order("occurs_at", { ascending: true });
+  if (error) throw toAppError(error);
+  return data ?? [];
 }
 
 export async function getUpcomingEvents(projectId: string, days = 14): Promise<TimelineEvent[]> {

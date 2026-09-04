@@ -7,6 +7,8 @@ import type {
 
 /** Derived — computed server-side, read-only (docs/DATABASE_SCHEMA.md §5). */
 export type ProjectFinancials = Database["public"]["Views"]["v_project_financials"]["Row"];
+export type CommitmentFinancials = Database["public"]["Views"]["v_commitment_financials"]["Row"];
+export type BudgetCategoryActual = Database["public"]["Views"]["v_budget_category_actuals"]["Row"];
 export type TimelineEvent = Database["public"]["Views"]["v_timeline_events"]["Row"];
 export type MemberDirectoryEntry = Database["public"]["Views"]["v_member_directory"]["Row"];
 

@@ -2,24 +2,44 @@
 import { computed } from "vue";
 import type { TimelineEvent } from "@/types/derived";
 import { useProjectTime } from "@/composables/useProjectTime";
+import StatusBadge from "@/components/ui/StatusBadge.vue";
 
 const props = defineProps<{ events: TimelineEvent[]; timezone: string }>();
 const t = computed(() => useProjectTime(props.timezone));
 
+// "Completed items" (BUSINESS_RULES §Timeline): a resolved commitment/payment is shown
+// muted rather than looking identical to something still pending. "Upcoming deadlines"
+// that have slipped into the past while still open (a due payment/task) are flagged —
+// this is a purely visual read of already-derived fields, not a second health engine.
+const DONE_STATUSES = new Set(["completed", "cancelled", "paid"]);
+const DEADLINE_TYPES = new Set(["payment_due", "task_due"]);
+
+interface Item {
+  label: string;
+  time: string;
+  allDay: boolean;
+  done: boolean;
+  overdue: boolean;
+}
 interface Group {
   day: string;
-  items: { label: string; time: string; allDay: boolean }[];
+  items: Item[];
 }
 
 const groups = computed<Group[]>(() => {
+  const now = Date.now();
   const byDay = new Map<string, Group>();
   for (const e of props.events) {
     const day = t.value.dayLabel(e.occurs_at);
     if (!byDay.has(day)) byDay.set(day, { day, items: [] });
+    const done = !!e.status && DONE_STATUSES.has(e.status);
+    const isPast = new Date(e.occurs_at).getTime() < now;
     byDay.get(day)!.items.push({
       label: e.title,
       time: e.all_day ? "" : t.value.time(e.occurs_at),
       allDay: e.all_day,
+      done,
+      overdue: !done && isPast && DEADLINE_TYPES.has(e.event_type),
     });
   }
   return [...byDay.values()];
@@ -31,9 +51,17 @@ const groups = computed<Group[]>(() => {
     <div v-for="g in groups" :key="g.day" class="px-4 py-3.5">
       <div class="text-[12.5px] font-medium mb-2 text-muted">{{ g.day }}</div>
       <div class="space-y-2">
-        <div v-for="(i, idx) in g.items" :key="idx" class="flex items-center gap-3 text-14">
-          <span class="tnum w-12 shrink-0 text-ink-soft">{{ i.allDay ? "All day" : i.time }}</span>
-          <span>{{ i.label }}</span>
+        <div
+          v-for="(i, idx) in g.items"
+          :key="idx"
+          class="flex items-center gap-3 text-14"
+          :class="i.done ? 'text-muted' : ''"
+        >
+          <span class="tnum w-12 shrink-0" :class="i.overdue ? 'text-danger font-medium' : 'text-ink-soft'">
+            {{ i.allDay ? "All day" : i.time }}
+          </span>
+          <span :class="i.done ? 'line-through' : ''">{{ i.label }}</span>
+          <StatusBadge v-if="i.overdue" label="Overdue" tone="danger" />
         </div>
       </div>
     </div>

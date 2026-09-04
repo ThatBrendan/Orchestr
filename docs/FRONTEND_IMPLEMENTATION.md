@@ -281,12 +281,12 @@ old root routes remain** (grep-verified).
 | `/app/projects` | `projects` | `ProjectsView` | `requireAuth` | |
 | `/app/projects/:projectId` | → `project.overview` | `ProjectLayout` | `requireAuth` + `hydrateProjectContext` | empty child redirects to overview |
 | `/app/projects/:projectId/overview` | `project.overview` | `OverviewTab` | ↑ | |
-| `/app/projects/:projectId/activities` | `project.commitments` | `CommitmentsTab` (FeaturePending) | ↑ | |
-| `/app/projects/:projectId/budget` | `project.budget` | `BudgetTab` (FeaturePending) | ↑ | |
-| `/app/projects/:projectId/timeline` | `project.timeline` | `TimelineTab` (FeaturePending) | ↑ | |
-| `/app/projects/:projectId/people` | `project.people` | `PeopleTab` (read-only) | ↑ | |
-| `/app/projects/:projectId/health` | `project.health` | `HealthTab` (FeaturePending) | ↑ | |
-| `/app/projects/:projectId/settings` | `project.settings` | `ProjectSettingsView` (FeaturePending) | ↑ | |
+| `/app/projects/:projectId/activities` | `project.commitments` | `CommitmentsTab` (real CRUD — §9) | ↑ | |
+| `/app/projects/:projectId/budget` | `project.budget` | `BudgetTab` (real — §10) | ↑ | |
+| `/app/projects/:projectId/timeline` | `project.timeline` | `TimelineTab` (real — §9, enhanced §10) | ↑ | |
+| `/app/projects/:projectId/people` | `project.people` | `PeopleTab` (real CRUD — §9) | ↑ | |
+| `/app/projects/:projectId/health` | `project.health` | `HealthTab` (real — §10) | ↑ | |
+| `/app/projects/:projectId/settings` | `project.settings` | `ProjectSettingsView` (real CRUD — §9) | ↑ | |
 | `/app/calendar` | `calendar` | `CalendarView` (FeaturePending) | `requireAuth` | |
 | `/app/people` | `people-global` | `PeopleView` (FeaturePending) | `requireAuth` | |
 | `/app/settings` | `settings` | `SettingsView` (partial — profile read-only) | `requireAuth` | |
@@ -390,4 +390,273 @@ Vercel serves files from `dist/` first (so `/assets/*` hashed bundles load direc
 - **Privacy / Terms / About pages** — footer renders these as disabled placeholders (`aria-disabled`), not fake links; a footer note says they're in progress.
 - **Real OG image** — `twitter:card` is `summary_large_image` but no image asset is set yet.
 - All Phase-2 application tabs remain `FeaturePending` (unchanged this pass).
+
+---
+
+## 9. Core CRUD implementation pass (2026-09-04)
+
+Purpose: replace the remaining `FeaturePending` application tabs with real, persisted
+CRUD for **Projects, Project Members, Commitments (Activities), Payments, Tasks and
+Milestones**, using only the backend surface already defined in
+`docs/DATABASE_SCHEMA.md` / `docs/SECURITY_RLS.md` — **no new migrations were needed**;
+every operation below is served by tables/views/triggers that already existed. Budget
+target editing and Health-finding dismissal remain out of scope (not requested) —
+`BudgetTab` and `HealthTab` are unchanged `FeaturePending` stubs.
+
+### 9.1 Milestone "Complete" — resolved deviation-avoidance
+
+The prompt asked for Milestone Create/Update/**Complete**/Delete, which conflicts with
+the already-approved `docs/BUSINESS_RULES.md` MIL-4/MIL-5 (milestones have **no**
+completion state; only derived "upcoming"/"passed" from `on_date`). Put to the user
+directly; the answer was to **keep MIL-4/MIL-5 as approved**: no `completed_at`
+column, no migration, no mutation. `TimelineTab` shows each milestone with a derived
+`Upcoming`/`Passed` badge computed purely from `on_date` vs. today in the project's
+timezone. pgTAP test `05_crud_operations.sql` asserts the column still doesn't exist,
+so a future pass can't reintroduce it silently.
+
+### 9.2 New/extended services (`src/services/*.ts`)
+
+| File | Added |
+|---|---|
+| `projects.ts` | `updateProject`, `setProjectStatus`, `softDeleteProject` |
+| `members.ts` | `inviteMember` (invokes the `invitations-send` Edge Function), `updateMemberRole`, `removeMember`, `reactivateMember` |
+| `commitments.ts` (new) | `listCommitments`, `createCommitment`, `updateCommitment`, `setCommitmentStatus`, `softDeleteCommitment`, `listParticipants`, `addParticipant`, `removeParticipant` |
+| `payments.ts` (new) | `listPayments`, `createPayment`, `updatePayment`, `setPaymentStatus`, `markPaymentPaid` |
+| `tasks.ts` (new) | `listTasks`, `createTask`, `updateTask`, `setTaskStatus`, `softDeleteTask` |
+| `milestones.ts` (new) | `listMilestones`, `createMilestone`, `updateMilestone`, `deleteMilestone` (hard delete — matches RLS §5.10) |
+| `derived.ts` | `getCommitmentFinancials` (`v_commitment_financials`, for per-activity outstanding balance), `getFullTimeline` (`v_timeline_events`, unbounded) |
+
+Every function is a single Supabase call + `toAppError` mapping, matching the existing
+pattern — no business logic, no client-side recomputation of anything derived (money
+formulas, status legality, and last-organizer/ownership rules stay in Postgres).
+
+### 9.3 New/extended composables
+
+`useProjects.ts` (+`useUpdateProject`, `useSetProjectStatus`, `useDeleteProject`),
+`useMembers.ts` (new), `useCommitments.ts` (new), `usePayments.ts` (new),
+`useTasks.ts` (new), `useMilestones.ts` (new), `useProject.ts` (+`useFullTimeline`).
+All mutations invalidate the relevant `qk.*` query keys on success (extended in
+`keys.ts`: `project.timeline/commitments/tasks/milestones`, `commitment.participants/
+financials/payments`), so dependent reads (financials, health, timeline) refresh
+automatically after a write — e.g. creating a payment invalidates the commitment's
+financials **and** the project-level financials/health/timeline in one place
+(`invalidatePaymentEffects` in `usePayments.ts`).
+
+### 9.4 New/extended UI
+
+- **`AppModal`** gained an additive `size="lg"` variant (`max-w-2xl`, internal scroll)
+  for the two-column commitment form/detail dialogs — the `md` default is untouched.
+- **`AppConfirmDialog`** (new) — generic destructive-action confirmation, reused for
+  member removal, activity/task/milestone/project deletion.
+- **`useMoney`** gained `toMinor`/`toMajor`/`digitsFor` so forms can round-trip a
+  plain-language amount into integer minor units **without duplicating** the
+  per-currency digit table anywhere else.
+- **`PeopleTab`** — real invite (`InviteMemberDialog` → Edge Function), role change
+  (`<select>`, organizer-only), remove (confirm dialog), empty/loading/error states.
+  Removed members are counted, not listed (no removal-undo UI in this pass).
+- **`CommitmentsTab`** — list, `CommitmentFormDialog` (create/edit: title, kind, owner,
+  schedule, location, supplier, booking, estimated cost, notes), `CommitmentDetailDialog`
+  (status-transition buttons restricted to the DB's legal edges, participants
+  add/remove, embedded `PaymentsPanel`, edit/delete), plus a `TasksPanel` for
+  project-wide tasks (optionally linked to an activity).
+- **`PaymentsPanel`** (new) — list, add (type/direction/amount/due date), mark-paid
+  (paid-on/paid-by/method/reference), cancel; shows the commitment's derived
+  outstanding balance from `v_commitment_financials` (never recomputed in Vue).
+- **`TasksPanel`** (new) — create/assign, status `<select>` restricted to the task's
+  legal next states, delete; a checkbox is a fast-path for open↔done.
+- **`TimelineTab`** — full derived `v_timeline_events` feed (reuses `UpcomingList`)
+  plus `MilestoneFormDialog` CRUD with the derived Upcoming/Passed badge from §9.1.
+- **`ProjectSettingsView`** — edit name/description/dates, status actions (archive /
+  unarchive / mark completed / reopen, each only shown for a legal transition),
+  soft-delete with a confirm dialog that redirects to `projects` on success.
+
+Status-transition and ownership/role UI restrictions (which buttons are shown) mirror
+the DB triggers exactly (`app.tg_commitment_status_transition`,
+`app.tg_payment_status_transition`, `app.tg_task_status_transition`,
+`app.tg_project_status_transition`, `app.tg_last_organizer_guard`) so the common path
+never round-trips an illegal transition — but nothing client-side is trusted as the
+real gate; every mutation still goes through RLS + triggers, and a denied/illegal
+write surfaces through `AppError` → toast exactly like any other failure.
+
+### 9.5 Permission mapping (`lib/permissions.ts`)
+
+No changes were needed — the `PermissionKey` matrix already had every key this pass
+uses (`commitment.edit`, `payment.edit`, `task.edit`, `milestone.edit`,
+`members.manage`, `project.invite`, `project.archive`, `project.delete`,
+`project.settings`). These remain **advisory only**: they hide dead-end controls
+(e.g. a viewer never sees a "New activity" button) but every operation is re-checked
+by RLS/triggers regardless of what the UI shows.
+
+### 9.6 Testing performed, and what could not be tested
+
+**Static/build verification (run in this sandbox, all clean):**
+
+| Check | Result |
+|---|---|
+| `npx vue-tsc --noEmit` | exit 0, 0 errors, across all new/changed files |
+| `npx vite build` | exit 0, 327→370 modules, no warnings |
+| `npm run lint` | same pre-existing sandbox limitation as every prior pass (`Cannot find package '@eslint/js'` — new packages cannot be installed here; not a code defect) |
+| pgTAP syntax sanity (balanced `$$`/parens, `plan()` count == assertion count) | verified programmatically; **not executed** |
+
+**New pgTAP suite — `supabase/tests/05_crud_operations.sql`, 37 assertions**,
+covering exactly the operations this pass wires up: project rename/archive/unarchive
++ member-cannot-rename; role promotion, self-escalation-blocked, last-organizer-guard
+on a role change (not just removal), organizer remove/reinstate; commitment
+create/edit/full status chain (`idea→researching→confirmed→booked`) + one illegal
+jump (`booked→idea`) rejected; participant add by organizer/member vs. rejected for a
+viewer; payment create, future-`paid_on` rejected, mark-paid + `ever_paid` latch,
+paid-payment soft-delete rejected, viewer-create rejected; task create+assign,
+viewer-assignee rejected, done/reopen + `completed_at` stamped/cleared, delete by the
+assignee; milestone create/update/hard-delete, and a schema assertion that no
+completion column exists (§9.1).
+
+**Disclosed limitation (same as every prior backend/verification pass in this
+project): this sandbox has no Docker, so `supabase start`/`db reset` cannot run.**
+The new test file has never actually been executed against Postgres — only checked
+for syntactic self-consistency (balanced delimiters, assertion count matching
+`plan()`) and manually traced statement-by-statement against the actual trigger/RLS
+SQL in `supabase/migrations/` (transition tables, guard functions, policy predicates)
+to confirm the expected pass/fail outcome of each assertion. The same is true of
+every live end-to-end flow this pass adds — invite email delivery, RLS on real
+network requests, browser-rendered dialogs — none of it has been exercised against a
+running Supabase instance or a browser, for the same environment reason documented in
+§7 and §8. No failures were found or hidden; nothing in this pass claims to have been
+run against a live backend.
+
+### 9.7 Known gaps / follow-ups (not defects, disclosed rather than silently shipped)
+
+- `CommitmentFormDialog`: toggling "All day" after already entering a date/time value
+  doesn't reformat the existing input string — the browser will reject the mismatched
+  format and the field just needs re-entry. Cosmetic; does not corrupt data (invalid
+  input is dropped, not sent).
+- `PeopleTab` shows removed members only as a count, not a reinstateable list — the
+  `reactivateMember` service/composable exists (used internally by the pgTAP-verified
+  reinstate path) but has no UI entry point yet.
+- Payment RSVP-style participant responses (`commitment_participants.rsvp`) are not
+  editable from the UI — participants can only be added/removed, matching what was
+  actually requested ("Add participants"), not full RSVP management.
+- Task/commitment delete buttons are shown to anyone with edit rights, not narrowed to
+  the exact organizer/creator/owner set the RLS `UPDATE … WITH CHECK` enforces for
+  soft-delete of *commitments* (narrowed correctly in `CommitmentsTab.canDelete`) —
+  for *tasks* the delete action is shown to any organizer/member and relies on RLS to
+  reject it (surfaced as a "Not found." `AppError`) if they're not the creator/
+  assignee. Functionally safe (RLS is the real gate), but a future pass could narrow
+  the button the same way commitments already are.
+
+---
+
+## 10. Derived systems: Budget, Timeline, Health (2026-09-04)
+
+Purpose: implement/surface the three derived project systems from
+`docs/BUSINESS_RULES.md` — Budget, Timeline, Health — end to end. **All three were
+already fully specified and computed in Postgres** (views + the 17-rule health
+engine, written in the original backend pass); what this pass adds is (a) the
+frontend surface that was still `FeaturePending` (`BudgetTab`, `HealthTab`), (b) the
+one genuinely new write path — finding dismiss/snooze/reactivate — and (c) a visual
+read of already-derived fields to distinguish completed items and overdue deadlines
+on the timeline. **No new financial or health-rule logic was written anywhere** —
+every number and every finding is read from an existing view/function, never
+recomputed in Vue, per "do not duplicate financial data unnecessarily."
+
+### 10.1 Budget — `BudgetTab.vue` (was `FeaturePending`)
+
+Reads `v_project_financials` (via the existing `useProjectFinancials`) and the
+previously-unused `v_budget_category_actuals` (new `getBudgetCategoryActuals` /
+`useBudgetCategoryActuals`). Six requested figures, each a direct column, no client
+arithmetic:
+
+| Requested | Source column |
+|---|---|
+| Total budget | `total_target_minor` |
+| Committed spend | `committed_spend_minor` |
+| Paid amount | `net_actual_spend_minor` (gross paid − refunded, per BUD‑8/§8 financial-history rule) |
+| Outstanding amount | `outstanding_minor` |
+| Remaining budget | `remaining_budget_minor` |
+| Budget variance | `projected_variance_minor` **and** `settled_variance_minor` shown separately (target vs. committed-including-open, and target vs. money actually paid) — showing both instead of picking one avoids inventing a blended number that doesn't exist in the schema |
+
+A per-category table (`v_budget_category_actuals`: target/actual/variance per
+`commitment_kind`) is included since it's already computed and directly answers "why"
+a variance exists (BUD‑10 / HLT‑10's data source) — display-only, same view.
+
+### 10.2 Timeline — enhancements to the existing `TimelineTab.vue` / `UpcomingList.vue`
+
+The chronological generation itself (`v_timeline_events`: commitment start/end,
+payment due/made, task due, milestones, project boundaries) was already built in §9.
+This pass addresses the explicit handling requirements:
+
+- **Missing dates** — unchanged, and confirmed correct: a row with no relevant date
+  column is excluded at the view level (there's no timeline position for it); it's
+  still visible in its own tab (Activities/Tasks list) with no date shown.
+- **Overlapping events** — multiple events at the same day/time are listed together
+  under that day's group (`UpcomingList` already grouped by day); a genuine
+  double-booking is additionally surfaced as a `schedule_conflict` **health** finding
+  (HLT‑11) — the timeline shows *that it happened*, Health explains *that it's a
+  problem*, deliberately not duplicated in both places.
+- **Completed items** (new) — `UpcomingList` now reads each event's `status` field
+  (already present, unused until now) and renders `completed`/`cancelled`/`paid`
+  items muted with a struck-through label, instead of looking identical to a pending
+  one.
+- **Upcoming deadlines** (new) — a `payment_due`/`task_due` event whose date has
+  passed while the underlying row is still open is flagged with a red "Overdue"
+  badge. This is a plain read of `occurs_at < now` + `status` already on the row —
+  not a second implementation of HLT‑3/HLT‑13; those remain the authoritative,
+  dismissible/blocking source of truth in Health.
+
+### 10.3 Health — `HealthTab.vue` (was `FeaturePending`), dismiss/snooze/reactivate (new)
+
+The rule engine (`app._health_findings`, all 17 HLT codes) and read RPCs
+(`get_project_health`, `get_project_health_summary`) already existed verbatim from
+`docs/BUSINESS_RULES.md` §9.2 — verified code-for-code against the doc, nothing added
+or changed. What was missing was a UI to see *all* findings (not just the dashboard's
+"needs attention" slice) and to act on the dismissible ones:
+
+- **`HealthTab.vue`** — overall status badge + counts (`get_project_health_summary`),
+  severity filter tabs (All/Blockers/Warnings/Info/On track) with live counts, a
+  "show dismissed/snoozed" toggle, and a `FindingCard` per finding.
+- **`FindingCard.vue`** (new) — every finding shown with: **Severity** (icon),
+  **Title** (`healthCodeTitle(code)` — a static, code→label map added purely for
+  display; the authoritative one-line explanation stays server-side in `message`),
+  **Description** (`finding.message`), **Related entity** (`subject_label`, e.g. the
+  commitment/payment/task title), **Resolution/action** (`finding.resolution`,
+  verbatim from the rule engine) — plus Dismiss / Snooze 7 days / Restore, disabled
+  entirely for non-dismissible findings (blockers) with an explanatory note instead
+  of a dead button.
+- **`services/health.ts` + `composables/useHealth.ts`** (new) — `dismissFinding` /
+  `snoozeFinding` / `reactivateFinding` all write to `finding_dismissals` only
+  (upsert on the table's `(project_id, code, subject_type, subject_id)` unique
+  constraint for dismiss/snooze; a plain delete to reactivate, matching VAL‑43 — the
+  finding itself is never touched, it just stops being suppressed). The DB, not the
+  client, is what actually enforces "blockers can't be dismissed"
+  (`app.finding_is_dismissible` / `tg_dismissal_not_blocker`) — the `canDismiss` prop
+  and the per-finding `dismissible` flag are advisory UI, same pattern as every other
+  permission check in this app.
+
+### 10.4 Testing performed, and what could not be tested
+
+Same static verification as every prior pass, all clean: `vue-tsc --noEmit` (exit 0),
+`vite build` (exit 0), `npm run lint` (same pre-existing, disclosed sandbox
+limitation).
+
+**New pgTAP suite — `supabase/tests/06_health_dismissals.sql`, 15 assertions**: seeds
+a deterministic `missing_owner` (warning) and `payment_overdue` (blocker) finding,
+then asserts — dismissibility is classified correctly per finding; a member can
+dismiss the warning and `get_project_health` immediately reflects it; the project
+health summary's `attention_count` drops by exactly one; a direct-table attempt to
+dismiss the blocker is rejected (`P0001`, `tg_dismissal_not_blocker`); a dismissal can
+be converted to a snooze; deleting the dismissal row reactivates the finding and
+`attention_count` returns to its original value; a non-member is rejected (`42501`)
+attempting to write a dismissal for a project they're not in. Combined with the
+existing `03_financials.sql` (which already covers the Budget formulas) and the
+`v_timeline_events` view itself (read-only, no new write surface), this is the full
+set of genuinely new/changed backend behavior from this pass.
+
+**Disclosed limitation, unchanged from every prior pass**: this sandbox has no
+Docker, so none of these pgTAP files — old or new — have been executed against a
+live Postgres. `06_health_dismissals.sql` was verified the same way as `05_crud_
+operations.sql`: syntactic self-consistency (balanced delimiters, assertion count
+matches `plan()`) and a manual trace against the actual `_health_findings`/
+`tg_dismissal_not_blocker`/`get_project_health_summary` SQL to confirm each expected
+outcome, including working through which of the 17 rules would and wouldn't fire for
+the seeded fixture so the attention-count deltas are exact rather than approximate.
+No live browser/backend E2E was possible either, for the same reason.
 - Live E2E of the auth-entry redirects (needs the Supabase stack).
