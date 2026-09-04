@@ -1,0 +1,638 @@
+/**
+ * Supabase database types — `public` schema.
+ *
+ * Hand-authored to match `supabase gen types typescript --local` output exactly,
+ * derived from supabase/migrations (the authoritative schema). Regenerate with
+ * `npm run gen:types` once the local stack is running — the shape is identical,
+ * so it is a drop-in replacement.
+ *
+ * Covers every table/view/enum/function in the current schema, including
+ * 20260904120800_frontend_read_models (v_my_projects.total_target_minor,
+ * public.get_my_attention()).
+ */
+
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json | undefined }
+  | Json[];
+
+export interface Database {
+  public: {
+    Tables: {
+      currencies: {
+        Row: { code: string; name: string; minor_unit: number; symbol: string | null };
+        Insert: { code: string; name: string; minor_unit: number; symbol?: string | null };
+        Update: { code?: string; name?: string; minor_unit?: number; symbol?: string | null };
+        Relationships: [];
+      };
+      users: {
+        Row: {
+          id: string;
+          email: string;
+          display_name: string;
+          avatar_url: string | null;
+          timezone: string;
+          default_currency: string;
+          notification_prefs: Json;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id: string;
+          email: string;
+          display_name: string;
+          avatar_url?: string | null;
+          timezone?: string;
+          default_currency?: string;
+          notification_prefs?: Json;
+        };
+        Update: {
+          display_name?: string;
+          avatar_url?: string | null;
+          timezone?: string;
+          default_currency?: string;
+          notification_prefs?: Json;
+        };
+        Relationships: [];
+      };
+      projects: {
+        Row: {
+          id: string;
+          name: string;
+          description: string | null;
+          status: Database["public"]["Enums"]["project_status"];
+          starts_on: string | null;
+          ends_on: string | null;
+          timezone: string;
+          currency: string;
+          cover_theme: string | null;
+          health_config: Json;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+          archived_at: string | null;
+          deleted_at: string | null;
+        };
+        Insert: {
+          name: string;
+          timezone: string;
+          currency: string;
+          description?: string | null;
+          starts_on?: string | null;
+          ends_on?: string | null;
+          cover_theme?: string | null;
+        };
+        Update: {
+          name?: string;
+          description?: string | null;
+          status?: Database["public"]["Enums"]["project_status"];
+          starts_on?: string | null;
+          ends_on?: string | null;
+          cover_theme?: string | null;
+          health_config?: Json;
+          deleted_at?: string | null;
+        };
+        Relationships: [];
+      };
+      project_members: {
+        Row: {
+          id: string;
+          project_id: string;
+          user_id: string | null;
+          display_name: string;
+          email: string | null;
+          role: Database["public"]["Enums"]["member_role"];
+          status: Database["public"]["Enums"]["member_status"];
+          invited_at: string | null;
+          joined_at: string | null;
+          removed_at: string | null;
+          created_at: string;
+          updated_at: string;
+          deleted_at: string | null;
+        };
+        Insert: {
+          project_id: string;
+          display_name: string;
+          user_id?: string | null;
+          email?: string | null;
+          role?: Database["public"]["Enums"]["member_role"];
+          status?: Database["public"]["Enums"]["member_status"];
+        };
+        Update: {
+          display_name?: string;
+          email?: string | null;
+          role?: Database["public"]["Enums"]["member_role"];
+          status?: Database["public"]["Enums"]["member_status"];
+        };
+        Relationships: [];
+      };
+      invitations: {
+        Row: {
+          id: string;
+          project_id: string;
+          email: string;
+          role: Database["public"]["Enums"]["member_role"];
+          status: Database["public"]["Enums"]["invitation_status"];
+          token: string;
+          invited_by: string;
+          expires_at: string;
+          created_at: string;
+          updated_at: string;
+          accepted_at: string | null;
+          accepted_member_id: string | null;
+        };
+        Insert: {
+          project_id: string;
+          email: string;
+          invited_by: string;
+          role?: Database["public"]["Enums"]["member_role"];
+          status?: Database["public"]["Enums"]["invitation_status"];
+          token?: string;
+          expires_at?: string;
+        };
+        Update: {
+          status?: Database["public"]["Enums"]["invitation_status"];
+          accepted_at?: string | null;
+          accepted_member_id?: string | null;
+        };
+        Relationships: [];
+      };
+      commitments: {
+        Row: {
+          id: string;
+          project_id: string;
+          title: string;
+          kind: Database["public"]["Enums"]["commitment_kind"];
+          status: Database["public"]["Enums"]["commitment_status"];
+          owner_member_id: string | null;
+          estimated_cost_minor: number | null;
+          confirmed_cost_minor: number | null;
+          starts_at: string | null;
+          ends_at: string | null;
+          is_all_day: boolean;
+          schedule_note: string | null;
+          location_label: string | null;
+          location_address: string | null;
+          location_lat: number | null;
+          location_lng: number | null;
+          location_place_id: string | null;
+          supplier_name: string | null;
+          supplier_contact: string | null;
+          booking_reference: string | null;
+          booking_confirmed: boolean;
+          notes: string | null;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+          deleted_at: string | null;
+        };
+        Insert: {
+          project_id: string;
+          title: string;
+          kind: Database["public"]["Enums"]["commitment_kind"];
+          status?: Database["public"]["Enums"]["commitment_status"];
+          owner_member_id?: string | null;
+          estimated_cost_minor?: number | null;
+          confirmed_cost_minor?: number | null;
+          starts_at?: string | null;
+          ends_at?: string | null;
+          is_all_day?: boolean;
+          schedule_note?: string | null;
+          location_label?: string | null;
+          location_address?: string | null;
+          location_lat?: number | null;
+          location_lng?: number | null;
+          location_place_id?: string | null;
+          supplier_name?: string | null;
+          supplier_contact?: string | null;
+          booking_reference?: string | null;
+          booking_confirmed?: boolean;
+          notes?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["commitments"]["Insert"]> & {
+          deleted_at?: string | null;
+        };
+        Relationships: [];
+      };
+      commitment_participants: {
+        Row: {
+          id: string;
+          project_id: string;
+          commitment_id: string;
+          member_id: string;
+          rsvp: Database["public"]["Enums"]["rsvp_status"];
+          added_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          project_id: string;
+          commitment_id: string;
+          member_id: string;
+          rsvp?: Database["public"]["Enums"]["rsvp_status"];
+        };
+        Update: { rsvp?: Database["public"]["Enums"]["rsvp_status"] };
+        Relationships: [];
+      };
+      cost_shares: {
+        Row: {
+          id: string;
+          project_id: string;
+          commitment_id: string;
+          member_id: string;
+          basis: Database["public"]["Enums"]["cost_share_basis"];
+          weight: number | null;
+          fixed_amount_minor: number | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          project_id: string;
+          commitment_id: string;
+          member_id: string;
+          basis: Database["public"]["Enums"]["cost_share_basis"];
+          weight?: number | null;
+          fixed_amount_minor?: number | null;
+        };
+        Update: {
+          basis?: Database["public"]["Enums"]["cost_share_basis"];
+          weight?: number | null;
+          fixed_amount_minor?: number | null;
+        };
+        Relationships: [];
+      };
+      payments: {
+        Row: {
+          id: string;
+          project_id: string;
+          commitment_id: string;
+          type: Database["public"]["Enums"]["payment_type"];
+          direction: Database["public"]["Enums"]["payment_direction"];
+          status: Database["public"]["Enums"]["payment_status"];
+          amount_minor: number;
+          due_on: string | null;
+          paid_on: string | null;
+          ever_paid: boolean;
+          paid_by_member_id: string | null;
+          method: string | null;
+          reference: string | null;
+          notes: string | null;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+          deleted_at: string | null;
+        };
+        Insert: {
+          project_id: string;
+          commitment_id: string;
+          type: Database["public"]["Enums"]["payment_type"];
+          amount_minor: number;
+          direction?: Database["public"]["Enums"]["payment_direction"];
+          status?: Database["public"]["Enums"]["payment_status"];
+          due_on?: string | null;
+          paid_on?: string | null;
+          paid_by_member_id?: string | null;
+          method?: string | null;
+          reference?: string | null;
+          notes?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["payments"]["Insert"]> & {
+          deleted_at?: string | null;
+        };
+        Relationships: [];
+      };
+      tasks: {
+        Row: {
+          id: string;
+          project_id: string;
+          commitment_id: string | null;
+          title: string;
+          status: Database["public"]["Enums"]["task_status"];
+          assignee_member_id: string | null;
+          due_on: string | null;
+          notes: string | null;
+          completed_at: string | null;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+          deleted_at: string | null;
+        };
+        Insert: {
+          project_id: string;
+          title: string;
+          commitment_id?: string | null;
+          status?: Database["public"]["Enums"]["task_status"];
+          assignee_member_id?: string | null;
+          due_on?: string | null;
+          notes?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["tasks"]["Insert"]> & {
+          status?: Database["public"]["Enums"]["task_status"];
+          deleted_at?: string | null;
+        };
+        Relationships: [];
+      };
+      milestones: {
+        Row: {
+          id: string;
+          project_id: string;
+          commitment_id: string | null;
+          title: string;
+          on_date: string;
+          notes: string | null;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          project_id: string;
+          title: string;
+          on_date: string;
+          commitment_id?: string | null;
+          notes?: string | null;
+        };
+        Update: { title?: string; on_date?: string; notes?: string | null; commitment_id?: string | null };
+        Relationships: [];
+      };
+      budgets: {
+        Row: { project_id: string; total_target_minor: number | null; created_at: string; updated_at: string };
+        Insert: { project_id: string; total_target_minor?: number | null };
+        Update: { total_target_minor?: number | null };
+        Relationships: [];
+      };
+      budget_category_targets: {
+        Row: {
+          project_id: string;
+          kind: Database["public"]["Enums"]["commitment_kind"];
+          amount_minor: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          project_id: string;
+          kind: Database["public"]["Enums"]["commitment_kind"];
+          amount_minor: number;
+        };
+        Update: { amount_minor?: number };
+        Relationships: [];
+      };
+      finding_dismissals: {
+        Row: {
+          id: string;
+          project_id: string;
+          code: string;
+          subject_type: string;
+          subject_id: string | null;
+          state: Database["public"]["Enums"]["finding_dismissal_state"];
+          snoozed_until: string | null;
+          actor_member_id: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          project_id: string;
+          code: string;
+          subject_type: string;
+          state: Database["public"]["Enums"]["finding_dismissal_state"];
+          subject_id?: string | null;
+          snoozed_until?: string | null;
+          actor_member_id?: string | null;
+        };
+        Update: {
+          state?: Database["public"]["Enums"]["finding_dismissal_state"];
+          snoozed_until?: string | null;
+        };
+        Relationships: [];
+      };
+      audit_log: {
+        Row: {
+          id: string;
+          project_id: string | null;
+          at: string;
+          actor_user_id: string | null;
+          actor_member_id: string | null;
+          source: Database["public"]["Enums"]["audit_source"];
+          action: Database["public"]["Enums"]["audit_action"];
+          entity_type: string;
+          entity_id: string;
+          before: Json | null;
+          after: Json | null;
+          request_id: string | null;
+        };
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
+    };
+    Views: {
+      v_my_projects: {
+        Row: {
+          project_id: string;
+          name: string;
+          status: Database["public"]["Enums"]["project_status"];
+          starts_on: string | null;
+          ends_on: string | null;
+          timezone: string;
+          currency: string;
+          my_role: Database["public"]["Enums"]["member_role"];
+          total_cost_minor: number | null;
+          committed_spend_minor: number | null;
+          net_actual_spend_minor: number | null;
+          outstanding_minor: number | null;
+          remaining_budget_minor: number | null;
+          progress_pct: number | null;
+          health_status: string | null;
+          attention_count: number | null;
+          next_event_at: string | null;
+          total_target_minor: number | null;
+        };
+        Relationships: [];
+      };
+      v_project_financials: {
+        Row: {
+          project_id: string;
+          total_cost_minor: number;
+          committed_spend_minor: number;
+          gross_paid_minor: number;
+          refunded_minor: number;
+          net_actual_spend_minor: number;
+          outstanding_minor: number;
+          scheduled_outstanding_minor: number;
+          total_target_minor: number | null;
+          remaining_budget_minor: number | null;
+          projected_variance_minor: number | null;
+          settled_variance_minor: number | null;
+          progress_pct: number;
+          commitment_count: number;
+          open_commitment_count: number;
+        };
+        Relationships: [];
+      };
+      v_commitment_financials: {
+        Row: {
+          commitment_id: string;
+          project_id: string;
+          status: Database["public"]["Enums"]["commitment_status"];
+          effective_cost_minor: number;
+          gross_paid_minor: number;
+          refunded_minor: number;
+          net_paid_minor: number;
+          outstanding_minor: number;
+          payment_progress: string;
+        };
+        Relationships: [];
+      };
+      v_budget_category_actuals: {
+        Row: {
+          project_id: string;
+          kind: Database["public"]["Enums"]["commitment_kind"];
+          target_minor: number | null;
+          actual_minor: number;
+          variance_minor: number | null;
+        };
+        Relationships: [];
+      };
+      v_member_balances: {
+        Row: {
+          project_id: string;
+          member_id: string;
+          display_name: string;
+          member_status: Database["public"]["Enums"]["member_status"];
+          owed_minor: number;
+          contributed_minor: number;
+          balance_minor: number;
+        };
+        Relationships: [];
+      };
+      v_timeline_events: {
+        Row: {
+          project_id: string;
+          occurs_at: string;
+          all_day: boolean;
+          event_type: string;
+          title: string;
+          subject_type: string;
+          subject_id: string;
+          status: string | null;
+        };
+        Relationships: [];
+      };
+      v_member_directory: {
+        Row: {
+          project_id: string;
+          member_id: string;
+          display_name: string;
+          avatar_url: string | null;
+          role: Database["public"]["Enums"]["member_role"];
+          status: Database["public"]["Enums"]["member_status"];
+        };
+        Relationships: [];
+      };
+    };
+    Functions: {
+      get_project_health: {
+        Args: { p_project: string };
+        Returns: {
+          code: string;
+          severity: string;
+          subject_type: string;
+          subject_id: string | null;
+          subject_label: string | null;
+          params: Json;
+          message: string;
+          resolution: string;
+          affects_health: boolean;
+          dismissible: boolean;
+          dismissed: boolean;
+          snoozed_until: string | null;
+        }[];
+      };
+      get_project_health_summary: {
+        Args: { p_project: string };
+        Returns: {
+          status: string;
+          blocker_count: number;
+          warning_count: number;
+          info_count: number;
+          attention_count: number;
+        }[];
+      };
+      get_my_attention: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+          project_id: string;
+          project_name: string;
+          code: string;
+          severity: string;
+          subject_type: string;
+          subject_id: string | null;
+          subject_label: string | null;
+          params: Json;
+          message: string;
+          resolution: string;
+        }[];
+      };
+      get_invitation: {
+        Args: { p_token: string };
+        Returns: {
+          project_name: string;
+          inviter_name: string | null;
+          role: Database["public"]["Enums"]["member_role"];
+          status: Database["public"]["Enums"]["invitation_status"];
+        }[];
+      };
+      accept_invitation: {
+        Args: { p_token: string };
+        Returns: string;
+      };
+      transfer_and_leave: {
+        Args: { p_project: string; p_new_organizer_member: string };
+        Returns: undefined;
+      };
+    };
+    Enums: {
+      project_status: "draft" | "active" | "completed" | "archived";
+      member_role: "organizer" | "member" | "viewer";
+      member_status: "invited" | "active" | "removed";
+      invitation_status: "pending" | "accepted" | "expired" | "revoked";
+      commitment_kind: "accommodation" | "transport" | "food" | "experience" | "services" | "other";
+      commitment_status: "idea" | "researching" | "confirmed" | "booked" | "completed" | "cancelled";
+      payment_type: "deposit" | "balance" | "installment" | "full" | "refund";
+      payment_direction: "outgoing" | "incoming";
+      payment_status: "scheduled" | "paid" | "waived" | "cancelled";
+      task_status: "open" | "in_progress" | "done" | "cancelled";
+      cost_share_basis: "equal" | "weight" | "fixed";
+      rsvp_status: "going" | "maybe" | "not_going" | "unknown";
+      finding_dismissal_state: "dismissed" | "snoozed";
+      audit_action: "create" | "update" | "soft_delete" | "restore" | "delete";
+      audit_source: "app" | "rpc" | "edge" | "system";
+    };
+    CompositeTypes: Record<PropertyKey, never>;
+  };
+}
+
+// ---- generated-style helper aliases -----------------------------------------
+type PublicSchema = Database["public"];
+
+export type Tables<T extends keyof PublicSchema["Tables"]> = PublicSchema["Tables"][T]["Row"];
+export type TablesInsert<T extends keyof PublicSchema["Tables"]> = PublicSchema["Tables"][T]["Insert"];
+export type TablesUpdate<T extends keyof PublicSchema["Tables"]> = PublicSchema["Tables"][T]["Update"];
+export type Views<T extends keyof PublicSchema["Views"]> = PublicSchema["Views"][T]["Row"];
+export type Enums<T extends keyof PublicSchema["Enums"]> = PublicSchema["Enums"][T];
+
+// ---- convenience unions referenced across the app --------------------------
+export type ProjectStatus = Enums<"project_status">;
+export type MemberRole = Enums<"member_role">;
+export type MemberStatus = Enums<"member_status">;
+export type CommitmentKind = Enums<"commitment_kind">;
+export type CommitmentStatus = Enums<"commitment_status">;
+export type HealthStatus = "needs_attention" | "at_risk" | "healthy";
+export type FindingSeverity = "blocker" | "warning" | "info" | "ok";
+
+// Row shapes for the two health RPCs (used by services/composables).
+export type HealthFindingRow = Database["public"]["Functions"]["get_project_health"]["Returns"][number];
+export type HealthSummaryRow = Database["public"]["Functions"]["get_project_health_summary"]["Returns"][number];
+export type MyAttentionRow = Database["public"]["Functions"]["get_my_attention"]["Returns"][number];

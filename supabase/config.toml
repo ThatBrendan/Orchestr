@@ -1,0 +1,58 @@
+# Supabase local config — Orchestr
+# See docs/TECHNICAL_ARCHITECTURE.md §22 for environment strategy.
+project_id = "orchestr"
+
+[api]
+enabled = true
+port = 54321
+# Only `public` is exposed to PostgREST. RLS helpers live in `app` and are NOT reachable
+# via supabase.rpc(); client-facing RPCs are created in `public`. (docs/SECURITY_RLS.md §4)
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+shadow_port = 54320
+major_version = 17
+
+[db.pooler]
+enabled = false
+
+[realtime]
+enabled = true
+
+[studio]
+enabled = true
+port = 54323
+
+[storage]
+enabled = true
+file_size_limit = "10MiB"
+
+[auth]
+enabled = true
+site_url = "http://localhost:5173"
+# `**` wildcard allows the ?redirect= query the login/signup flow appends to emailRedirectTo.
+additional_redirect_urls = [
+  "http://localhost:5173/auth/callback",
+  "http://localhost:5173/auth/callback**",
+  "http://localhost:5173/invite/**",
+]
+jwt_expiry = 3600
+enable_refresh_token_rotation = true
+enable_signup = true
+
+[auth.email]
+enable_signup = true
+enable_confirmations = false
+double_confirm_changes = true
+
+[auth.mfa]
+max_enrolled_factors = 10
+
+[edge_runtime]
+enabled = true
+
+[analytics]
+enabled = false

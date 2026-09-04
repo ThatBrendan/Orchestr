@@ -1,0 +1,19 @@
+node_modules/
+dist/
+.DS_Store
+
+# Documentation
+docs/
+
+# env — keep the example only
+.env
+.env.*
+!.env.example
+
+# Supabase local
+supabase/.branches/
+supabase/.temp/
+
+# editor / tooling
+*.log
+.vite/

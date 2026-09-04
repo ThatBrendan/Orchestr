@@ -1,0 +1,828 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Basecamp — Plan it. Run it. Done.</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#F8F8F6;
+    --surface:#FFFFFF;
+    --ink:#16181B;
+    --ink-soft:#4B4F56;
+    --muted:#8A8D93;
+    --line:#E7E7E3;
+    --accent:#1F6F5C;
+    --accent-soft:#E7F2EF;
+    --amber:#B45309;
+    --amber-soft:#FBEEDD;
+    --red:#B3261E;
+    --red-soft:#FBEAE9;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Inter',ui-sans-serif,system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .font-display{font-family:'Space Grotesk',ui-sans-serif,sans-serif;}
+  .tnum{font-variant-numeric:tabular-nums;}
+  ::-webkit-scrollbar{width:8px;height:8px;}
+  ::-webkit-scrollbar-thumb{background:#DEDEDA;border-radius:8px;}
+  .nav-item{transition:background-color .12s ease, color .12s ease;}
+  .row-hover{transition:background-color .12s ease;}
+  .fade-in{animation:fadeIn .18s ease;}
+  @keyframes fadeIn{from{opacity:0; transform:translateY(2px);} to{opacity:1; transform:translateY(0);}}
+  .slide-in{animation:slideIn .22s cubic-bezier(.2,.8,.2,1);}
+  @keyframes slideIn{from{transform:translateX(16px); opacity:0;} to{transform:translateX(0); opacity:1;}}
+  .overlay-in{animation:overlayIn .18s ease;}
+  @keyframes overlayIn{from{opacity:0;} to{opacity:1;}}
+  .bar-fill{transition:width .5s cubic-bezier(.2,.8,.2,1);}
+  [data-bottom-nav] a.active svg, [data-bottom-nav] a.active span{color:var(--ink);}
+  @media (max-width: 767px){
+    .desktop-only{display:none !important;}
+  }
+  @media (min-width: 768px){
+    .mobile-only{display:none !important;}
+  }
+  .focus-ring:focus-visible{outline:2px solid var(--accent); outline-offset:2px; border-radius:6px;}
+</style>
+</head>
+<body class="text-[15px]">
+
+<div id="app" class="min-h-screen"></div>
+
+<script>
+/* ---------------------------------------------------------------
+   DATA
+--------------------------------------------------------------- */
+const DATA = {
+  user: { name: "James" },
+  projects: {
+    barcelona: {
+      id: "barcelona",
+      name: "Barcelona Stag Weekend",
+      dates: "16–18 May 2027",
+      progress: 72,
+      budget: 5000, committed: 4680, paid: 3340, outstanding: 1340, remaining: 320,
+      attentionCount: 3,
+      cover: "Barcelona",
+      needsAttention: [
+        { id:1, title:"Payment due", subject:"Boat Party", detail:"£800 due 12 May", kind:"payment", link:{view:"activity", id:"boat"} },
+        { id:2, title:"Missing owner", subject:"Airport Transfer", detail:"No person assigned", kind:"owner", link:{view:"activity", id:"transfer"} },
+        { id:3, title:"Booking incomplete", subject:"Restaurant", detail:"Confirmation number missing", kind:"booking", link:{view:"activity", id:"restaurant"} },
+      ],
+      upcoming: [
+        { day:"Friday 15 May", items:[ {time:"18:00", title:"Hotel check-in"}, {time:"20:00", title:"Dinner"} ] },
+        { day:"Saturday 16 May", items:[ {time:"11:00", title:"Boat Party"}, {time:"19:30", title:"Restaurant"} ] },
+      ],
+      activities: [
+        { id:"boat", name:"Boat Party", date:"Sat 16 May", time:"11:00–15:00", owner:"Mike", cost:1200, deposit:400, paid:400, status:"Confirmed",
+          location:"Port Olímpic, Barcelona", bookingRef:"ABC123", supplier:"Barcelona Boats", contact:"+34 600 123 456",
+          dueDate:"12 May 2027", participants:12, category:"Activities",
+          notes:"Skipper confirmed for 11:00 sharp. Bring waterproof bags — deck gets wet. Balance due before boarding.",
+          prevGap:"18 min", nextGap:"24 min" },
+        { id:"restaurant", name:"Restaurant", date:"Sat 16 May", time:"19:30–22:00", owner:"Chris", cost:600, deposit:600, paid:600, status:"Confirmed",
+          location:"El Xampanyet, Barcelona", bookingRef:"—", supplier:"El Xampanyet", contact:"+34 600 555 111",
+          dueDate:"—", participants:12, category:"Food",
+          notes:"Confirmation number still missing — chase the restaurant directly, they don't reply to email.",
+          prevGap:"24 min", nextGap:"—", missingBooking:true },
+        { id:"transfer", name:"Airport Transfer", date:"Fri 15 May", time:"14:00", owner:null, cost:240, deposit:0, paid:0, status:"Researching",
+          location:"BCN Airport → Hotel Praktik", bookingRef:"—", supplier:"—", contact:"—",
+          dueDate:"—", participants:12, category:"Transport",
+          notes:"Comparing minibus companies. Need someone to own this and confirm by Friday.",
+          prevGap:"—", nextGap:"18 min", missingOwner:true },
+        { id:"hotel", name:"Hotel", date:"Fri 15 May", time:"Check-in 15:00", owner:"James", cost:1800, deposit:1800, paid:1800, status:"Fully Paid",
+          location:"Hotel Praktik Rambla", bookingRef:"HPR-2245", supplier:"Hotel Praktik Rambla", contact:"+34 933 435 447",
+          dueDate:"Paid in full", participants:12, category:"Accommodation",
+          notes:"Two twin rooms and two doubles booked. Early check-in requested, not yet confirmed.",
+          prevGap:"—", nextGap:"18 min" },
+        { id:"golf", name:"Crazy Golf", date:"Fri 15 May", time:"16:30–18:00", owner:"Sarah", cost:180, deposit:0, paid:0, status:"Confirmed",
+          location:"Adventure Golf, Poble Espanyol", bookingRef:"AG-9081", supplier:"Adventure Golf", contact:"+34 933 220 011",
+          dueDate:"Pay on arrival", participants:12, category:"Activities",
+          notes:"Casual warm-up before dinner. No deposit required, pay on the day.",
+          prevGap:"—", nextGap:"—" },
+      ],
+      budgetBreakdown: [
+        { label:"Accommodation", amount:1800 },
+        { label:"Activities", amount:1200 },
+        { label:"Food", amount:900 },
+        { label:"Transport", amount:480 },
+        { label:"Other", amount:300 },
+      ],
+      timeline: [
+        { date:"12 May", items:[{ label:"£800 Boat Party balance due", type:"payment" }] },
+        { date:"15 May", items:[{ label:"Airport transfer", type:"activity" },{ label:"Hotel check-in", type:"activity" },{ label:"Crazy Golf", type:"activity" }] },
+        { date:"16 May", items:[{ label:"Boat Party", type:"activity" },{ label:"Dinner", type:"activity" }] },
+        { date:"18 May", items:[{ label:"Checkout", type:"milestone" }] },
+      ],
+      people: [
+        { name:"James", role:"Organizer", responsibilities:["Hotel"], paid:"Fully paid" },
+        { name:"Mike", role:"Participant", responsibilities:["Boat Party"], paid:"Deposit paid" },
+        { name:"Sarah", role:"Participant", responsibilities:["Airport Transfer","Crazy Golf"], paid:"Owes £70" },
+        { name:"Chris", role:"Participant", responsibilities:["Restaurant"], paid:"Fully paid" },
+        { name:"Tom", role:"Participant", responsibilities:[], paid:"Owes £70" },
+        { name:"Ed", role:"Participant", responsibilities:[], paid:"Owes £70" },
+      ],
+      health: [
+        { title:"Missing owner", detail:"Airport Transfer has no one assigned", severity:"warning" },
+        { title:"Missing booking reference", detail:"Restaurant confirmation number not recorded", severity:"warning" },
+        { title:"Timeline risk", detail:"18 min gap between Restaurant and next-day checkout logistics", severity:"info" },
+        { title:"Budget risk", detail:"Projected spend is tracking £320 under budget — on course", severity:"ok" },
+        { title:"Inactive item", detail:"Airport Transfer has had no update for 9 days", severity:"warning" },
+      ]
+    },
+    wedding: {
+      id:"wedding", name:"Sarah & John's Wedding", dates:"24 July 2027", progress:41,
+      budget:12000, committed:8400, paid:5200, outstanding:3200, remaining:3600,
+      attentionCount:5, cover:"Wedding"
+    }
+  }
+};
+
+/* ---------------------------------------------------------------
+   STATE
+--------------------------------------------------------------- */
+const state = {
+  view: "dashboard",           // dashboard | projects | project | settings
+  projectId: null,
+  projectTab: "overview",      // overview | activities | budget | timeline | people | health
+  activityPanel: null,         // activity id shown in slide-over
+  addWizardOpen: false,
+  wizardStep: 1,
+  wizardData: { type:null, name:"", date:"", location:"", cost:"", deposit:"", due:"", owner:"" },
+};
+
+function money(n){ return "£" + Number(n).toLocaleString("en-GB"); }
+
+/* ---------------------------------------------------------------
+   ICONS (minimal inline SVG set)
+--------------------------------------------------------------- */
+const Icon = {
+  home: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 11.5 12 4l8 7.5"/><path d="M6 10v9a1 1 0 0 0 1 1h4v-6h2v6h4a1 1 0 0 0 1-1v-9"/></svg>`,
+  projects: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 9.5h16M8 3v4M16 3v4"/></svg>`,
+  calendar: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 9.5h16M8 3v4M16 3v4M8 14h.01M12 14h.01M16 14h.01M8 17h.01M12 17h.01"/></svg>`,
+  people: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="17" cy="9" r="2.6"/><path d="M15.5 14.2c2.5.3 4.5 2.4 4.5 5.3"/></svg>`,
+  settings: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="3"/><path d="M19.4 13.5a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1 1.55V19.5a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1-1.55 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.55-1H4.5a2 2 0 1 1 0-4h.09a1.7 1.7 0 0 0 1.55-1 1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34H10a1.7 1.7 0 0 0 1-1.55V4.5a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1 1.55 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87V10a1.7 1.7 0 0 0 1.55 1h.09a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.55 1z"/></svg>`,
+  chevronRight: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 6l6 6-6 6"/></svg>`,
+  close: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 6l12 12M18 6L6 18"/></svg>`,
+  plus: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>`,
+  pin: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 21s7-6.1 7-11.5A7 7 0 0 0 5 9.5C5 14.9 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.3"/></svg>`,
+  alert: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>`,
+  check: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12l5 5L20 6"/></svg>`,
+};
+
+/* ---------------------------------------------------------------
+   SMALL HELPERS
+--------------------------------------------------------------- */
+function statusBadge(status){
+  const map = {
+    "Confirmed": ["var(--accent-soft)","var(--accent)"],
+    "Fully Paid": ["var(--accent-soft)","var(--accent)"],
+    "Researching": ["var(--amber-soft)","var(--amber)"],
+  };
+  const [bg,fg] = map[status] || ["#F1F1EF","var(--ink-soft)"];
+  return `<span class="inline-flex items-center px-2 py-0.5 rounded text-[12.5px] font-medium" style="background:${bg};color:${fg}">${status}</span>`;
+}
+
+function attentionIcon(kind){
+  return `<div class="w-8 h-8 rounded-md flex items-center justify-center shrink-0" style="background:var(--amber-soft); color:var(--amber)">${Icon.alert}</div>`;
+}
+
+/* ---------------------------------------------------------------
+   RENDER: SHELL
+--------------------------------------------------------------- */
+function render(){
+  const app = document.getElementById("app");
+  app.innerHTML = `
+    <div class="flex min-h-screen">
+      ${renderSidebar()}
+      <div class="flex-1 min-w-0 flex flex-col">
+        ${renderTopbarMobile()}
+        <main class="flex-1 min-w-0 pb-24 md:pb-0">
+          ${renderMain()}
+        </main>
+      </div>
+    </div>
+    ${renderBottomNavMobile()}
+    ${state.activityPanel ? renderActivityPanel() : ""}
+    ${state.addWizardOpen ? renderWizard() : ""}
+  `;
+  bindEvents();
+}
+
+function renderSidebar(){
+  const items = [
+    { id:"dashboard", label:"Dashboard", icon:Icon.home },
+    { id:"projects", label:"Projects", icon:Icon.projects },
+    { id:"calendar", label:"Calendar", icon:Icon.calendar },
+    { id:"people-global", label:"People", icon:Icon.people },
+    { id:"settings", label:"Settings", icon:Icon.settings },
+  ];
+  return `
+  <aside class="desktop-only w-60 shrink-0 border-r flex flex-col" style="border-color:var(--line); background:var(--surface)">
+    <div class="h-16 flex items-center px-5 border-b" style="border-color:var(--line)">
+      <span class="font-display font-semibold text-[17px] tracking-tight">Basecamp</span>
+    </div>
+    <nav class="flex-1 px-3 py-4 space-y-0.5">
+      ${items.map(it => `
+        <a href="#" data-nav="${it.id}" class="nav-item flex items-center gap-3 px-3 py-2 rounded-lg text-[14px] font-medium focus-ring"
+           style="color:${state.view===it.id? 'var(--ink)':'var(--ink-soft)'}; background:${state.view===it.id? '#F0F0EE':'transparent'}">
+          ${it.icon}<span>${it.label}</span>
+        </a>`).join("")}
+    </nav>
+    ${state.projectId ? `
+    <div class="px-3 pb-4">
+      <div class="text-[11px] font-medium uppercase tracking-wide px-3 pb-2" style="color:var(--muted)">Current project</div>
+      <a href="#" data-nav="project" class="flex items-center gap-2.5 px-3 py-2.5 rounded-lg" style="background:var(--accent-soft)">
+        <div class="w-2 h-2 rounded-full shrink-0" style="background:var(--accent)"></div>
+        <div class="min-w-0">
+          <div class="text-[13.5px] font-medium truncate" style="color:var(--ink)">${DATA.projects[state.projectId].name}</div>
+        </div>
+      </a>
+    </div>` : ""}
+    <div class="px-5 py-4 border-t flex items-center gap-2.5" style="border-color:var(--line)">
+      <div class="w-7 h-7 rounded-full flex items-center justify-center text-[12px] font-semibold" style="background:var(--ink); color:#fff">JD</div>
+      <span class="text-[13.5px] font-medium">James</span>
+    </div>
+  </aside>`;
+}
+
+function renderTopbarMobile(){
+  const titles = { dashboard:"Dashboard", projects:"Projects", project: state.projectId ? DATA.projects[state.projectId].name : "Project", settings:"Settings", calendar:"Calendar", "people-global":"People" };
+  return `
+  <div class="mobile-only sticky top-0 z-10 h-14 flex items-center px-4 border-b" style="background:var(--surface); border-color:var(--line)">
+    <span class="font-display font-semibold text-[16px] truncate">${titles[state.view] || "Basecamp"}</span>
+  </div>`;
+}
+
+function renderBottomNavMobile(){
+  const items = [
+    { id:"dashboard", label:"Home", icon:Icon.home },
+    { id:"projects", label:"Projects", icon:Icon.projects },
+    { id:"calendar", label:"Calendar", icon:Icon.calendar },
+    { id:"people-global", label:"People", icon:Icon.people },
+    { id:"settings", label:"Settings", icon:Icon.settings },
+  ];
+  return `
+  <div data-bottom-nav class="mobile-only fixed bottom-0 left-0 right-0 h-16 border-t flex items-stretch z-10" style="background:var(--surface); border-color:var(--line)">
+    ${items.map(it=>`
+      <a href="#" data-nav="${it.id}" class="flex-1 flex flex-col items-center justify-center gap-1 ${state.view===it.id?'active':''}">
+        <span style="color:${state.view===it.id?'var(--ink)':'var(--muted)'}">${it.icon}</span>
+        <span class="text-[11px]" style="color:${state.view===it.id?'var(--ink)':'var(--muted)'}">${it.label}</span>
+      </a>`).join("")}
+  </div>`;
+}
+
+/* ---------------------------------------------------------------
+   RENDER: MAIN ROUTES
+--------------------------------------------------------------- */
+function renderMain(){
+  switch(state.view){
+    case "dashboard": return renderDashboard();
+    case "projects": return renderProjects();
+    case "project": return renderProject();
+    case "calendar": return renderPlaceholder("Calendar", "A combined view of every deadline, booking and payment across your projects.");
+    case "people-global": return renderPlaceholder("People", "Everyone across every project, in one place.");
+    case "settings": return renderSettings();
+    default: return renderDashboard();
+  }
+}
+
+function renderPlaceholder(title, sub){
+  return `
+  <div class="max-w-3xl mx-auto px-6 md:px-10 py-10 fade-in">
+    <h1 class="font-display text-[26px] font-semibold tracking-tight">${title}</h1>
+    <p class="mt-1.5 text-[14.5px]" style="color:var(--ink-soft)">${sub}</p>
+    <div class="mt-10 border rounded-xl p-10 text-center" style="border-color:var(--line)">
+      <p class="text-[14px]" style="color:var(--muted)">Nothing to show yet — this view isn't part of the prototype flow. Try Dashboard or Projects.</p>
+    </div>
+  </div>`;
+}
+
+function renderDashboard(){
+  const p = DATA.projects.barcelona;
+  const w = DATA.projects.wedding;
+  return `
+  <div class="max-w-5xl mx-auto px-6 md:px-10 py-10 fade-in">
+    <h1 class="font-display text-[26px] font-semibold tracking-tight">Good morning, ${DATA.user.name}</h1>
+    <p class="mt-1.5 text-[14.5px]" style="color:var(--ink-soft)">You have 3 things that need your attention.</p>
+
+    <div class="mt-9 space-y-3">
+      ${projectSummaryRow(p)}
+      ${projectSummaryRow(w)}
+    </div>
+
+    <div class="mt-10">
+      <h2 class="text-[13px] font-semibold uppercase tracking-wide" style="color:var(--muted)">Needs attention</h2>
+      <div class="mt-3 border rounded-xl divide-y" style="border-color:var(--line); background:var(--surface)">
+        ${p.needsAttention.map(a => attentionRow(a, p.id)).join("")}
+      </div>
+    </div>
+  </div>`;
+}
+
+function projectSummaryRow(p){
+  return `
+  <a href="#" data-open-project="${p.id}" class="row-hover block border rounded-xl p-5 hover:bg-[#FBFBFA]" style="border-color:var(--line); background:var(--surface)">
+    <div class="flex items-start justify-between gap-6">
+      <div class="min-w-0">
+        <div class="font-medium text-[15.5px]">${p.name}</div>
+        <div class="text-[13px] mt-0.5" style="color:var(--muted)">${p.dates}</div>
+        <div class="mt-3 flex items-center gap-2 text-[13px]" style="color:var(--ink-soft)">
+          <span class="tnum">${p.progress}%</span><span style="color:var(--muted)">complete</span>
+          <span style="color:var(--line)">·</span>
+          <span class="tnum">${money(p.committed || p.paid+p.outstanding)}</span><span style="color:var(--muted)">${p.committed?'spent of '+money(p.budget):''}</span>
+        </div>
+      </div>
+      <div class="text-right shrink-0">
+        <div class="text-[13px] font-medium" style="color:var(--amber)">${p.attentionCount} items need attention</div>
+        <div class="mt-3 inline-flex items-center gap-1 text-[13.5px] font-medium" style="color:var(--accent)">Open project ${Icon.chevronRight}</div>
+      </div>
+    </div>
+    <div class="mt-4 h-1.5 rounded-full overflow-hidden" style="background:#EFEFEC">
+      <div class="h-full rounded-full bar-fill" style="width:${p.progress}%; background:var(--accent)"></div>
+    </div>
+  </a>`;
+}
+
+function attentionRow(a, projectId){
+  return `
+  <a href="#" data-attention="${a.id}" data-project="${projectId}" class="row-hover flex items-center gap-3 px-4 py-3.5 hover:bg-[#FBFBFA]">
+    ${attentionIcon(a.kind)}
+    <div class="min-w-0 flex-1">
+      <div class="text-[14px] font-medium">${a.title}</div>
+      <div class="text-[13px]" style="color:var(--ink-soft)">${a.subject} — ${a.detail}</div>
+    </div>
+    <span style="color:var(--muted)">${Icon.chevronRight}</span>
+  </a>`;
+}
+
+function renderProjects(){
+  const list = Object.values(DATA.projects);
+  return `
+  <div class="max-w-5xl mx-auto px-6 md:px-10 py-10 fade-in">
+    <div class="flex items-center justify-between">
+      <div>
+        <h1 class="font-display text-[26px] font-semibold tracking-tight">Projects</h1>
+        <p class="mt-1.5 text-[14.5px]" style="color:var(--ink-soft)">Everything you're currently planning.</p>
+      </div>
+      <button class="px-3.5 py-2 rounded-lg text-[13.5px] font-medium text-white flex items-center gap-1.5" style="background:var(--ink)">${Icon.plus}New project</button>
+    </div>
+    <div class="mt-8 space-y-3">
+      ${list.map(p => projectSummaryRow(p)).join("")}
+    </div>
+  </div>`;
+}
+
+function renderProject(){
+  const p = DATA.projects[state.projectId || "barcelona"];
+  const tabs = [
+    { id:"overview", label:"Overview" },
+    { id:"activities", label:"Activities" },
+    { id:"budget", label:"Budget" },
+    { id:"timeline", label:"Timeline" },
+    { id:"people", label:"People" },
+    { id:"health", label:"Health" },
+  ];
+  return `
+  <div class="max-w-5xl mx-auto px-6 md:px-10 py-10 fade-in">
+    <div class="flex items-start justify-between gap-4 flex-wrap">
+      <div>
+        <h1 class="font-display text-[24px] font-semibold tracking-tight">${p.name}</h1>
+        <p class="mt-1 text-[13.5px]" style="color:var(--muted)">${p.dates}</p>
+      </div>
+      <div class="flex items-center gap-2">
+        <button class="px-3 py-1.5 rounded-lg text-[13px] font-medium border" style="border-color:var(--line); color:var(--ink-soft)">Share</button>
+        <button class="px-3 py-1.5 rounded-lg text-[13px] font-medium border" style="border-color:var(--line); color:var(--ink-soft)">Project settings</button>
+      </div>
+    </div>
+
+    <div class="mt-6 border rounded-xl px-6 py-4 flex flex-wrap gap-x-10 gap-y-4" style="border-color:var(--line); background:var(--surface)">
+      ${statTile(money(p.budget),"Total budget")}
+      ${statTile(money(p.committed),"Committed")}
+      ${statTile(money(p.remaining),"Remaining", p.remaining < 500 ? "var(--amber)" : null)}
+      ${statTile(p.progress+"%","Complete")}
+    </div>
+
+    <div class="mt-8 border-b flex gap-1 overflow-x-auto" style="border-color:var(--line)">
+      ${tabs.map(t => `
+        <a href="#" data-project-tab="${t.id}" class="px-3.5 py-2.5 text-[13.5px] font-medium whitespace-nowrap border-b-2 -mb-px focus-ring"
+           style="border-color:${state.projectTab===t.id?'var(--ink)':'transparent'}; color:${state.projectTab===t.id?'var(--ink)':'var(--muted)'}">${t.label}</a>
+      `).join("")}
+    </div>
+
+    <div class="mt-7">
+      ${renderProjectTab(p)}
+    </div>
+  </div>`;
+}
+
+function statTile(value, label, color){
+  return `<div><div class="font-display text-[21px] font-semibold tnum" style="${color?`color:${color}`:''}">${value}</div><div class="text-[12.5px] mt-0.5" style="color:var(--muted)">${label}</div></div>`;
+}
+
+function renderProjectTab(p){
+  if(state.projectTab === "overview") return renderOverviewTab(p);
+  if(state.projectTab === "activities") return renderActivitiesTab(p);
+  if(state.projectTab === "budget") return renderBudgetTab(p);
+  if(state.projectTab === "timeline") return renderTimelineTab(p);
+  if(state.projectTab === "people") return renderPeopleTab(p);
+  if(state.projectTab === "health") return renderHealthTab(p);
+  return "";
+}
+
+function renderOverviewTab(p){
+  return `
+  <div class="grid md:grid-cols-2 gap-8">
+    <div>
+      <h3 class="text-[13px] font-semibold uppercase tracking-wide" style="color:var(--muted)">Needs attention</h3>
+      <div class="mt-3 border rounded-xl divide-y" style="border-color:var(--line); background:var(--surface)">
+        ${p.needsAttention.map(a => attentionRow(a, p.id)).join("")}
+      </div>
+    </div>
+    <div>
+      <h3 class="text-[13px] font-semibold uppercase tracking-wide" style="color:var(--muted)">Upcoming</h3>
+      <div class="mt-3 border rounded-xl divide-y" style="border-color:var(--line); background:var(--surface)">
+        ${p.upcoming.map(day => `
+          <div class="px-4 py-3.5">
+            <div class="text-[12.5px] font-medium mb-2" style="color:var(--muted)">${day.day}</div>
+            <div class="space-y-2">
+              ${day.items.map(i => `
+                <div class="flex items-center gap-3 text-[14px]">
+                  <span class="tnum w-12 shrink-0" style="color:var(--ink-soft)">${i.time}</span>
+                  <span>${i.title}</span>
+                </div>`).join("")}
+            </div>
+          </div>`).join("")}
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderActivitiesTab(p){
+  return `
+  <div>
+    <div class="flex items-center justify-between mb-4">
+      <p class="text-[14px]" style="color:var(--ink-soft)">Everything you've booked, planned or still need to arrange.</p>
+      <button data-open-wizard="1" class="px-3.5 py-2 rounded-lg text-[13.5px] font-medium text-white flex items-center gap-1.5 shrink-0" style="background:var(--ink)">${Icon.plus}Add activity</button>
+    </div>
+
+    <div class="hidden md:block border rounded-xl overflow-hidden" style="border-color:var(--line); background:var(--surface)">
+      <div class="grid grid-cols-[1fr_110px_100px_100px_120px] px-4 py-2.5 text-[12px] font-medium uppercase tracking-wide border-b" style="color:var(--muted); border-color:var(--line)">
+        <div>Activity</div><div>Date</div><div>Owner</div><div>Cost</div><div>Status</div>
+      </div>
+      <div class="divide-y" style="border-color:var(--line)">
+        ${p.activities.map(a => `
+          <a href="#" data-activity="${a.id}" class="row-hover grid grid-cols-[1fr_110px_100px_100px_120px] items-center px-4 py-3.5 hover:bg-[#FBFBFA]">
+            <div class="font-medium text-[14px] truncate pr-4">${a.name}</div>
+            <div class="text-[13.5px]" style="color:var(--ink-soft)">${a.date}</div>
+            <div class="text-[13.5px]" style="color:${a.owner? 'var(--ink-soft)':'var(--amber)'}">${a.owner || "Unassigned"}</div>
+            <div class="text-[13.5px] tnum" style="color:var(--ink-soft)">${money(a.cost)}</div>
+            <div>${statusBadge(a.status)}</div>
+          </a>`).join("")}
+      </div>
+    </div>
+
+    <div class="md:hidden space-y-2">
+      ${p.activities.map(a => `
+        <a href="#" data-activity="${a.id}" class="row-hover block border rounded-xl p-4" style="border-color:var(--line); background:var(--surface)">
+          <div class="flex items-center justify-between">
+            <div class="font-medium text-[14.5px]">${a.name}</div>
+            ${statusBadge(a.status)}
+          </div>
+          <div class="mt-1.5 text-[13px] flex items-center gap-2" style="color:var(--ink-soft)">
+            <span>${a.date}</span><span style="color:var(--line)">·</span>
+            <span style="color:${a.owner?'var(--ink-soft)':'var(--amber)'}">${a.owner||"Unassigned"}</span>
+            <span style="color:var(--line)">·</span><span class="tnum">${money(a.cost)}</span>
+          </div>
+        </a>`).join("")}
+    </div>
+  </div>`;
+}
+
+function renderBudgetTab(p){
+  const max = Math.max(...p.budgetBreakdown.map(b=>b.amount));
+  return `
+  <div class="grid md:grid-cols-2 gap-8">
+    <div class="border rounded-xl p-6" style="border-color:var(--line); background:var(--surface)">
+      <div class="grid grid-cols-2 gap-y-6">
+        ${statTile(money(p.budget),"Total budget")}
+        ${statTile(money(p.committed),"Committed")}
+        ${statTile(money(p.paid),"Paid")}
+        ${statTile(money(p.outstanding),"Outstanding","var(--amber)")}
+        ${statTile(money(p.remaining),"Remaining")}
+      </div>
+    </div>
+    <div>
+      <h3 class="text-[13px] font-semibold uppercase tracking-wide mb-3" style="color:var(--muted)">Breakdown by category</h3>
+      <div class="space-y-3.5">
+        ${p.budgetBreakdown.map(b => `
+          <div>
+            <div class="flex items-baseline justify-between text-[13.5px] mb-1.5">
+              <span class="font-medium">${b.label}</span>
+              <span class="tnum" style="color:var(--ink-soft)">${money(b.amount)}</span>
+            </div>
+            <div class="h-1.5 rounded-full overflow-hidden" style="background:#EFEFEC">
+              <div class="h-full rounded-full bar-fill" style="width:${(b.amount/max*100).toFixed(0)}%; background:var(--accent)"></div>
+            </div>
+          </div>`).join("")}
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderTimelineTab(p){
+  return `
+  <div class="max-w-2xl">
+    <div class="relative pl-6 space-y-8" style="border-left:1.5px solid var(--line)">
+      ${p.timeline.map(day => `
+        <div class="relative">
+          <div class="absolute -left-[26px] top-0.5 w-3 h-3 rounded-full border-2" style="background:var(--surface); border-color:var(--accent)"></div>
+          <div class="text-[13px] font-semibold" style="color:var(--muted)">${day.date}</div>
+          <div class="mt-2 space-y-2">
+            ${day.items.map(i => `
+              <div class="flex items-center gap-2.5 text-[14.5px]">
+                <span class="w-1.5 h-1.5 rounded-full shrink-0" style="background:${i.type==='payment'?'var(--amber)': i.type==='milestone'?'var(--ink)':'var(--accent)'}"></span>
+                <span>${i.label}</span>
+              </div>`).join("")}
+          </div>
+        </div>`).join("")}
+    </div>
+  </div>`;
+}
+
+function renderPeopleTab(p){
+  return `
+  <div>
+    <p class="text-[14px] mb-4" style="color:var(--ink-soft)">${p.people.length} participants</p>
+    <div class="border rounded-xl divide-y" style="border-color:var(--line); background:var(--surface)">
+      ${p.people.map(person => `
+        <div class="flex items-center gap-3.5 px-4 py-3.5">
+          <div class="w-9 h-9 rounded-full flex items-center justify-center text-[13px] font-semibold shrink-0" style="background:#F0F0EE; color:var(--ink-soft)">${person.name[0]}</div>
+          <div class="min-w-0 flex-1">
+            <div class="text-[14px] font-medium">${person.name} <span class="font-normal text-[12.5px]" style="color:var(--muted)">· ${person.role}</span></div>
+            <div class="text-[13px]" style="color:var(--ink-soft)">${person.responsibilities.length ? person.responsibilities.join(", ") : "No responsibilities yet"}</div>
+          </div>
+          <div class="text-[12.5px] font-medium shrink-0" style="color:${person.paid.startsWith('Owes')?'var(--amber)':'var(--accent)'}">${person.paid}</div>
+        </div>`).join("")}
+    </div>
+  </div>`;
+}
+
+function renderHealthTab(p){
+  const sevStyle = { warning:["var(--amber-soft)","var(--amber)"], info:["#EFEFEC","var(--ink-soft)"], ok:["var(--accent-soft)","var(--accent)"] };
+  return `
+  <div>
+    <p class="text-[14px] mb-4" style="color:var(--ink-soft)">What might go wrong, and what to do next.</p>
+    <div class="border rounded-xl divide-y" style="border-color:var(--line); background:var(--surface)">
+      ${p.health.map(h => {
+        const [bg,fg] = sevStyle[h.severity];
+        return `
+        <div class="flex items-start gap-3 px-4 py-3.5">
+          <div class="w-8 h-8 rounded-md flex items-center justify-center shrink-0 mt-0.5" style="background:${bg}; color:${fg}">${h.severity==='ok'?Icon.check:Icon.alert}</div>
+          <div class="min-w-0">
+            <div class="text-[14px] font-medium">${h.title}</div>
+            <div class="text-[13px]" style="color:var(--ink-soft)">${h.detail}</div>
+          </div>
+        </div>`;
+      }).join("")}
+    </div>
+  </div>`;
+}
+
+function renderSettings(){
+  return `
+  <div class="max-w-2xl mx-auto px-6 md:px-10 py-10 fade-in">
+    <h1 class="font-display text-[26px] font-semibold tracking-tight">Settings</h1>
+    <p class="mt-1.5 text-[14.5px]" style="color:var(--ink-soft)">Manage your account and preferences.</p>
+    <div class="mt-8 border rounded-xl divide-y" style="border-color:var(--line); background:var(--surface)">
+      ${[["Name","James Dawson"],["Email","james@example.com"],["Currency","GBP (£)"],["Notifications","Email + push"]].map(([k,v])=>`
+        <div class="flex items-center justify-between px-5 py-4">
+          <span class="text-[14px] font-medium" style="color:var(--ink-soft)">${k}</span>
+          <span class="text-[14px]">${v}</span>
+        </div>`).join("")}
+    </div>
+  </div>`;
+}
+
+/* ---------------------------------------------------------------
+   RENDER: ACTIVITY SLIDE-OVER
+--------------------------------------------------------------- */
+function renderActivityPanel(){
+  const p = DATA.projects[state.projectId || "barcelona"];
+  const a = p.activities.find(x => x.id === state.activityPanel);
+  if(!a) return "";
+  return `
+  <div class="fixed inset-0 z-30 overlay-in" style="background:rgba(20,20,18,.32)" data-panel-backdrop>
+    <div class="absolute right-0 top-0 h-full w-full sm:w-[440px] slide-in overflow-y-auto" style="background:var(--surface); border-left:1px solid var(--line)">
+      <div class="sticky top-0 flex items-center justify-between px-6 py-4 border-b" style="background:var(--surface); border-color:var(--line)">
+        <span class="text-[13px] font-medium" style="color:var(--muted)">Activity</span>
+        <button data-close-panel="1" class="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-[#F3F3F0]" style="color:var(--ink-soft)">${Icon.close}</button>
+      </div>
+      <div class="px-6 py-6">
+        <div class="flex items-center gap-2.5">
+          <h2 class="font-display text-[21px] font-semibold tracking-tight">${a.name}</h2>
+          ${statusBadge(a.status)}
+        </div>
+        <p class="mt-1.5 text-[13.5px]" style="color:var(--ink-soft)">${a.date} · ${a.time}</p>
+        <p class="mt-1 text-[13.5px] flex items-center gap-1.5" style="color:var(--muted)">${Icon.pin}${a.location}</p>
+
+        <div class="mt-7">
+          <h3 class="text-[12px] font-semibold uppercase tracking-wide mb-3" style="color:var(--muted)">Financial</h3>
+          <div class="border rounded-xl p-4 grid grid-cols-3 gap-4" style="border-color:var(--line)">
+            ${statTile(money(a.cost),"Total")}
+            ${statTile(money(a.deposit),"Deposit")}
+            ${statTile(money(a.cost-a.paid),"Outstanding", a.cost-a.paid>0?"var(--amber)":null)}
+          </div>
+          <p class="mt-2.5 text-[13px]" style="color:var(--ink-soft)">Payment due: ${a.dueDate}</p>
+        </div>
+
+        <div class="mt-7">
+          <h3 class="text-[12px] font-semibold uppercase tracking-wide mb-3" style="color:var(--muted)">Responsibility</h3>
+          <div class="flex items-center justify-between text-[14px]">
+            <span style="color:var(--ink-soft)">Owner</span>
+            <span class="font-medium" style="color:${a.owner?'var(--ink)':'var(--amber)'}">${a.owner || "Unassigned — needs an owner"}</span>
+          </div>
+          <div class="flex items-center justify-between text-[14px] mt-2">
+            <span style="color:var(--ink-soft)">Participants</span>
+            <span class="font-medium">${a.participants} people</span>
+          </div>
+        </div>
+
+        <div class="mt-7">
+          <h3 class="text-[12px] font-semibold uppercase tracking-wide mb-3" style="color:var(--muted)">Booking</h3>
+          <div class="text-[14px] space-y-2">
+            <div class="flex items-center justify-between"><span style="color:var(--ink-soft)">Reference</span><span class="font-medium ${a.missingBooking?'':''}" style="color:${a.missingBooking?'var(--amber)':'var(--ink)'}">${a.bookingRef}${a.missingBooking?' — missing':''}</span></div>
+            <div class="flex items-center justify-between"><span style="color:var(--ink-soft)">Supplier</span><span class="font-medium">${a.supplier}</span></div>
+            <div class="flex items-center justify-between"><span style="color:var(--ink-soft)">Contact</span><span class="font-medium">${a.contact}</span></div>
+          </div>
+        </div>
+
+        <div class="mt-7">
+          <h3 class="text-[12px] font-semibold uppercase tracking-wide mb-3" style="color:var(--muted)">Location</h3>
+          <div class="border rounded-xl p-4 text-[13.5px]" style="border-color:var(--line)">
+            <div class="flex items-center gap-1.5 font-medium">${Icon.pin}${a.location}</div>
+            <div class="mt-2.5 flex justify-between" style="color:var(--muted)">
+              <span>Previous activity → ${a.prevGap}</span>
+              <span>Next activity → ${a.nextGap}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-7">
+          <h3 class="text-[12px] font-semibold uppercase tracking-wide mb-3" style="color:var(--muted)">Notes</h3>
+          <div class="border rounded-xl p-4 text-[13.5px] leading-relaxed" style="border-color:var(--line); color:var(--ink-soft)">${a.notes}</div>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+/* ---------------------------------------------------------------
+   RENDER: ADD ACTIVITY WIZARD
+--------------------------------------------------------------- */
+const WIZARD_STEPS = ["Type","Name","Date & time","Location","Cost","Owner","Review"];
+
+function renderWizard(){
+  const step = state.wizardStep;
+  const total = WIZARD_STEPS.length;
+  return `
+  <div class="fixed inset-0 z-40 overlay-in flex items-center justify-center p-4" style="background:rgba(20,20,18,.4)" data-wizard-backdrop>
+    <div class="w-full max-w-md rounded-2xl overflow-hidden fade-in" style="background:var(--surface)">
+      <div class="px-6 pt-5 pb-4 border-b" style="border-color:var(--line)">
+        <div class="flex items-center justify-between">
+          <span class="text-[12.5px] font-medium" style="color:var(--muted)">Step ${step} of ${total} — ${WIZARD_STEPS[step-1]}</span>
+          <button data-close-wizard="1" class="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-[#F3F3F0]" style="color:var(--ink-soft)">${Icon.close}</button>
+        </div>
+        <div class="mt-3 h-1 rounded-full overflow-hidden" style="background:#EFEFEC">
+          <div class="h-full rounded-full bar-fill" style="width:${(step/total*100)}%; background:var(--accent)"></div>
+        </div>
+      </div>
+      <div class="px-6 py-6 min-h-[220px]">
+        ${renderWizardStep(step)}
+      </div>
+      <div class="px-6 py-4 border-t flex items-center justify-between" style="border-color:var(--line)">
+        ${step>1 ? `<button data-wizard-back="1" class="px-3.5 py-2 rounded-lg text-[13.5px] font-medium border" style="border-color:var(--line); color:var(--ink-soft)">Back</button>` : `<span></span>`}
+        <button data-wizard-next="1" class="px-4 py-2 rounded-lg text-[13.5px] font-medium text-white" style="background:var(--ink)">${step===total ? "Add activity" : "Continue"}</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderWizardStep(step){
+  const w = state.wizardData;
+  const field = (label, id, placeholder="", value="") => `
+    <label class="block mb-4">
+      <span class="text-[13px] font-medium block mb-1.5" style="color:var(--ink-soft)">${label}</span>
+      <input data-wizard-field="${id}" value="${value}" placeholder="${placeholder}" class="w-full border rounded-lg px-3.5 py-2.5 text-[14px] focus-ring" style="border-color:var(--line)" />
+    </label>`;
+
+  if(step===1){
+    const types = ["Activity","Booking","Task","Payment"];
+    return `
+    <p class="text-[14px] mb-4" style="color:var(--ink-soft)">What are you adding?</p>
+    <div class="grid grid-cols-2 gap-2.5">
+      ${types.map(t => `
+        <button data-wizard-select-type="${t}" class="border rounded-xl px-4 py-3.5 text-[14px] font-medium text-left"
+          style="border-color:${w.type===t?'var(--ink)':'var(--line)'}; background:${w.type===t?'#F5F5F3':'var(--surface)'}">${t}</button>
+      `).join("")}
+    </div>`;
+  }
+  if(step===2) return field("Activity name", "name", "e.g. Boat Party", w.name);
+  if(step===3) return field("Date and time", "date", "e.g. Sat 16 May, 11:00", w.date);
+  if(step===4) return field("Location", "location", "e.g. Port Olímpic, Barcelona", w.location);
+  if(step===5) return `
+    ${field("Total cost", "cost", "£0", w.cost)}
+    ${field("Deposit", "deposit", "£0", w.deposit)}
+    ${field("Payment due date", "due", "e.g. 12 May 2027", w.due)}`;
+  if(step===6) return field("Assign owner", "owner", "e.g. Mike", w.owner);
+  if(step===7) return `
+    <p class="text-[14px] mb-4" style="color:var(--ink-soft)">Review before adding.</p>
+    <div class="border rounded-xl divide-y text-[13.5px]" style="border-color:var(--line)">
+      ${[["Type",w.type||"—"],["Name",w.name||"—"],["Date",w.date||"—"],["Location",w.location||"—"],["Cost",w.cost?("£"+w.cost):"—"],["Owner",w.owner||"Unassigned"]].map(([k,v])=>`
+        <div class="flex items-center justify-between px-4 py-2.5"><span style="color:var(--muted)">${k}</span><span class="font-medium">${v}</span></div>
+      `).join("")}
+    </div>`;
+  return "";
+}
+
+/* ---------------------------------------------------------------
+   EVENTS
+--------------------------------------------------------------- */
+function bindEvents(){
+  document.querySelectorAll("[data-nav]").forEach(el => el.addEventListener("click", e => {
+    e.preventDefault();
+    const v = el.getAttribute("data-nav");
+    if(v === "project"){ state.view = "project"; }
+    else { state.view = v; }
+    render();
+  }));
+
+  document.querySelectorAll("[data-open-project]").forEach(el => el.addEventListener("click", e => {
+    e.preventDefault();
+    state.projectId = el.getAttribute("data-open-project");
+    state.projectTab = "overview";
+    state.view = "project";
+    render();
+  }));
+
+  document.querySelectorAll("[data-attention]").forEach(el => el.addEventListener("click", e => {
+    e.preventDefault();
+    state.projectId = el.getAttribute("data-project");
+    state.view = "project";
+    state.projectTab = "activities";
+    state.activityPanel = el.getAttribute("data-attention");
+    render();
+  }));
+
+  document.querySelectorAll("[data-project-tab]").forEach(el => el.addEventListener("click", e => {
+    e.preventDefault();
+    state.projectTab = el.getAttribute("data-project-tab");
+    render();
+  }));
+
+  document.querySelectorAll("[data-activity]").forEach(el => el.addEventListener("click", e => {
+    e.preventDefault();
+    state.activityPanel = el.getAttribute("data-activity");
+    render();
+  }));
+
+  const panelBackdrop = document.querySelector("[data-panel-backdrop]");
+  if(panelBackdrop) panelBackdrop.addEventListener("click", e => {
+    if(e.target === panelBackdrop){ state.activityPanel = null; render(); }
+  });
+  document.querySelectorAll("[data-close-panel]").forEach(el => el.addEventListener("click", () => { state.activityPanel = null; render(); }));
+
+  document.querySelectorAll("[data-open-wizard]").forEach(el => el.addEventListener("click", () => {
+    state.addWizardOpen = true; state.wizardStep = 1;
+    state.wizardData = { type:null, name:"", date:"", location:"", cost:"", deposit:"", due:"", owner:"" };
+    render();
+  }));
+  document.querySelectorAll("[data-close-wizard]").forEach(el => el.addEventListener("click", () => { state.addWizardOpen = false; render(); }));
+  const wizardBackdrop = document.querySelector("[data-wizard-backdrop]");
+  if(wizardBackdrop) wizardBackdrop.addEventListener("click", e => { if(e.target === wizardBackdrop){ state.addWizardOpen = false; render(); } });
+
+  document.querySelectorAll("[data-wizard-select-type]").forEach(el => el.addEventListener("click", () => {
+    state.wizardData.type = el.getAttribute("data-wizard-select-type"); render();
+  }));
+  document.querySelectorAll("[data-wizard-field]").forEach(el => el.addEventListener("input", () => {
+    state.wizardData[el.getAttribute("data-wizard-field")] = el.value;
+  }));
+  document.querySelectorAll("[data-wizard-back]").forEach(el => el.addEventListener("click", () => { state.wizardStep = Math.max(1, state.wizardStep-1); render(); }));
+  document.querySelectorAll("[data-wizard-next]").forEach(el => el.addEventListener("click", () => {
+    if(state.wizardStep === WIZARD_STEPS.length){ state.addWizardOpen = false; render(); return; }
+    state.wizardStep = Math.min(WIZARD_STEPS.length, state.wizardStep+1);
+    render();
+  }));
+}
+
+render();
+</script>
+</body>
+</html>
