@@ -522,6 +522,23 @@ export interface Database {
         };
         Relationships: [];
       };
+      v_my_timeline_events: {
+        Row: {
+          project_id: string;
+          project_name: string;
+          project_timezone: string;
+          currency: string;
+          occurs_at: string;
+          all_day: boolean;
+          event_type: string;
+          title: string;
+          subject_type: string;
+          subject_id: string;
+          status: string | null;
+          amount_minor: number | null;
+        };
+        Relationships: [];
+      };
       v_member_directory: {
         Row: {
           project_id: string;
@@ -530,6 +547,19 @@ export interface Database {
           avatar_url: string | null;
           role: Database["public"]["Enums"]["member_role"];
           status: Database["public"]["Enums"]["member_status"];
+        };
+        Relationships: [];
+      };
+      v_my_people: {
+        Row: {
+          person_key: string;
+          user_id: string | null;
+          display_name: string;
+          avatar_url: string | null;
+          is_current_user: boolean;
+          project_count: number;
+          roles: Database["public"]["Enums"]["member_role"][];
+          projects: Json;
         };
         Relationships: [];
       };

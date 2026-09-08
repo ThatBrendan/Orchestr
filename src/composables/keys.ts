@@ -5,6 +5,8 @@ export const qk = {
     platformAdmin: (userId: string) => ["me", "platform-admin", userId] as const,
     projects: () => ["me", "projects"] as const,
     attention: () => ["me", "attention"] as const,
+    calendar: (start: string, end: string) => ["me", "calendar", start, end] as const,
+    people: () => ["me", "people"] as const,
   },
   project: {
     root: (id: string) => ["project", id] as const,

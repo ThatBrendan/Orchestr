@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
-import { useRoute } from "vue-router";
+import { computed, ref, watch } from "vue";
+import { useRoute, useRouter } from "vue-router";
 import { useCommitments } from "@/composables/useCommitments";
 import { useMemberDirectory } from "@/composables/useProject";
 import { useProjectContext } from "@/composables/useProjectContext";
@@ -18,6 +18,7 @@ import CommitmentDetailDialog from "@/components/commitments/CommitmentDetailDia
 import TasksPanel from "@/components/tasks/TasksPanel.vue";
 
 const route = useRoute();
+const router = useRouter();
 const projectId = computed(() => String(route.params.projectId));
 const { project, allowed, context } = useProjectContext();
 const { commitments, isPending, isError, error, refetch } = useCommitments(projectId);
@@ -45,18 +46,37 @@ const detailCommitmentId = ref<string | null>(null);
 // detail dialog are reflected immediately rather than showing a stale snapshot.
 const detailCommitment = computed(() => commitments.value.find((c) => c.id === detailCommitmentId.value) ?? null);
 
+watch(
+  () => route.query.commitment,
+  (id) => {
+    detailCommitmentId.value = typeof id === "string" ? id : null;
+  },
+  { immediate: true },
+);
+
 function openCreate() {
   editingCommitment.value = null;
   formOpen.value = true;
 }
 function openEditFromDetail() {
   editingCommitment.value = detailCommitment.value;
-  detailCommitmentId.value = null;
+  closeDetail();
   formOpen.value = true;
 }
 function closeForm() {
   formOpen.value = false;
   editingCommitment.value = null;
+}
+
+function openDetail(id: string) {
+  void router.replace({ query: { ...route.query, commitment: id } });
+}
+
+function closeDetail() {
+  const query = { ...route.query };
+  delete query.commitment;
+  void router.replace({ query });
+  detailCommitmentId.value = null;
 }
 
 const statusTone = (s: string) =>
@@ -91,7 +111,7 @@ const time = computed(() => useProjectTime(timezone.value));
         v-for="c in commitments"
         :key="c.id"
         class="w-full text-left flex items-center gap-3.5 px-4 py-3.5 hover:bg-[#FBFBFA] focus-ring"
-        @click="detailCommitmentId = c.id"
+        @click="openDetail(c.id)"
       >
         <div class="min-w-0 flex-1">
           <div class="text-14 font-medium truncate">{{ c.title }}</div>
@@ -134,7 +154,7 @@ const time = computed(() => useProjectTime(timezone.value));
       :can-edit="canEdit"
       :can-edit-payments="canEditPayments"
       :can-delete="canDelete(detailCommitment)"
-      @close="detailCommitmentId = null"
+      @close="closeDetail"
       @edit="openEditFromDetail"
     />
   </div>
