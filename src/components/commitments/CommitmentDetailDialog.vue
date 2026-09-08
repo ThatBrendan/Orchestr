@@ -5,6 +5,7 @@ import { useMoney } from "@/composables/useMoney";
 import { useProjectTime } from "@/composables/useProjectTime";
 import { useToast } from "@/composables/useToast";
 import { toAppError } from "@/lib/errors";
+import { categoryLabel } from "@/lib/commitmentCategories";
 import type { Commitment } from "@/services/commitments";
 import type { CommitmentStatus } from "@/types/database";
 import type { MemberDirectoryEntry } from "@/types/derived";
@@ -113,6 +114,17 @@ async function doRemoveParticipant(id: string) {
 function memberName(memberId: string): string {
   return props.members.find((m) => m.member_id === memberId)?.display_name ?? "Unknown";
 }
+
+const hasLocation = computed(() => !!(props.commitment.location_label || props.commitment.location_address));
+const hasSupplierBooking = computed(
+  () =>
+    !!(
+      props.commitment.supplier_name ||
+      props.commitment.supplier_contact ||
+      props.commitment.booking_reference ||
+      props.commitment.booking_confirmed
+    ),
+);
 </script>
 
 <template>
@@ -121,7 +133,7 @@ function memberName(memberId: string): string {
       <div class="flex items-center justify-between flex-wrap gap-2">
         <div class="flex items-center gap-2">
           <StatusBadge :label="props.commitment.status" :tone="statusTone(props.commitment.status)" />
-          <span class="text-13 text-muted capitalize">{{ props.commitment.kind }}</span>
+          <span class="text-13 text-muted">Category: {{ categoryLabel(props.commitment.kind) }}</span>
         </div>
         <div class="flex flex-wrap gap-2">
           <AppButton
@@ -147,23 +159,23 @@ function memberName(memberId: string): string {
           <div class="text-13 text-muted">Ends</div>
           <div>{{ props.commitment.is_all_day ? time.dateOnly(props.commitment.ends_at) : time.dateTime(props.commitment.ends_at) }}</div>
         </div>
-        <div v-if="props.commitment.location_label || props.commitment.location_address">
+        <div v-if="hasLocation">
           <div class="text-13 text-muted">Location</div>
-          <div>{{ props.commitment.location_label }}</div>
+          <div v-if="props.commitment.location_label">{{ props.commitment.location_label }}</div>
           <div v-if="props.commitment.location_address" class="text-13 text-muted">{{ props.commitment.location_address }}</div>
         </div>
         <div v-if="props.commitment.owner_member_id">
           <div class="text-13 text-muted">Owner</div>
           <div>{{ memberName(props.commitment.owner_member_id) }}</div>
         </div>
-        <div v-if="props.commitment.supplier_name">
-          <div class="text-13 text-muted">Supplier</div>
-          <div>{{ props.commitment.supplier_name }}</div>
+        <div v-if="hasSupplierBooking">
+          <div class="text-13 text-muted">Supplier / booking</div>
+          <div v-if="props.commitment.supplier_name">{{ props.commitment.supplier_name }}</div>
           <div v-if="props.commitment.supplier_contact" class="text-13 text-muted">{{ props.commitment.supplier_contact }}</div>
-        </div>
-        <div v-if="props.commitment.booking_reference">
-          <div class="text-13 text-muted">Booking reference</div>
-          <div>{{ props.commitment.booking_reference }} <StatusBadge v-if="props.commitment.booking_confirmed" label="Confirmed" tone="accent" /></div>
+          <div v-if="props.commitment.booking_reference" class="text-13 text-muted">
+            {{ props.commitment.booking_reference }}
+          </div>
+          <StatusBadge v-if="props.commitment.booking_confirmed" label="Confirmed" tone="accent" />
         </div>
         <div v-if="props.commitment.estimated_cost_minor != null">
           <div class="text-13 text-muted">Estimated cost</div>

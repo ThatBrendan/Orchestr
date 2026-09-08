@@ -5,6 +5,7 @@ import { useCreateCommitment, useUpdateCommitment } from "@/composables/useCommi
 import { useToast } from "@/composables/useToast";
 import { useMoney } from "@/composables/useMoney";
 import { toAppError } from "@/lib/errors";
+import { COMMITMENT_CATEGORY_OPTIONS, DEFAULT_COMMITMENT_KIND } from "@/lib/commitmentCategories";
 import type { Commitment } from "@/services/commitments";
 import type { CommitmentKind } from "@/types/database";
 import type { MemberDirectoryEntry } from "@/types/derived";
@@ -22,15 +23,6 @@ const props = defineProps<{
 }>();
 const emit = defineEmits<{ close: [] }>();
 
-const KINDS: { value: CommitmentKind; label: string }[] = [
-  { value: "accommodation", label: "Accommodation" },
-  { value: "transport", label: "Transport" },
-  { value: "food", label: "Food" },
-  { value: "experience", label: "Experience" },
-  { value: "services", label: "Services" },
-  { value: "other", label: "Other" },
-];
-
 const create = useCreateCommitment(props.projectId);
 const update = useUpdateCommitment(props.projectId);
 const toast = useToast();
@@ -46,7 +38,7 @@ function localDateInput(iso: string | null): string {
 
 const form = reactive({
   title: "",
-  kind: "other" as CommitmentKind,
+  kind: DEFAULT_COMMITMENT_KIND as CommitmentKind,
   owner_member_id: "" as string,
   starts_at: "",
   ends_at: "",
@@ -60,13 +52,29 @@ const form = reactive({
   notes: "",
 });
 const fieldError = ref<string | null>(null);
+const showEndDate = ref(false);
+const showLocation = ref(false);
+const showSupplier = ref(false);
+const showCost = ref(false);
+
+function hasLocation(c: Commitment): boolean {
+  return !!(c.location_label || c.location_address);
+}
+
+function hasSupplierBooking(c: Commitment): boolean {
+  return !!(c.supplier_name || c.supplier_contact || c.booking_reference || c.booking_confirmed);
+}
+
+function hasCost(c: Commitment): boolean {
+  return c.estimated_cost_minor != null;
+}
 
 function resetFromCommitment() {
   const c = props.commitment;
   if (!c) {
     Object.assign(form, {
       title: "",
-      kind: "other",
+      kind: DEFAULT_COMMITMENT_KIND,
       owner_member_id: "",
       starts_at: "",
       ends_at: "",
@@ -79,6 +87,10 @@ function resetFromCommitment() {
       estimated_cost_major: "",
       notes: "",
     });
+    showEndDate.value = false;
+    showLocation.value = false;
+    showSupplier.value = false;
+    showCost.value = false;
     return;
   }
   form.title = c.title;
@@ -95,6 +107,10 @@ function resetFromCommitment() {
   const major = toMajor(c.estimated_cost_minor, props.currency);
   form.estimated_cost_major = major != null ? String(major) : "";
   form.notes = c.notes ?? "";
+  showEndDate.value = !!c.ends_at;
+  showLocation.value = hasLocation(c);
+  showSupplier.value = hasSupplierBooking(c);
+  showCost.value = hasCost(c);
 }
 watch(() => [props.open, props.commitment], resetFromCommitment, { immediate: true });
 
@@ -160,15 +176,20 @@ const isPending = computed(() => create.isPending.value || update.isPending.valu
   <AppModal :open="props.open" :title="props.commitment ? 'Edit activity' : 'New activity'" size="lg" @close="emit('close')">
     <form class="space-y-4" @submit.prevent="submit">
       <label class="block">
-        <span class="text-13 font-medium block mb-1.5 text-ink-soft">Title</span>
-        <input v-model="form.title" required class="w-full border rounded-lg px-3.5 py-2.5 text-14 focus-ring border-line" />
+        <span class="text-13 font-medium block mb-1.5 text-ink-soft">Title *</span>
+        <input
+          v-model="form.title"
+          required
+          maxlength="120"
+          class="w-full border rounded-lg px-3.5 py-2.5 text-14 focus-ring border-line"
+        />
       </label>
 
-      <div class="grid grid-cols-2 gap-3">
+      <div class="grid gap-3 sm:grid-cols-2">
         <label class="block">
-          <span class="text-13 font-medium block mb-1.5 text-ink-soft">Kind</span>
+          <span class="text-13 font-medium block mb-1.5 text-ink-soft">Category</span>
           <select v-model="form.kind" class="w-full border rounded-lg px-3 py-2.5 text-14 focus-ring border-line bg-surface">
-            <option v-for="k in KINDS" :key="k.value" :value="k.value">{{ k.label }}</option>
+            <option v-for="k in COMMITMENT_CATEGORY_OPTIONS" :key="k.value" :value="k.value">{{ k.label }}</option>
           </select>
         </label>
         <label class="block">
@@ -183,7 +204,7 @@ const isPending = computed(() => create.isPending.value || update.isPending.valu
         </label>
       </div>
 
-      <div class="grid grid-cols-2 gap-3">
+      <div class="grid gap-3 sm:grid-cols-2">
         <label class="block">
           <span class="text-13 font-medium block mb-1.5 text-ink-soft">Date</span>
           <input
@@ -192,64 +213,109 @@ const isPending = computed(() => create.isPending.value || update.isPending.valu
             class="w-full border rounded-lg px-3 py-2.5 text-14 focus-ring border-line"
           />
         </label>
-        <label class="block">
-          <span class="text-13 font-medium block mb-1.5 text-ink-soft">End date</span>
-          <input
-            v-model="form.ends_at"
-            type="date"
-            class="w-full border rounded-lg px-3 py-2.5 text-14 focus-ring border-line"
-          />
-        </label>
       </div>
-
-      <div class="grid grid-cols-2 gap-3">
-        <label class="block">
-          <span class="text-13 font-medium block mb-1.5 text-ink-soft">Location name</span>
-          <input v-model="form.location_label" class="w-full border rounded-lg px-3.5 py-2.5 text-14 focus-ring border-line" />
-        </label>
-        <label class="block">
-          <span class="text-13 font-medium block mb-1.5 text-ink-soft">Address</span>
-          <input v-model="form.location_address" class="w-full border rounded-lg px-3.5 py-2.5 text-14 focus-ring border-line" />
-        </label>
-      </div>
-
-      <div class="grid grid-cols-2 gap-3">
-        <label class="block">
-          <span class="text-13 font-medium block mb-1.5 text-ink-soft">Supplier</span>
-          <input v-model="form.supplier_name" class="w-full border rounded-lg px-3.5 py-2.5 text-14 focus-ring border-line" />
-        </label>
-        <label class="block">
-          <span class="text-13 font-medium block mb-1.5 text-ink-soft">Supplier contact</span>
-          <input v-model="form.supplier_contact" class="w-full border rounded-lg px-3.5 py-2.5 text-14 focus-ring border-line" />
-        </label>
-      </div>
-
-      <div class="grid grid-cols-2 gap-3">
-        <label class="block">
-          <span class="text-13 font-medium block mb-1.5 text-ink-soft">Booking reference</span>
-          <input v-model="form.booking_reference" class="w-full border rounded-lg px-3.5 py-2.5 text-14 focus-ring border-line" />
-        </label>
-        <label class="block">
-          <span class="text-13 font-medium block mb-1.5 text-ink-soft">Estimated cost ({{ props.currency }})</span>
-          <input
-            v-model="form.estimated_cost_major"
-            type="number"
-            step="0.01"
-            min="0"
-            class="w-full border rounded-lg px-3.5 py-2.5 text-14 focus-ring border-line"
-          />
-        </label>
-      </div>
-
-      <label class="flex items-center gap-2 text-13.5 text-ink-soft">
-        <input v-model="form.booking_confirmed" type="checkbox" class="rounded border-line" />
-        Booking confirmed
-      </label>
 
       <label class="block">
         <span class="text-13 font-medium block mb-1.5 text-ink-soft">Notes</span>
         <textarea v-model="form.notes" rows="2" class="w-full border rounded-lg px-3.5 py-2.5 text-14 focus-ring border-line" />
       </label>
+
+      <div class="border-t border-line pt-4">
+        <h3 class="text-13 font-semibold text-ink-soft uppercase tracking-wide">Additional details</h3>
+        <div class="mt-3 space-y-3">
+          <section>
+            <button
+              type="button"
+              class="text-14 font-medium text-accent focus-ring"
+              :aria-expanded="showEndDate"
+              @click="showEndDate = !showEndDate"
+            >
+              {{ showEndDate ? "− Hide end date" : "+ Add end date" }}
+            </button>
+            <label v-if="showEndDate" class="block mt-2">
+              <span class="text-13 font-medium block mb-1.5 text-ink-soft">End date</span>
+              <input
+                v-model="form.ends_at"
+                type="date"
+                class="w-full border rounded-lg px-3 py-2.5 text-14 focus-ring border-line"
+              />
+            </label>
+          </section>
+
+          <section>
+            <button
+              type="button"
+              class="text-14 font-medium text-accent focus-ring"
+              :aria-expanded="showLocation"
+              @click="showLocation = !showLocation"
+            >
+              {{ showLocation ? "− Hide location" : "+ Add location" }}
+            </button>
+            <div v-if="showLocation" class="mt-2 grid gap-3 sm:grid-cols-2">
+              <label class="block">
+                <span class="text-13 font-medium block mb-1.5 text-ink-soft">Location name</span>
+                <input v-model="form.location_label" class="w-full border rounded-lg px-3.5 py-2.5 text-14 focus-ring border-line" />
+              </label>
+              <label class="block">
+                <span class="text-13 font-medium block mb-1.5 text-ink-soft">Address</span>
+                <input v-model="form.location_address" class="w-full border rounded-lg px-3.5 py-2.5 text-14 focus-ring border-line" />
+              </label>
+            </div>
+          </section>
+
+          <section>
+            <button
+              type="button"
+              class="text-14 font-medium text-accent focus-ring"
+              :aria-expanded="showSupplier"
+              @click="showSupplier = !showSupplier"
+            >
+              {{ showSupplier ? "− Hide supplier / booking" : "+ Add supplier / booking" }}
+            </button>
+            <div v-if="showSupplier" class="mt-2 space-y-3">
+              <div class="grid gap-3 sm:grid-cols-2">
+                <label class="block">
+                  <span class="text-13 font-medium block mb-1.5 text-ink-soft">Supplier</span>
+                  <input v-model="form.supplier_name" class="w-full border rounded-lg px-3.5 py-2.5 text-14 focus-ring border-line" />
+                </label>
+                <label class="block">
+                  <span class="text-13 font-medium block mb-1.5 text-ink-soft">Supplier contact</span>
+                  <input v-model="form.supplier_contact" class="w-full border rounded-lg px-3.5 py-2.5 text-14 focus-ring border-line" />
+                </label>
+              </div>
+              <label class="block">
+                <span class="text-13 font-medium block mb-1.5 text-ink-soft">Booking reference</span>
+                <input v-model="form.booking_reference" class="w-full border rounded-lg px-3.5 py-2.5 text-14 focus-ring border-line" />
+              </label>
+              <label class="flex items-center gap-2 text-13.5 text-ink-soft">
+                <input v-model="form.booking_confirmed" type="checkbox" class="rounded border-line" />
+                Booking confirmed
+              </label>
+            </div>
+          </section>
+
+          <section>
+            <button
+              type="button"
+              class="text-14 font-medium text-accent focus-ring"
+              :aria-expanded="showCost"
+              @click="showCost = !showCost"
+            >
+              {{ showCost ? "− Hide estimated cost" : "+ Add estimated cost" }}
+            </button>
+            <label v-if="showCost" class="block mt-2">
+              <span class="text-13 font-medium block mb-1.5 text-ink-soft">Estimated cost ({{ props.currency }})</span>
+              <input
+                v-model="form.estimated_cost_major"
+                type="number"
+                step="0.01"
+                min="0"
+                class="w-full border rounded-lg px-3.5 py-2.5 text-14 focus-ring border-line"
+              />
+            </label>
+          </section>
+        </div>
+      </div>
 
       <p v-if="fieldError" class="text-13 text-danger">{{ fieldError }}</p>
     </form>

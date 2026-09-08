@@ -6,6 +6,7 @@ import { useMemberDirectory } from "@/composables/useProject";
 import { useProjectContext } from "@/composables/useProjectContext";
 import { useMoney } from "@/composables/useMoney";
 import { useProjectTime } from "@/composables/useProjectTime";
+import { categoryLabel } from "@/lib/commitmentCategories";
 import type { Commitment } from "@/services/commitments";
 import SkeletonBlock from "@/components/ui/SkeletonBlock.vue";
 import ErrorState from "@/components/ui/ErrorState.vue";
@@ -95,7 +96,7 @@ const time = computed(() => useProjectTime(timezone.value));
         <div class="min-w-0 flex-1">
           <div class="text-14 font-medium truncate">{{ c.title }}</div>
           <div class="text-13 text-muted capitalize">
-            {{ c.kind }}
+            {{ categoryLabel(c.kind) }}
             <span v-if="c.starts_at"> · {{ time.dateOnly(c.starts_at) }}</span>
             <span v-if="ownerName(c.owner_member_id)"> · {{ ownerName(c.owner_member_id) }}</span>
           </div>

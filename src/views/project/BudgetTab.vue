@@ -4,6 +4,7 @@ import { useRoute } from "vue-router";
 import { useProjectFinancials, useBudgetCategoryActuals } from "@/composables/useProject";
 import { useProjectContext } from "@/composables/useProjectContext";
 import { useMoney } from "@/composables/useMoney";
+import { categoryLabel } from "@/lib/commitmentCategories";
 import SkeletonBlock from "@/components/ui/SkeletonBlock.vue";
 import ErrorState from "@/components/ui/ErrorState.vue";
 import EmptyState from "@/components/ui/EmptyState.vue";
@@ -29,14 +30,6 @@ function varianceLabel(minor: number | null | undefined): string {
 
 const categoriesWithData = computed(() => categories.value.filter((c) => c.target_minor != null || c.actual_minor > 0));
 
-const KIND_LABELS: Record<string, string> = {
-  accommodation: "Accommodation",
-  transport: "Transport",
-  food: "Food",
-  experience: "Experience",
-  services: "Services",
-  other: "Other",
-};
 </script>
 
 <template>
@@ -85,7 +78,7 @@ const KIND_LABELS: Record<string, string> = {
         <EmptyState v-else-if="categoriesWithData.length === 0" class="mt-3" message="No spend or category targets recorded yet." />
         <div v-else class="mt-3 border rounded-xl divide-y border-line bg-surface">
           <div v-for="c in categoriesWithData" :key="c.kind" class="flex items-center gap-4 px-4 py-3">
-            <span class="text-14 flex-1">{{ KIND_LABELS[c.kind] ?? c.kind }}</span>
+            <span class="text-14 flex-1">{{ categoryLabel(c.kind) }}</span>
             <span class="text-13.5 text-muted w-32 text-right">{{ format(c.actual_minor, currency) }} actual</span>
             <span class="text-13.5 text-muted w-32 text-right">{{ c.target_minor != null ? format(c.target_minor, currency) + " target" : "no target" }}</span>
             <span
