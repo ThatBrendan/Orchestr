@@ -11,19 +11,18 @@ import AppButton from "@/components/ui/AppButton.vue";
 
 usePageMeta({
   title: `Get started · ${APP_NAME}`,
-  description: "Create an Orchestr account and start turning plans into coordinated execution.",
+  description: `Create an ${APP_NAME} account and start turning plans into coordinated execution.`,
 });
 
 const route = useRoute();
 const router = useRouter();
-const { signUpWithPassword, signInWithOtp } = useAuth();
+const { signUpWithPassword } = useAuth();
 const toast = useToast();
 
 const email = ref("");
 const password = ref("");
-const useMagicLink = ref(false);
 const busy = ref(false);
-const outcome = ref<null | "confirm" | "link">(null);
+const outcome = ref<null | "confirm">(null);
 
 const dest = () => safeRedirect(route.query.redirect) ?? "/app";
 const loginTo = { name: "login", query: route.query.redirect ? { redirect: String(route.query.redirect) } : undefined };
@@ -33,11 +32,6 @@ async function submit() {
   busy.value = true;
   try {
     const redirectPath = safeRedirect(route.query.redirect);
-    if (useMagicLink.value) {
-      await signInWithOtp(email.value.trim(), redirectPath);
-      outcome.value = "link";
-      return;
-    }
     if (password.value.length < 8) {
       toast.error("Use a password of at least 8 characters.");
       return;
@@ -76,15 +70,6 @@ async function submit() {
         <p class="mt-3 text-13 text-muted">You're not signed in yet.</p>
       </div>
 
-      <div v-else-if="outcome === 'link'" class="mt-6 border rounded-xl p-6 text-center border-line bg-surface">
-        <p class="text-14 text-ink-soft">
-          Check <span class="font-medium text-ink">{{ email }}</span> for a link to finish signing up.
-        </p>
-        <button class="mt-3 text-13 text-accent font-medium focus-ring" @click="outcome = null">
-          Use a different email
-        </button>
-      </div>
-
       <form v-else class="mt-6 space-y-4" @submit.prevent="submit">
         <label class="block">
           <span class="text-13 font-medium block mb-1.5 text-ink-soft">Email</span>
@@ -97,7 +82,7 @@ async function submit() {
           />
         </label>
 
-        <label v-if="!useMagicLink" class="block">
+        <label class="block">
           <span class="text-13 font-medium block mb-1.5 text-ink-soft">Password</span>
           <input
             v-model="password"
@@ -111,16 +96,8 @@ async function submit() {
         </label>
 
         <AppButton type="submit" :loading="busy" block>
-          {{ useMagicLink ? "Send sign-up link" : "Create account" }}
+          Create account
         </AppButton>
-
-        <button
-          type="button"
-          class="w-full text-13 text-muted hover:text-ink-soft focus-ring"
-          @click="useMagicLink = !useMagicLink"
-        >
-          {{ useMagicLink ? "Use a password instead" : "Email me a link instead" }}
-        </button>
       </form>
 
       <p class="mt-6 text-center text-13 text-muted">

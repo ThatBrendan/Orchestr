@@ -15,7 +15,7 @@ const CASES = [
       Different plans, the same problem
     </h2>
     <p class="mt-3 text-[16px] text-ink-soft max-w-2xl">
-      Orchestr isn't built for one kind of plan. These all share the need to coordinate across people, money,
+      Orchestrio isn't built for one kind of plan. These all share the need to coordinate across people, money,
       responsibilities and deadlines.
     </p>
 

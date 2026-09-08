@@ -413,7 +413,7 @@ Everything under `const DATA`:
 ## 14. Inconsistencies and ambiguities
 
 ### Product identity
-- The prototype HTML's `<title>` / wordmark carried a placeholder ("Basecamp"); the file, directory, and repo are `Orchestr`. **The product name is "Orchestr"** (resolved — see [AD-1](#areas-requiring-an-architectural-decision)). Tagline: "Plan it. Run it. Done."
+- The prototype HTML's `<title>` / wordmark carried a placeholder ("Basecamp"); the file, directory, and repo were originally `Orchestr`. **The product name is now "Orchestrio"** (resolved — see [AD-1](#areas-requiring-an-architectural-decision)). Tagline: "Plan it. Run it. Done."
 
 ### User identity
 - `DATA.user.name = "James"`; sidebar avatar "JD" + "James"; Settings "James Dawson" / `james@example.com`. Three representations, no single user object.
@@ -564,7 +564,7 @@ Values the prototype **shows** that in production would be **computed**, not sto
 
 | ID | Decision | Why it's open |
 |----|----------|---------------|
-| **AD-1** | ~~**Product name** and branding.~~ **RESOLVED: the product is "Orchestr".** (The prototype HTML's placeholder wordmark said "Basecamp"; that was never the name.) | — |
+| **AD-1** | ~~**Product name** and branding.~~ **RESOLVED: the product is "Orchestrio".** (The prototype HTML's placeholder wordmark said "Basecamp"; that was never the name.) | — |
 | **AD-2** | **Is "Activity" one entity or several** (Activity / Booking / Task / Payment)? Single table with a `type`, or distinct entities, or Activity-with-optional-booking/payment sub-records? | Wizard offers 4 types; data model has 1 flat list. |
 | **AD-3** | **What is `progress`?** Manual field, or derived — and from what? | No formula is expressed anywhere. |
 | **AD-4** | **Owner model.** Is an activity owner a project Person, a User, or a free label? How does it relate to Person `responsibilities` (one direction only, or a single join)? | Prototype has two unlinked, contradictory representations. |
@@ -621,7 +621,7 @@ Values the prototype **shows** that in production would be **computed**, not sto
 - **Placeholder screens (Calendar, global People) as if they define scope.** Their copy is a hint, not a spec — treat as AD-12 / AD-15.
 - **`cover` / theme keys, `category` field, `missingOwner` flag, `needsAttention.link`** — dead fields; don't reintroduce without a purpose.
 - **Wizard-as-spec.** The wizard collects 6 free-text fields and throws them away; it is not a definition of the create-activity contract. In particular its 4 "types" are unresolved (AD-2).
-- **The prototype's placeholder wordmark "Basecamp".** The product is **Orchestr** (AD-1, resolved).
+- **The prototype's placeholder wordmark "Basecamp".** The product is **Orchestrio** (AD-1, resolved).
 - **Threshold magic numbers** (`remaining < 500`, "9 days", "18 min") baked into views.
 
 ---

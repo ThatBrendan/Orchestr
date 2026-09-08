@@ -42,7 +42,7 @@ const PILLARS: { title: string; body: string; icon: IconName }[] = [
       One workspace for the whole plan
     </h2>
     <p class="mt-3 text-[16px] text-ink-soft max-w-2xl">
-      Orchestr keeps the moving parts of a plan connected — not scattered across tools that don't talk to each other.
+      Orchestrio keeps the moving parts of a plan connected — not scattered across tools that don't talk to each other.
     </p>
 
     <div class="mt-10 grid sm:grid-cols-2 lg:grid-cols-3 gap-4">

@@ -137,7 +137,7 @@ Deno.serve(async (req) => {
         body: JSON.stringify({
           from: Deno.env.get("EMAIL_FROM") ?? "no-reply@example.com",
           to: email,
-          subject: "You've been invited to a project on Orchestr",
+          subject: "You've been invited to a project on Orchestrio",
           text: `You've been invited to join a project. Open ${link} to accept.`,
         }),
       });

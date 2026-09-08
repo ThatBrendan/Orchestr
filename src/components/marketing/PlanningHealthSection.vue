@@ -17,14 +17,14 @@ const CHECKS = [
       <div>
         <div class="text-13 font-semibold uppercase tracking-wide text-accent">Planning health</div>
         <h2 id="health-heading" class="mt-2 font-display text-[26px] md:text-[32px] font-semibold tracking-tight">
-          Orchestr continuously checks your plan for things that need attention.
+          Orchestrio continuously checks your plan for things that need attention.
         </h2>
         <p class="mt-4 text-[16px] leading-relaxed text-ink-soft">
           It's a set of clear, deterministic checks — not a black box. When something's missing, overdue or off budget,
           it shows up on the dashboard with a plain explanation and what to do about it.
         </p>
         <p class="mt-3 text-13.5 text-muted">
-          No AI guesswork. Orchestr won't make bookings for you or plan the project on its own — it keeps you informed so
+          No AI guesswork. Orchestrio won't make bookings for you or plan the project on its own — it keeps you informed so
           you can.
         </p>
       </div>

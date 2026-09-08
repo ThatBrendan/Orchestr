@@ -43,14 +43,6 @@ export function useAuth() {
       : base;
   }
 
-  async function signInWithOtp(emailAddr: string, redirectPath?: string | null) {
-    const { error } = await supabase.auth.signInWithOtp({
-      email: emailAddr,
-      options: { emailRedirectTo: callbackUrl(redirectPath) },
-    });
-    if (error) throw toAppError(error);
-  }
-
   async function signInWithPassword(emailAddr: string, password: string) {
     const { error } = await supabase.auth.signInWithPassword({ email: emailAddr, password });
     if (error) throw toAppError(error);
@@ -89,7 +81,6 @@ export function useAuth() {
     isAuthenticated,
     userId,
     email,
-    signInWithOtp,
     signInWithPassword,
     signUpWithPassword,
     signOut,

@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory, type RouteRecordRaw } from "vue-router";
-import { requireAuth, requireGuest, hydrateProjectContext } from "./guards";
+import { requireAuth, requireGuest, requirePlatformAdmin, hydrateProjectContext } from "./guards";
 import { DEFAULT_TITLE, resetPageMeta } from "@/composables/usePageMeta";
 import { APP_NAME } from "@/config";
 
@@ -65,6 +65,29 @@ const routes: RouteRecordRaw[] = [
         ],
       },
     ],
+  },
+
+  // ---- platform administration ---------------------------------------------
+  {
+    path: "/admin",
+    component: () => import("@/components/admin/AdminShell.vue"),
+    beforeEnter: requirePlatformAdmin,
+    children: [
+      { path: "", name: "admin.dashboard", component: () => import("@/views/admin/AdminDashboardView.vue"), meta: { title: `Admin · ${APP_NAME}` } },
+      { path: "users", name: "admin.users", component: () => import("@/views/admin/AdminUsersView.vue"), meta: { title: `Users · Admin · ${APP_NAME}` } },
+      { path: "users/:userId", name: "admin.user", component: () => import("@/views/admin/AdminUserDetailView.vue"), meta: { title: `User · Admin · ${APP_NAME}` } },
+      { path: "projects", name: "admin.projects", component: () => import("@/views/admin/AdminProjectsView.vue"), meta: { title: `Projects · Admin · ${APP_NAME}` } },
+      { path: "projects/:projectId", name: "admin.project", component: () => import("@/views/admin/AdminProjectDetailView.vue"), meta: { title: `Project · Admin · ${APP_NAME}` } },
+      { path: "invitations", name: "admin.invitations", component: () => import("@/views/admin/AdminInvitationsView.vue"), meta: { title: `Invitations · Admin · ${APP_NAME}` } },
+      { path: "audit", name: "admin.audit", component: () => import("@/views/admin/AdminAuditView.vue"), meta: { title: `Audit · Admin · ${APP_NAME}` } },
+    ],
+  },
+
+  {
+    path: "/access-denied",
+    name: "access-denied",
+    component: () => import("@/views/AccessDeniedView.vue"),
+    meta: { title: `Access denied · ${APP_NAME}` },
   },
 
   { path: "/:pathMatch(.*)*", name: "not-found", component: () => import("@/views/NotFoundView.vue"), meta: { public: true } },

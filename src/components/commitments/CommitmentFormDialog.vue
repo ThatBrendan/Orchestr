@@ -38,17 +38,16 @@ const { toMinor, toMajor } = useMoney();
 
 const ownerCandidates = computed(() => props.memberOptions.filter((m) => m.role !== "viewer" && m.status === "active"));
 
-function localInput(iso: string | null, allDay: boolean): string {
+function localDateInput(iso: string | null): string {
   if (!iso) return "";
   const dt = DateTime.fromISO(iso, { zone: props.timezone });
-  return dt.toFormat(allDay ? "yyyy-LL-dd" : "yyyy-LL-dd'T'HH:mm");
+  return dt.toFormat("yyyy-LL-dd");
 }
 
 const form = reactive({
   title: "",
   kind: "other" as CommitmentKind,
   owner_member_id: "" as string,
-  is_all_day: false,
   starts_at: "",
   ends_at: "",
   location_label: "",
@@ -69,7 +68,6 @@ function resetFromCommitment() {
       title: "",
       kind: "other",
       owner_member_id: "",
-      is_all_day: false,
       starts_at: "",
       ends_at: "",
       location_label: "",
@@ -86,9 +84,8 @@ function resetFromCommitment() {
   form.title = c.title;
   form.kind = c.kind;
   form.owner_member_id = c.owner_member_id ?? "";
-  form.is_all_day = c.is_all_day;
-  form.starts_at = localInput(c.starts_at, c.is_all_day);
-  form.ends_at = localInput(c.ends_at, c.is_all_day);
+  form.starts_at = localDateInput(c.starts_at);
+  form.ends_at = localDateInput(c.ends_at);
   form.location_label = c.location_label ?? "";
   form.location_address = c.location_address ?? "";
   form.supplier_name = c.supplier_name ?? "";
@@ -101,11 +98,9 @@ function resetFromCommitment() {
 }
 watch(() => [props.open, props.commitment], resetFromCommitment, { immediate: true });
 
-function toIso(local: string, allDay: boolean): string | null {
+function toIsoDate(local: string): string | null {
   if (!local) return null;
-  const dt = allDay
-    ? DateTime.fromFormat(local, "yyyy-LL-dd", { zone: props.timezone })
-    : DateTime.fromFormat(local, "yyyy-LL-dd'T'HH:mm", { zone: props.timezone });
+  const dt = DateTime.fromFormat(local, "yyyy-LL-dd", { zone: props.timezone }).startOf("day");
   return dt.isValid ? dt.toUTC().toISO() : null;
 }
 
@@ -115,8 +110,8 @@ async function submit() {
     fieldError.value = "Give the activity a title.";
     return;
   }
-  const startsAt = toIso(form.starts_at, form.is_all_day);
-  const endsAt = toIso(form.ends_at, form.is_all_day);
+  const startsAt = toIsoDate(form.starts_at);
+  const endsAt = toIsoDate(form.ends_at);
   if (startsAt && endsAt && endsAt < startsAt) {
     fieldError.value = "The end must be on or after the start.";
     return;
@@ -131,7 +126,7 @@ async function submit() {
     title: form.title.trim(),
     kind: form.kind,
     owner_member_id: form.owner_member_id || null,
-    is_all_day: form.is_all_day,
+    is_all_day: true,
     starts_at: startsAt,
     ends_at: endsAt,
     location_label: form.location_label.trim() || null,
@@ -188,24 +183,20 @@ const isPending = computed(() => create.isPending.value || update.isPending.valu
         </label>
       </div>
 
-      <label class="flex items-center gap-2 text-13.5 text-ink-soft">
-        <input v-model="form.is_all_day" type="checkbox" class="rounded border-line" />
-        All day
-      </label>
       <div class="grid grid-cols-2 gap-3">
         <label class="block">
-          <span class="text-13 font-medium block mb-1.5 text-ink-soft">Starts</span>
+          <span class="text-13 font-medium block mb-1.5 text-ink-soft">Date</span>
           <input
             v-model="form.starts_at"
-            :type="form.is_all_day ? 'date' : 'datetime-local'"
+            type="date"
             class="w-full border rounded-lg px-3 py-2.5 text-14 focus-ring border-line"
           />
         </label>
         <label class="block">
-          <span class="text-13 font-medium block mb-1.5 text-ink-soft">Ends</span>
+          <span class="text-13 font-medium block mb-1.5 text-ink-soft">End date</span>
           <input
             v-model="form.ends_at"
-            :type="form.is_all_day ? 'date' : 'datetime-local'"
+            type="date"
             class="w-full border rounded-lg px-3 py-2.5 text-14 focus-ring border-line"
           />
         </label>

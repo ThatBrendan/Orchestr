@@ -7,7 +7,7 @@ import AppButton from "@/components/ui/AppButton.vue";
 const { isAuthenticated } = useAuth();
 const primary = computed(() =>
   isAuthenticated.value
-    ? { to: { name: "dashboard" }, label: "Open Orchestr" }
+    ? { to: { name: "dashboard" }, label: "Open Orchestrio" }
     : { to: { name: "signup" }, label: "Create your first plan" },
 );
 </script>

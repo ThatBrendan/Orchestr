@@ -48,5 +48,5 @@ export const config = Object.freeze({
     parsed.output.VITE_APP_ENV === "development",
 });
 
-/** Product name — resolved: Orchestr. */
-export const APP_NAME = "Orchestr";
+/** Product name — resolved: Orchestrio. */
+export const APP_NAME = "Orchestrio";

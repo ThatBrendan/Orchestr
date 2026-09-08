@@ -35,6 +35,7 @@ Native enums — chosen because each set is closed, referenced in `CHECK`/transi
 
 | Enum | Values | Used by |
 |------|--------|---------|
+| `platform_role` | `user`, `admin` | `users.platform_role` |
 | `project_status` | `draft`, `active`, `completed`, `archived` | `projects.status` |
 | `member_role` | `organizer`, `member`, `viewer` | `project_members.role`, `invitations.role` |
 | `member_status` | `invited`, `active`, `removed` | `project_members.status` |
@@ -96,6 +97,7 @@ Native enums — chosen because each set is closed, referenced in `CHECK`/transi
 | `timezone` | `text` | no | `'UTC'` | IANA; validated by trigger ([§7.9](#79-timezone-validity)) |
 | `default_currency` | `text` | no | `'GBP'` | `REFERENCES currencies(code) ON DELETE RESTRICT` |
 | `notification_prefs` | `jsonb` | no | `'{"email":true,"push":false}'::jsonb` | shape validated by `CHECK (jsonb_typeof(notification_prefs) = 'object')`; detailed schema is app-side |
+| `platform_role` | `platform_role` | no | `'user'` | global platform authorization role. Separate from project-scoped `member_role`; `admin` is never a project role. |
 | `created_at` | `timestamptz` | no | `now()` | |
 | `updated_at` | `timestamptz` | no | `now()` | trigger-maintained |
 
@@ -103,11 +105,12 @@ Native enums — chosen because each set is closed, referenced in `CHECK`/transi
 - **FKs:** `id → auth.users(id)` `ON DELETE CASCADE`; `default_currency → currencies(code)` `ON DELETE RESTRICT`
 - **Unique:** `email` is unique in `auth.users`; a `UNIQUE (email)` here too for the invitation-claim lookup ([MEM‑3]).
 - **Check:** as above.
-- **Indexes:** PK; `UNIQUE (lower(email))`.
-- **Triggers:** `tg_set_updated_at`, `tg_validate_timezone`, `tg_audit_row` (project_id NULL — global audit).
+- **Indexes:** PK; `UNIQUE (lower(email))`; `users_platform_role_idx`.
+- **Triggers:** `tg_set_updated_at`, `tg_validate_timezone`, `tg_block_client_platform_role_change`, `tg_audit_row` (project_id NULL — global audit).
 - **Populated by:** `app.tg_handle_new_user()` — `AFTER INSERT ON auth.users`, `SECURITY DEFINER` ([§8.2](#82-security-definer-helpers--rpcs)).
 - **Delete behaviour:** deleting the `auth.users` row cascades here; `project_members.user_id` is then `SET NULL` (member row survives as name-only history). Account deletion is blocked upstream if the user is a project's last organizer ([VAL‑39], enforced by [§7.6](#76-last-organizer-guarantee)).
-- **RLS:** self read/update; a restricted column subset (`id, display_name, avatar_url`) is exposed to co-members via `app.v_member_directory`.
+- **RLS:** self read/update; platform admins can read all users through admin read models; a restricted column subset (`id, display_name, avatar_url`) is exposed to co-members via `app.v_member_directory`.
+- **Bootstrap:** promote the first known admin only from the database/Supabase administrative environment, for example `update public.users set platform_role = 'admin' where email = '<known-user@example.com>';`. There is no public "make me admin" flow.
 
 ---
 
@@ -777,6 +780,7 @@ All in schema `app`, all with:
 | `app.is_member(p_project uuid) → boolean` | helper | DEFINER, STABLE | membership predicate for RLS on all other tables | ↑ |
 | `app.has_role(p_project uuid, p_roles member_role[]) → boolean` | helper | DEFINER, STABLE | role predicate for write policies | ↑ |
 | `app.is_organizer(p_project uuid) → boolean` | helper | DEFINER, STABLE | shorthand | ↑ |
+| `app.is_platform_admin() → boolean` | helper | DEFINER, STABLE | caller has global `users.platform_role = 'admin'` | admin RLS/read models must check a backend-authoritative role without trusting Vue |
 | `app.finding_is_dismissible(p_code text) → boolean` | helper | INVOKER, IMMUTABLE | severity/dismissibility of a rule code (static map) | none — pure |
 | `app.accept_invitation(p_token text) → uuid` | RPC | DEFINER, VOLATILE | validate token (pending, unexpired), claim matching name-only member or create one, set `user_id = auth.uid()`, `status='active'`, mark invitation `accepted`, write audit; returns `project_id` | the invitee is **not yet a member**; RLS would block every write |
 | `app.transfer_and_leave(p_project uuid, p_new_organizer_member uuid) → void` | RPC | DEFINER, VOLATILE | atomic: promote target to `organizer`, set caller's membership `status='removed'`; passes the last-organizer guard because both happen in one statement sequence before commit | must bypass the ordering trap in `tg_last_organizer_guard` ([§7.6](#76-last-organizer-guarantee)) |
@@ -787,6 +791,8 @@ All in schema `app`, all with:
 | `app.tg_*_activates_project()` | trigger fns | DEFINER | `draft → active` ([§7.8](#78-draftactive-auto-transition)) | a `member` lacks UPDATE on `projects` |
 | `app.tg_last_organizer_guard()` | trigger fn | DEFINER | count organizers across RLS ([§7.6](#76-last-organizer-guarantee)) | must see rows the caller might not |
 | `app.tg_audit_row()` | trigger fn | DEFINER | append-only audit | only elevated capability: `INSERT ON audit_log` |
+| `public.get_admin_overview() → record` | RPC | DEFINER, STABLE | platform-wide user/project/invitation counts | validates `app.is_platform_admin()` then reads across RLS for set-based operational metrics |
+| `public.get_admin_project_health_summary(p_project uuid) → record` | RPC | DEFINER, STABLE | admin-only planning-health rollup for a project | validates `app.is_platform_admin()` and reuses the existing health rule engine without requiring project membership |
 
 ### 8.3 Views
 
@@ -801,6 +807,12 @@ All views: `WITH (security_invoker = true)` (base-table RLS applies to the query
 | `app.v_timeline_events` | event | `project_id`, `occurs_at timestamptz`, `event_type`, `title`, `subject_type`, `subject_id`, `status` — `UNION ALL` of the 7 sources (TML‑1), ordered by `occurs_at` |
 | `app.v_member_directory` | project × member | `member_id`, `display_name`, `avatar_url`, `role`, `status` — the columns co-members may see (feeds People tab, owner pickers) |
 | `app.v_my_projects` | project | project columns + caller's `role` + `v_project_financials` summary + `attention_count` (from `get_project_health_summary`) + `next_event_at` (from `v_timeline_events`) — for Dashboard / Projects list |
+| `public.v_admin_users` | user | admin-only user listing with email, display name, platform role, timestamps, and membership counts |
+| `public.v_admin_user_memberships` | user × membership | admin-only user detail memberships with project, role, status, and dates |
+| `public.v_admin_projects` | project | admin-only project listing/detail with status, creator signal, member counts, commitment count, and finance summary |
+| `public.v_admin_project_members` | project × member | admin-only project member inspection rows |
+| `public.v_admin_invitations` | invitation | admin-only invitation inspection with project, invitee, inviter, role, status, and dates |
+| `public.v_admin_audit_log` | audit event | admin-only global immutable audit inspection with actor and project labels |
 
 > **Performance note:** `v_my_projects` calls the health summary per project. For a user's realistic project count (single digits) this is fine on read. If it ever isn't, the mitigation is a small `project_health_cache(project_id, status, attention_count, computed_at)` refreshed by an `AFTER` statement trigger on the contributing tables — still no derived *business* data stored, just a memoised count. Not in MVP.
 

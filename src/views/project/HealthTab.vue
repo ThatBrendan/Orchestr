@@ -8,7 +8,7 @@ import ErrorState from "@/components/ui/ErrorState.vue";
 import EmptyState from "@/components/ui/EmptyState.vue";
 import ProjectHealthBadge from "@/components/health/ProjectHealthBadge.vue";
 import FindingCard from "@/components/health/FindingCard.vue";
-import type { FindingSeverity } from "@/types/database";
+import type { FindingSeverity, HealthStatus } from "@/types/database";
 
 const route = useRoute();
 const projectId = computed(() => String(route.params.projectId));
@@ -18,6 +18,7 @@ const canDismiss = computed(() => allowed("finding.dismiss") && !archived.value)
 
 const health = useProjectHealth(projectId);
 const { summary, isPending: summaryPending } = useProjectHealthSummary(projectId);
+const summaryStatus = computed(() => summary.value?.status as HealthStatus | undefined);
 
 type Filter = "all" | FindingSeverity;
 const filter = ref<Filter>("all");
@@ -56,7 +57,7 @@ const TABS: { key: Filter; label: string }[] = [
     <div class="flex items-center justify-between flex-wrap gap-3 mb-5">
       <div class="flex items-center gap-3">
         <SkeletonBlock v-if="summaryPending" width="120px" height="24px" />
-        <ProjectHealthBadge v-else :status="summary?.status as 'needs_attention' | 'at_risk' | 'healthy' | undefined" />
+        <ProjectHealthBadge v-else :status="summaryStatus" />
         <span v-if="!summaryPending && summary" class="text-13 text-muted">
           {{ summary.attention_count }} need{{ summary.attention_count === 1 ? "s" : "" }} attention
         </span>

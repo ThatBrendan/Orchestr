@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * Static marketing visual — a composed, illustrative snapshot of the Orchestr
+ * Static marketing visual — a composed, illustrative snapshot of the Orchestrio
  * product surface. NO network calls, NO composables, NO live data. The sample
  * content below is fixed marketing copy, scoped to this component.
  */
@@ -36,7 +36,7 @@ const SAMPLE = {
   <div
     class="rounded-2xl border border-line bg-surface shadow-[0_1px_2px_rgba(20,20,18,0.04),0_12px_32px_-12px_rgba(20,20,18,0.12)] overflow-hidden"
     role="img"
-    aria-label="Illustration of the Orchestr project workspace: budget summary, commitments with owners, and planning health findings"
+    aria-label="Illustration of the Orchestrio project workspace: budget summary, commitments with owners, and planning health findings"
   >
     <!-- header -->
     <div class="px-5 pt-5">

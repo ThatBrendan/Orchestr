@@ -1,9 +1,8 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { storeToRefs } from "pinia";
 import { useAuthStore } from "@/stores/auth";
-import { useAuth } from "@/composables/useAuth";
 import { useInvitation } from "@/composables/useInvitation";
 import { useToast } from "@/composables/useToast";
 import { toAppError } from "@/lib/errors";
@@ -14,31 +13,15 @@ const route = useRoute();
 const router = useRouter();
 const auth = useAuthStore();
 const { ready, isAuthenticated } = storeToRefs(auth);
-const { signInWithOtp } = useAuth();
 const toast = useToast();
 
 const token = computed(() => String(route.params.token));
-const email = ref("");
-const busy = ref(false);
-const linkSent = ref(false);
+const authQuery = computed(() => ({ redirect: route.fullPath }));
 
 // Preview requires auth (get_invitation is email-gated). Only fetch when signed in.
 const { preview, accept: acceptMutation } = useInvitation(token, {
   enabled: () => ready.value && isAuthenticated.value,
 });
-
-async function sendLink() {
-  if (!email.value) return;
-  busy.value = true;
-  try {
-    await signInWithOtp(email.value.trim());
-    linkSent.value = true;
-  } catch (e) {
-    toast.error(toAppError(e).message);
-  } finally {
-    busy.value = false;
-  }
-}
 
 async function accept() {
   try {
@@ -56,22 +39,13 @@ async function accept() {
     <div class="w-full max-w-sm fade-in text-center">
       <div class="font-display font-semibold text-[20px] tracking-tight">{{ APP_NAME }}</div>
 
-      <!-- signed out: gather the email to send an OTP -->
+      <!-- signed out: send the user through password auth, then back here -->
       <template v-if="ready && !isAuthenticated">
         <p class="mt-4 text-14 text-ink-soft">You've been invited to a project. Sign in to accept.</p>
-        <div v-if="linkSent" class="mt-6 border rounded-xl p-6 border-line bg-surface">
-          <p class="text-14 text-ink-soft">Check <span class="font-medium">{{ email }}</span> for a link, then reopen this invitation.</p>
+        <div class="mt-6 grid gap-3">
+          <AppButton :to="{ name: 'login', query: authQuery }" block>Log in</AppButton>
+          <AppButton :to="{ name: 'signup', query: authQuery }" variant="secondary" block>Create account</AppButton>
         </div>
-        <form v-else class="mt-6 space-y-3" @submit.prevent="sendLink">
-          <input
-            v-model="email"
-            type="email"
-            required
-            placeholder="Your email"
-            class="w-full border rounded-lg px-3.5 py-2.5 text-14 focus-ring border-line bg-surface"
-          />
-          <AppButton type="submit" :loading="busy" block>Send sign-in link</AppButton>
-        </form>
       </template>
 
       <!-- signed in -->

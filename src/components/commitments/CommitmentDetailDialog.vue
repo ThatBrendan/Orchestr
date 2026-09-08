@@ -141,11 +141,11 @@ function memberName(memberId: string): string {
       <div class="grid sm:grid-cols-2 gap-x-6 gap-y-3 text-14">
         <div v-if="props.commitment.starts_at">
           <div class="text-13 text-muted">Starts</div>
-          <div>{{ time.dateTime(props.commitment.starts_at) }}</div>
+          <div>{{ props.commitment.is_all_day ? time.dateOnly(props.commitment.starts_at) : time.dateTime(props.commitment.starts_at) }}</div>
         </div>
         <div v-if="props.commitment.ends_at">
           <div class="text-13 text-muted">Ends</div>
-          <div>{{ time.dateTime(props.commitment.ends_at) }}</div>
+          <div>{{ props.commitment.is_all_day ? time.dateOnly(props.commitment.ends_at) : time.dateTime(props.commitment.ends_at) }}</div>
         </div>
         <div v-if="props.commitment.location_label || props.commitment.location_address">
           <div class="text-13 text-muted">Location</div>

@@ -9,7 +9,7 @@ import { scrollToId } from "./scroll";
 const { isAuthenticated } = useAuth();
 const primary = computed(() =>
   isAuthenticated.value
-    ? { to: { name: "dashboard" }, label: "Open Orchestr" }
+    ? { to: { name: "dashboard" }, label: "Open Orchestrio" }
     : { to: { name: "signup" }, label: "Start planning" },
 );
 </script>
@@ -22,7 +22,7 @@ const primary = computed(() =>
           Turn complex plans into coordinated execution.
         </h1>
         <p class="mt-5 text-[16px] md:text-[18px] leading-relaxed text-ink-soft max-w-xl">
-          Orchestr brings costs, responsibilities, commitments, deadlines, logistics and progress into one shared
+          Orchestrio brings costs, responsibilities, commitments, deadlines, logistics and progress into one shared
           workspace — so everyone sees what's happening, who owns it, what it costs, and what's at risk.
         </p>
         <div class="mt-8 flex flex-wrap items-center gap-3">

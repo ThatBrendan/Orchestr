@@ -7,3 +7,14 @@ export async function getMyProfile(userId: string): Promise<UserProfile | null> 
   if (error) throw toAppError(error);
   return data;
 }
+
+export async function updateMyDisplayName(userId: string, displayName: string): Promise<UserProfile> {
+  const { data, error } = await supabase
+    .from("users")
+    .update({ display_name: displayName })
+    .eq("id", userId)
+    .select("*")
+    .single();
+  if (error) throw toAppError(error);
+  return data;
+}

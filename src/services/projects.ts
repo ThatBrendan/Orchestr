@@ -26,9 +26,15 @@ export async function getProject(projectId: string): Promise<Project> {
 }
 
 export async function createProject(input: ProjectInsert): Promise<{ id: string }> {
-  const { data, error } = await supabase.from("projects").insert(input).select("id").single();
+  const { data, error } = await supabase.rpc("create_project", {
+    p_name: input.name,
+    p_timezone: input.timezone,
+    p_currency: input.currency,
+    p_starts_on: input.starts_on ?? null,
+    p_ends_on: input.ends_on ?? null,
+  });
   if (error) throw toAppError(error);
-  return data;
+  return { id: data };
 }
 
 /** Editable field update — organizer only (enforced by RLS, docs/SECURITY_RLS.md §5.2). */

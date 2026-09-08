@@ -3,7 +3,7 @@ import { APP_NAME } from "@/config";
 
 export const DEFAULT_TITLE = `${APP_NAME} — Plan together. Execute clearly.`;
 export const DEFAULT_DESCRIPTION =
-  "Orchestr brings costs, responsibilities, commitments, deadlines, logistics and progress into one shared workspace — so complex plans become coordinated execution.";
+  "Orchestrio brings costs, responsibilities, commitments, deadlines, logistics and progress into one shared workspace — so complex plans become coordinated execution.";
 
 interface PageMeta {
   title?: string;

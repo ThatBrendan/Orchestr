@@ -7,6 +7,7 @@ import { queryClient } from "@/lib/query-client";
 import { qk } from "@/composables/keys";
 import * as membersService from "@/services/members";
 import * as projectsService from "@/services/projects";
+import * as adminService from "@/services/admin";
 import { toAppError } from "@/lib/errors";
 
 /**
@@ -44,6 +45,25 @@ export const requireAuth: NavigationGuardWithThis<undefined> = async (to) => {
   const auth = useAuthStore();
   if (!auth.isAuthenticated) return { name: "login", query: { redirect: to.fullPath } };
   return true;
+};
+
+export const requirePlatformAdmin: NavigationGuardWithThis<undefined> = async (to) => {
+  await whenReady();
+  const auth = useAuthStore();
+  if (!auth.isAuthenticated) return { name: "login", query: { redirect: to.fullPath } };
+
+  try {
+    const isAdmin = await queryClient.fetchQuery({
+      queryKey: qk.me.platformAdmin(auth.userId ?? "anon"),
+      queryFn: () => adminService.isCurrentUserPlatformAdmin(auth.userId!),
+      staleTime: 30_000,
+    });
+    if (!isAdmin) return { name: "access-denied" };
+    return true;
+  } catch (e) {
+    if (toAppError(e).kind === "permission") return { name: "access-denied" };
+    throw e;
+  }
 };
 
 /** For /login and /signup: a signed-in visitor is bounced into the app (honouring ?redirect). */

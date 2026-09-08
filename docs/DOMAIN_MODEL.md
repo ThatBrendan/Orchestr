@@ -718,7 +718,7 @@ Decisions the schema does **not** force, but which should be made before or duri
 | **D-6** | Health thresholds | inactive = 7 days; payment_due_soon = 7 days; tight_connection < 20 min; unconfirmed_close_to_date = 14 days | §8.10, AD-9 |
 | **D-7** | `Commitment.kind` / budget category list | `accommodation, transport, food, experience, services, other` | §5.5, AD-11 |
 | **D-8** | Commitment status set | `idea, researching, confirmed, booked, completed, cancelled` | §5.5, AD-2 |
-| **D-9** | Product name | **Resolved: "Orchestr".** Does not affect schema | AD-1 |
+| **D-9** | Product name | **Resolved: "Orchestrio".** Does not affect schema | AD-1 |
 | **D-10** | Whether `viewer` role ships in v1 or later | Ship it (needed for the "Share" button) | §8.1, AD-6 |
 
 **Decisions considered resolved by this document:** AD-2 (Commitment is the umbrella; §3), AD-4 (single ownership FK; §8.2), AD-5 (User vs ProjectMember; §5.1/§5.3), AD-7 (budget actuals derived; §7.1), AD-8 modelling half (Payment + CostShare entities; §8.4), AD-9 (health is a derived engine; §7.3), AD-10 (structured tz-aware time; §2), AD-11 (kind == budget category; §5.5), AD-13 (embed supplier/location, promote later; §8.6), AD-14 (participants are a set; §5.6), AD-17 (project status enum; §5.2).

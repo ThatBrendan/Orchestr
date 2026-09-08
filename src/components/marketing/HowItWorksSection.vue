@@ -18,7 +18,7 @@ const STEPS = [
   {
     n: "04",
     title: "Resolve risks and execute",
-    body: "Clear the issues Orchestr flags — missing owners, overdue payments, incomplete bookings — and run the plan.",
+    body: "Clear the issues Orchestrio flags — missing owners, overdue payments, incomplete bookings — and run the plan.",
   },
 ];
 </script>

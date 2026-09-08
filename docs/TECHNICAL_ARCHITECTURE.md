@@ -77,7 +77,7 @@
 
 | Path | Name | View | Guard | Notes |
 |------|------|------|-------|-------|
-| `/login`, `/auth/callback`, `/invite/:token` | `auth.*` | `views/auth/*` | `guestOrAny` | magic-link callback; invite acceptance |
+| `/login`, `/auth/callback`, `/invite/:token` | `auth.*` | `views/auth/*` | `guestOrAny` | auth callback; invite acceptance |
 | `/` | `dashboard` | `DashboardView` | `requireAuth` | prototype Dashboard |
 | `/projects` | `projects` | `ProjectsView` | `requireAuth` | prototype Projects list |
 | `/projects/:projectId` | `project` | `ProjectLayout` (nested) | `requireAuth` + `requireMembership` | redirects to `…/overview` |
@@ -152,7 +152,7 @@ Composables are the **only** thing views use for data. Each wraps vue-query + a 
 | Composable | Responsibility |
 |------------|----------------|
 | `useSupabase()` | returns the typed client singleton (thin; mostly for tests to inject) |
-| `useAuth()` | `user`, `session`, `isAuthenticated`, `signInWithOtp`, `signInWithPassword`, `signOut`; subscribes to `onAuthStateChange` once at app root |
+| `useAuth()` | `user`, `session`, `isAuthenticated`, `signInWithPassword`, `signOut`; subscribes to `onAuthStateChange` once at app root |
 | `useProjectContext()` | current `projectId`, `membership`, `project`, `currency`, `timezone`; used by guards + layout |
 | `usePermissions()` | pure, synchronous: `can('commitment.edit')`, `can('project.settings')`, `isOrganizer` — derived from `membership.role` and the [MEM‑14] matrix, encoded once in `lib/permissions.ts`. **UX only.** |
 | `useProjects()` / `useProject(id)` | list + detail, create/archive/delete mutations |
@@ -283,11 +283,11 @@ types/
 
 ## 10. Authentication
 
-- **Provider:** Supabase Auth. MVP methods: **email OTP / magic link** (primary) + **email + password** (optional). OAuth providers are FUTURE.
+- **Provider:** Supabase Auth. MVP method: **email + password**. OAuth providers are FUTURE.
 - **Profile mirror:** `public.users` row per `auth.users`, created by an `on_auth_user_created` trigger (`handle_new_user`) copying `id`, `email`, and defaulting `display_name`, `timezone`, `default_currency`, `notification_prefs`. The app reads/writes `public.users`, never `auth.users` directly.
-- **Session lifecycle:** PKCE flow; `detectSessionInUrl` handles the magic-link callback at `/auth/callback`; `autoRefreshToken` keeps it alive; `useAuth` exposes `ready` so guards wait for hydration (no flash of login screen).
+- **Session lifecycle:** PKCE flow; `detectSessionInUrl` handles Supabase auth redirects at `/auth/callback`; `autoRefreshToken` keeps sessions alive; `useAuth` exposes `ready` so guards wait for hydration (no flash of login screen).
 - **Sign-out:** `supabase.auth.signOut()` → `queryClient.clear()` → Pinia reset → redirect to `/login`.
-- **Invite acceptance:** `/invite/:token` → if unauthenticated, send an OTP to the invited email, then on return call `rpc('accept_invitation', { p_token })` → redirect into the project. The email that carries the link is sent by the `invitations-send` Edge Function.
+- **Invite acceptance:** `/invite/:token` → if unauthenticated, route to login or signup with `?redirect=<invite path>`; after password auth, call `rpc('accept_invitation', { p_token })` → redirect into the project. The invitation email is sent by the `invitations-send` Edge Function.
 - **Account deletion / last-organizer conflict** ([VAL‑39]) is enforced by a DB check on the delete path; the UI surfaces the reason.
 
 ---

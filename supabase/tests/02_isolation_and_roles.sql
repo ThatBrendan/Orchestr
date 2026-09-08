@@ -65,10 +65,10 @@ select throws_ok($$insert into public.project_members (project_id,user_id,displa
 select throws_ok($$insert into public.project_members (project_id,user_id,display_name,email,role,status)
   values ('11110000-0000-0000-0000-000000000001','e0e0e0e0-0000-0000-0000-00000000000e','E','e@t.co','member','active')$$,
   '42501', null, 'E: cannot self-enrol as member');
-insert into public.projects (id,name,status,timezone,currency)
-values ('33330000-0000-0000-0000-000000000003','E project','draft','UTC','GBP');
+select public.create_project('E project','UTC','GBP',null,null);
 select is((select role::text from public.project_members
-           where project_id='33330000-0000-0000-0000-000000000003' and user_id='e0e0e0e0-0000-0000-0000-00000000000e'),
+           where user_id='e0e0e0e0-0000-0000-0000-00000000000e'
+             and role = 'organizer' and status = 'active'),
           'organizer', 'E: founding member auto-created as organizer');
 select pg_temp.logout();
 

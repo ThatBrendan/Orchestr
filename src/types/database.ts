@@ -7,8 +7,7 @@
  * so it is a drop-in replacement.
  *
  * Covers every table/view/enum/function in the current schema, including
- * 20260904120800_frontend_read_models (v_my_projects.total_target_minor,
- * public.get_my_attention()).
+ * 20260907120000_platform_admin (platform_role, admin read models/RPCs).
  */
 
 export type Json =
@@ -37,6 +36,7 @@ export interface Database {
           timezone: string;
           default_currency: string;
           notification_prefs: Json;
+          platform_role: Database["public"]["Enums"]["platform_role"];
           created_at: string;
           updated_at: string;
         };
@@ -48,6 +48,7 @@ export interface Database {
           timezone?: string;
           default_currency?: string;
           notification_prefs?: Json;
+          platform_role?: Database["public"]["Enums"]["platform_role"];
         };
         Update: {
           display_name?: string;
@@ -55,6 +56,7 @@ export interface Database {
           timezone?: string;
           default_currency?: string;
           notification_prefs?: Json;
+          platform_role?: Database["public"]["Enums"]["platform_role"];
         };
         Relationships: [];
       };
@@ -531,8 +533,131 @@ export interface Database {
         };
         Relationships: [];
       };
+      v_admin_users: {
+        Row: {
+          id: string;
+          email: string;
+          display_name: string;
+          avatar_url: string | null;
+          timezone: string;
+          default_currency: string;
+          platform_role: Database["public"]["Enums"]["platform_role"];
+          created_at: string;
+          updated_at: string;
+          membership_count: number;
+          active_membership_count: number;
+        };
+        Relationships: [];
+      };
+      v_admin_user_memberships: {
+        Row: {
+          member_id: string;
+          project_id: string;
+          project_name: string;
+          project_status: Database["public"]["Enums"]["project_status"];
+          user_id: string | null;
+          display_name: string;
+          email: string | null;
+          role: Database["public"]["Enums"]["member_role"];
+          status: Database["public"]["Enums"]["member_status"];
+          joined_at: string | null;
+          created_at: string;
+          updated_at: string;
+          deleted_at: string | null;
+        };
+        Relationships: [];
+      };
+      v_admin_projects: {
+        Row: {
+          id: string;
+          name: string;
+          description: string | null;
+          status: Database["public"]["Enums"]["project_status"];
+          starts_on: string | null;
+          ends_on: string | null;
+          timezone: string;
+          currency: string;
+          created_by: string | null;
+          created_by_display_name: string | null;
+          created_by_email: string | null;
+          created_at: string;
+          updated_at: string;
+          archived_at: string | null;
+          deleted_at: string | null;
+          member_count: number;
+          active_member_count: number;
+          commitment_count: number;
+          total_cost_minor: number;
+          gross_paid_minor: number;
+        };
+        Relationships: [];
+      };
+      v_admin_project_members: {
+        Row: {
+          id: string;
+          project_id: string;
+          user_id: string | null;
+          display_name: string;
+          email: string | null;
+          role: Database["public"]["Enums"]["member_role"];
+          status: Database["public"]["Enums"]["member_status"];
+          platform_role: Database["public"]["Enums"]["platform_role"] | null;
+          joined_at: string | null;
+          created_at: string;
+          updated_at: string;
+          deleted_at: string | null;
+        };
+        Relationships: [];
+      };
+      v_admin_invitations: {
+        Row: {
+          id: string;
+          project_id: string;
+          project_name: string;
+          email: string;
+          role: Database["public"]["Enums"]["member_role"];
+          status: Database["public"]["Enums"]["invitation_status"];
+          inviter_display_name: string | null;
+          inviter_email: string | null;
+          created_at: string;
+          updated_at: string;
+          expires_at: string;
+          accepted_at: string | null;
+        };
+        Relationships: [];
+      };
+      v_admin_audit_log: {
+        Row: {
+          id: string;
+          project_id: string | null;
+          project_name: string | null;
+          at: string;
+          actor_user_id: string | null;
+          actor_email: string | null;
+          actor_display_name: string | null;
+          actor_member_id: string | null;
+          source: Database["public"]["Enums"]["audit_source"];
+          action: Database["public"]["Enums"]["audit_action"];
+          entity_type: string;
+          entity_id: string;
+          request_id: string | null;
+          before: Json | null;
+          after: Json | null;
+        };
+        Relationships: [];
+      };
     };
     Functions: {
+      create_project: {
+        Args: {
+          p_name: string;
+          p_timezone: string;
+          p_currency: string;
+          p_starts_on?: string | null;
+          p_ends_on?: string | null;
+        };
+        Returns: string;
+      };
       get_project_health: {
         Args: { p_project: string };
         Returns: {
@@ -592,8 +717,32 @@ export interface Database {
         Args: { p_project: string; p_new_organizer_member: string };
         Returns: undefined;
       };
+      get_admin_overview: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+          total_users: number;
+          admin_users: number;
+          total_projects: number;
+          active_projects: number;
+          archived_projects: number;
+          deleted_projects: number;
+          pending_invitations: number;
+          active_invitations: number;
+        }[];
+      };
+      get_admin_project_health_summary: {
+        Args: { p_project: string };
+        Returns: {
+          status: string;
+          blocker_count: number;
+          warning_count: number;
+          info_count: number;
+          attention_count: number;
+        }[];
+      };
     };
     Enums: {
+      platform_role: "user" | "admin";
       project_status: "draft" | "active" | "completed" | "archived";
       member_role: "organizer" | "member" | "viewer";
       member_status: "invited" | "active" | "removed";
@@ -627,6 +776,7 @@ export type Enums<T extends keyof PublicSchema["Enums"]> = PublicSchema["Enums"]
 export type ProjectStatus = Enums<"project_status">;
 export type MemberRole = Enums<"member_role">;
 export type MemberStatus = Enums<"member_status">;
+export type PlatformRole = Enums<"platform_role">;
 export type CommitmentKind = Enums<"commitment_kind">;
 export type CommitmentStatus = Enums<"commitment_status">;
 export type HealthStatus = "needs_attention" | "at_risk" | "healthy";

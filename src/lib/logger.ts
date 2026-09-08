@@ -6,7 +6,7 @@ type Level = "debug" | "info" | "warn" | "error";
 function emit(level: Level, msg: string, ctx?: Record<string, unknown>) {
   if (level === "debug" && !config.isDev) return;
   // eslint-disable-next-line no-console
-  (console[level] ?? console.log)(`[orchestr] ${msg}`, ctx ?? "");
+  (console[level] ?? console.log)(`[orchestrio] ${msg}`, ctx ?? "");
   // TODO(sentry): forward warn/error when config.sentryDsn is set.
 }
 

@@ -1,5 +1,5 @@
 import { computed } from "vue";
-import { useQuery } from "@tanstack/vue-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/vue-query";
 import { qk } from "./keys";
 import { useAuth } from "./useAuth";
 import { useMyProjects } from "./useProjects";
@@ -14,6 +14,18 @@ export function useMyProfile() {
     enabled: computed(() => !!userId.value),
   });
   return { profile: q.data, isPending: q.isPending };
+}
+
+export function useUpdateMyDisplayName() {
+  const { userId } = useAuth();
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (displayName: string) => profileService.updateMyDisplayName(userId.value!, displayName),
+    onSuccess: (profile) => {
+      client.setQueryData(qk.me.profile(profile.id), profile);
+      void client.invalidateQueries({ queryKey: qk.me.profile(profile.id) });
+    },
+  });
 }
 
 /**

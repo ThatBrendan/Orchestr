@@ -1,4 +1,4 @@
-// Shared CORS + response helpers for Orchestr Edge Functions.
+// Shared CORS + response helpers for Orchestrio Edge Functions.
 export const corsHeaders = {
   "Access-Control-Allow-Origin": Deno.env.get("APP_URL") ?? "*",
   "Access-Control-Allow-Headers":

@@ -1,4 +1,4 @@
-# Supabase local config — Orchestr
+# Supabase local config — Orchestrio
 # See docs/TECHNICAL_ARCHITECTURE.md §22 for environment strategy.
 project_id = "orchestr"
 

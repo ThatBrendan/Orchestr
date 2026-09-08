@@ -55,6 +55,8 @@ export function fromPostgrestError(err: PostgrestError): AppError {
       "project_archived",
       "last_organizer",
       "forbidden_member_change",
+      "platform_admin_required",
+      "platform_role_locked",
     ]);
     if (permissionCodes.has(orchestr.code)) {
       return new AppError("permission", orchestr.text, { code: orchestr.code, cause: err });

@@ -9,33 +9,26 @@ import { toAppError } from "@/lib/errors";
 import { APP_NAME } from "@/config";
 import AppButton from "@/components/ui/AppButton.vue";
 
-usePageMeta({ title: `Log in · ${APP_NAME}`, description: "Log in to your Orchestr workspace." });
+usePageMeta({ title: `Log in · ${APP_NAME}`, description: `Log in to your ${APP_NAME} workspace.` });
 
 const route = useRoute();
 const router = useRouter();
-const { signInWithOtp, signInWithPassword } = useAuth();
+const { signInWithPassword } = useAuth();
 const toast = useToast();
 
 const email = ref("");
 const password = ref("");
-const usePassword = ref(false);
 const busy = ref(false);
-const linkSent = ref(false);
 
 const dest = () => safeRedirect(route.query.redirect) ?? "/app";
 const signupTo = { name: "signup", query: route.query.redirect ? { redirect: String(route.query.redirect) } : undefined };
 
 async function submit() {
-  if (!email.value) return;
+  if (!email.value || !password.value) return;
   busy.value = true;
   try {
-    if (usePassword.value) {
-      await signInWithPassword(email.value.trim(), password.value);
-      await router.push(dest());
-    } else {
-      await signInWithOtp(email.value.trim(), safeRedirect(route.query.redirect));
-      linkSent.value = true;
-    }
+    await signInWithPassword(email.value.trim(), password.value);
+    await router.push(dest());
   } catch (e) {
     toast.error(toAppError(e).message);
   } finally {
@@ -55,16 +48,7 @@ async function submit() {
       </RouterLink>
       <h1 class="mt-6 text-center font-display text-[19px] font-semibold tracking-tight">Log in</h1>
 
-      <div v-if="linkSent" class="mt-6 border rounded-xl p-6 text-center border-line bg-surface">
-        <p class="text-14 text-ink-soft">
-          Check <span class="font-medium text-ink">{{ email }}</span> for a sign-in link.
-        </p>
-        <button class="mt-3 text-13 text-accent font-medium focus-ring" @click="linkSent = false">
-          Use a different email
-        </button>
-      </div>
-
-      <form v-else class="mt-6 space-y-4" @submit.prevent="submit">
+      <form class="mt-6 space-y-4" @submit.prevent="submit">
         <label class="block">
           <span class="text-13 font-medium block mb-1.5 text-ink-soft">Email</span>
           <input
@@ -76,7 +60,7 @@ async function submit() {
           />
         </label>
 
-        <label v-if="usePassword" class="block">
+        <label class="block">
           <span class="text-13 font-medium block mb-1.5 text-ink-soft">Password</span>
           <input
             v-model="password"
@@ -88,16 +72,8 @@ async function submit() {
         </label>
 
         <AppButton type="submit" :loading="busy" block>
-          {{ usePassword ? "Log in" : "Send sign-in link" }}
+          Log in
         </AppButton>
-
-        <button
-          type="button"
-          class="w-full text-13 text-muted hover:text-ink-soft focus-ring"
-          @click="usePassword = !usePassword"
-        >
-          {{ usePassword ? "Email me a link instead" : "Log in with a password" }}
-        </button>
       </form>
 
       <p class="mt-6 text-center text-13 text-muted">

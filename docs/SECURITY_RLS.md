@@ -15,6 +15,7 @@
 4. **Elevation is contained.** `SECURITY DEFINER` is used in exactly the places [DATABASE_SCHEMA §8.2] lists, each with `SET search_path = ''`, typed args, no dynamic SQL, and a body that can only ever act on `auth.uid()`'s own membership or a token the caller already holds.
 5. **History is immutable.** `audit_log` and paid `payments` cannot be altered or removed by any client role; `audit_log` cannot be altered by `service_role` either.
 6. **Soft-deleted and deleted-project data is invisible** to every non-service role, including the project's own organizers ([BUSINESS_RULES PRJ‑23]). Restore is a support/`service_role` operation in MVP.
+7. **Platform administration is global and separate.** `users.platform_role` (`user`/`admin`) is the platform-admin role. `project_members.role` remains project-scoped (`organizer`/`member`/`viewer`).
 
 ---
 
@@ -26,6 +27,7 @@
 |------|-----|----------------------|--------------|
 | `anon` | any unauthenticated caller using the anon key | PostgREST with no/invalid JWT | yes — and almost every policy excludes it |
 | `authenticated` | any signed-in user; JWT carries `sub` = `auth.uid()` | PostgREST (`supabase-js` **or** raw `fetch` — identical) | yes |
+| `platform admin` | signed-in user with `users.platform_role = 'admin'` | Same anon key + JWT as any authenticated user | yes; admin SELECT policies/read models require `app.is_platform_admin()` |
 | `service_role` | Edge Functions, migrations, CI, support scripts | service key, **never in the browser bundle** ([TECHNICAL_ARCHITECTURE §8.1]) | **no — bypasses RLS.** Must self-authorise. |
 | `postgres` / migration owner | schema management only | direct connection | n/a |
 
@@ -147,7 +149,17 @@ Global: `ALTER TABLE <t> ENABLE ROW LEVEL SECURITY; ALTER TABLE <t> FORCE ROW LE
 
 **Cross-member display data** (name + avatar of co-members) is **not** served from `users`. It comes from `app.v_member_directory` ([§7](#7-views--exposed-read-models)), a `security_invoker = false` view that joins `project_members` → `users` and returns only `(project_id, member_id, display_name, avatar_url, role, status)` for projects where `app.is_member(project_id)`. This keeps `email`, `timezone`, `default_currency`, `notification_prefs` private to the account owner.
 
-**Attack notes:** `GET /rest/v1/users?select=*` → returns only your row. `GET /rest/v1/users?id=eq.<someone>` → 0 rows. `PATCH /rest/v1/users?id=eq.<someone>` → 0 rows updated. No enumeration of the user base.
+**Attack notes:** `GET /rest/v1/users?select=*` → returns only your row unless you are a platform admin. `GET /rest/v1/users?id=eq.<someone>` → 0 rows for non-admins. `PATCH /rest/v1/users?id=eq.<someone>` → 0 rows updated. No normal-user enumeration of the user base.
+
+**Platform role notes:** authenticated clients cannot change `users.platform_role`; `app.tg_block_client_platform_role_change()` raises `orchestr:platform_role_locked` whenever a JWT-backed session attempts it. Bootstrap the first admin only from a trusted database/Supabase administrative environment:
+
+```sql
+update public.users
+set platform_role = 'admin'
+where email = '<known-user@example.com>';
+```
+
+There is no email-domain rule and no frontend promotion flow.
 
 ---
 
@@ -219,7 +231,7 @@ Global: `ALTER TABLE <t> ENABLE ROW LEVEL SECURITY; ALTER TABLE <t> FORCE ROW LE
 | DELETE | `USING (app.is_organizer(project_id))` — optional hard delete; revoke is preferred |
 
 **Invitee path (no direct table access):**
-- `/invite/:token` asks the user to authenticate (magic link to an email they type).
+- `/invite/:token` asks the user to sign in or create an account.
 - Post-auth, the client calls `public.accept_invitation(p_token)` ([§6](#6-rpc-authorization)), which:
   - looks up the invitation by `token` (a 192-bit random string — not enumerable),
   - rejects if `status <> 'pending'` or `expires_at < now()` with a **generic** error (no oracle for "exists but expired" vs "revoked"),
@@ -480,8 +492,11 @@ All in `app`, `GRANT SELECT TO authenticated`. `app` unexposed to PostgREST, so 
 |------|---------------------------|
 | `v_commitment_financials`, `v_project_financials`, `v_budget_category_actuals`, `v_member_balances`, `v_timeline_events`, `v_my_projects` | `security_invoker` ⇒ exactly the rows the caller could `SELECT` from the underlying tables ⇒ members-only, non-deleted, cross-project-safe automatically |
 | `v_member_directory` | `security_invoker = false` **by design** — joins `users` for `avatar_url`, which members otherwise can't read; the view body itself filters `WHERE app.is_member(project_id)` and selects only 6 non-sensitive columns |
+| `v_admin_users`, `v_admin_user_memberships`, `v_admin_projects`, `v_admin_project_members`, `v_admin_invitations`, `v_admin_audit_log` | admin-only inspection views. They are `security_invoker = true`, base-table SELECT policies are gated by `app.is_platform_admin()`, and each view also filters with `WHERE app.is_platform_admin()`. |
 
 `v_member_directory` is the one deliberate definer view; its safety rests on (a) the internal `is_member` filter and (b) the column whitelist. Documented and pgTAP-tested.
+
+`public.get_admin_overview()` and `public.get_admin_project_health_summary(uuid)` are the admin RPCs in this phase. They are `SECURITY DEFINER`, use `SET search_path = ''`, validate `app.is_platform_admin()`, and return set-based operational data. Normal users can invoke the RPC names but receive `orchestr:platform_admin_required`; no rows are leaked.
 
 ---
 
@@ -581,13 +596,15 @@ Legend: **✔** allowed · **✔ᶜ** allowed with a row condition (organizer/cr
 | **currencies** | SELECT | ✘ | ✔ | ✔ | ✔ | ✔ | reference |
 | | write | ✘ | ✘ | ✘ | ✘ | ✘ | seed only |
 
+Platform admins add read-only inspection access through the admin views/RPC above: all users, all projects, invitations, project members, selected project financial summaries, and global audit rows. This does not grant unrestricted mutation, impersonation, password reset, billing access, hard deletion, or project intervention.
+
 ---
 
 ## 10. Principal capability summary
 
 ### Anonymous (`anon`)
 - **SELECT/INSERT/UPDATE/DELETE: nothing** on any `public` table. No policy references `anon`; all table privileges revoked.
-- Can only hit Supabase **Auth** endpoints (sign up / sign in / magic link) — not RLS-controlled.
+- Can only hit Supabase **Auth** endpoints (sign up / sign in) — not RLS-controlled.
 - Cannot read `currencies`, cannot see that a project or invitation exists, cannot enumerate users.
 
 ### Authenticated non-member (of a given project)
@@ -671,8 +688,9 @@ Fixtures: `userA` (organizer of P1, member of P2), `userB` (member of P1), `user
 8. **Payment manipulation** — `userC` `INSERT payments` ⇒ denied; `userD` `INSERT payments` for P1 ⇒ denied; `userB` `INSERT payments {project_id:P1, commitment_id:<P2 commitment>}` ⇒ FK error; `userB` soft-delete a `paid` payment ⇒ trigger exception; hard `DELETE` ⇒ denied.
 9. **Audit integrity** — `userA` (organizer) `UPDATE/DELETE audit_log` ⇒ denied (RLS) and exception (trigger); `userB` `SELECT audit_log` ⇒ 0 rows; `userA` `SELECT audit_log` for P1 ⇒ rows; direct `SELECT app.tg_audit_row()` ⇒ error/permission denied.
 10. **Soft-deleted rows** — after soft-deleting a P1 commitment: `userA`/`userB` `SELECT` ⇒ excluded; `UPDATE` ⇒ 0 rows. P3 (deleted project): all users ⇒ project + all children invisible.
-11. **Archived project** (P4) — `SELECT` by members ⇒ works; any child `INSERT/UPDATE/DELETE` ⇒ exception (`tg_enforce_project_writable`); `projects UPDATE status='active'` by organizer ⇒ works (un-archive).
-12. **Direct REST parity** — a subset of the above re-run as raw `http` calls with each user's JWT and with the anon key, asserting identical outcomes (proves no frontend dependency).
-13. **Storage** — `userD` download `project-media/P1/...` ⇒ 403; `userC` upload to `project-media/P1/...` ⇒ denied; `userB` upload ⇒ ok; malformed-UUID path ⇒ denied.
+11. **Platform admin** — anon cannot read admin views; normal authenticated users get 0 rows from admin views, cannot update their own `platform_role`, and cannot run `get_admin_overview()` successfully; admins can read approved admin views and global audit.
+12. **Archived project** (P4) — `SELECT` by members ⇒ works; any child `INSERT/UPDATE/DELETE` ⇒ exception (`tg_enforce_project_writable`); `projects UPDATE status='active'` by organizer ⇒ works (un-archive).
+13. **Direct REST parity** — a subset of the above re-run as raw `http` calls with each user's JWT and with the anon key, asserting identical outcomes (proves no frontend dependency).
+14. **Storage** — `userD` download `project-media/P1/...` ⇒ 403; `userC` upload to `project-media/P1/...` ⇒ denied; `userB` upload ⇒ ok; malformed-UUID path ⇒ denied.
 14. **Helper safety** — `anon` `EXECUTE app.is_member` ⇒ denied; `authenticated` `EXECUTE app.is_member('<any project>')` ⇒ returns only a boolean about self; `app` schema not in PostgREST introspection.
 ```

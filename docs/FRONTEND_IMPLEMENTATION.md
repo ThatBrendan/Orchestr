@@ -20,7 +20,7 @@ npm run build                     # vue-tsc && vite build
 npm run dev                       # http://localhost:5173
 ```
 
-Seed users (from `supabase/seed.sql`): `james@example.com` … `chris@example.com`, password `password123`. Local Supabase has email confirmations disabled, so password sign-in works immediately; magic links appear in Inbucket (`http://localhost:54324`).
+Seed users (from `supabase/seed.sql`): `james@example.com` … `chris@example.com`, password `password123`. Local Supabase has email confirmations disabled, so password sign-in works immediately.
 
 ---
 
@@ -58,7 +58,7 @@ src/
 ├─ stores/  auth · project-context · ui
 ├─ services/                 projects · members · derived · profile · invitations   (one call + error map each)
 ├─ composables/
-│  ├─ useAuth (+ initAuth)   onAuthStateChange wired once; signInWithOtp/Password/signOut
+│  ├─ useAuth (+ initAuth)   onAuthStateChange wired once; signInWithPassword/signOut
 │  ├─ useProjects            useMyProjects, useCreateProject
 │  ├─ useProject             useProject, useProjectFinancials, useProjectHealth, useUpcoming, useMemberDirectory
 │  ├─ useDashboard           useMyProfile, useDashboardAttention (fan-out get_project_health)
@@ -96,7 +96,7 @@ Ported unchanged: the paper/ink/accent/amber palette, Inter + Space Grotesk, the
 | Deep-linking a "Needs attention" row opens the **project** (not an activity slide-over) | the activity slide-over is a later pass; not faked |
 | Dashboard "Needs attention" **aggregates across all your projects** | matches DOMAIN_MODEL; the prototype only showed one project's list |
 | Every list has explicit **skeleton / error(+retry) / empty** states | the prototype had none |
-| Wordmark is **"Orchestr"** | the product name — resolved. The prototype HTML carried a "Basecamp" placeholder. |
+| Wordmark is **"Orchestrio"** | the product name — resolved. The prototype HTML carried a "Basecamp" placeholder. |
 
 ---
 
@@ -106,7 +106,7 @@ Ported unchanged: the paper/ink/accent/amber palette, Inter + Space Grotesk, the
 
 | Screen | Source |
 |---|---|
-| Login / magic link / password | Supabase Auth |
+| Login / signup password auth | Supabase Auth |
 | Invite accept | `get_invitation` + `accept_invitation` RPCs |
 | Dashboard greeting | `public.users.display_name` |
 | Dashboard project rows + Projects list | `v_my_projects` |
@@ -134,13 +134,13 @@ Each `FeaturePending` block states plainly what's missing and whether the backen
 ## 6. Open items / notes
 
 1. **`src/types/database.ts` is authored to match `supabase gen types typescript --local` output exactly** — full coverage of every table/view/enum/function in the current migrations (not a partial stopgap). Regenerate with `npm run gen:types` once the local stack runs; the shape is identical so it drops in.
-2. **Product name is resolved: "Orchestr"** — one constant, `APP_NAME` in `src/config.ts`.
+2. **Product name is resolved: "Orchestrio"** — one constant, `APP_NAME` in `src/config.ts`.
 3. **`v_my_projects.total_target_minor`** is now provided by the backend (migration `20260904120800`). `ProjectSummaryRow` consumes it directly — no client-side budget math.
 4. **Dashboard "Needs attention" is one set-based call** (`public.get_my_attention()`, migration `20260904120800`). The former per-project `get_project_health` fan-out (client N+1) is gone. The headline count still comes from `v_my_projects.attention_count` (already in the view).
 5. **No realtime yet** — vue-query `refetchOnWindowFocus` + manual invalidation only (TECHNICAL_ARCHITECTURE §8.1, SHOULD — later pass).
 6. **`initAuth()` runs before the router**; guards `await` a `ready` watcher.
 7. **Project-header financial tiles degrade gracefully** on a `v_project_financials` error (show "Not set" / "—" / "0%") rather than blocking the tab content — a deliberate choice for a secondary stat panel.
-8. **Magic-link login always returns to `/`** (the `?redirect=` param isn't carried through the email link). Password login honours `?redirect=`.
+8. **Password login honours `?redirect=`** via `safeRedirect`.
 
 ---
 
@@ -184,7 +184,7 @@ One additive migration — **`supabase/migrations/20260904120800_frontend_read_m
 | Scenario | Path traced | Verdict |
 |---|---|---|
 | Password login | `LoginView` → `useAuth.signInWithPassword` → `supabase.auth.signInWithPassword` → error→toast / success→`router.push(redirect)` | ✅ |
-| Magic-link login | `signInWithOtp` (redirect `…/auth/callback`) → "check email" → `AuthCallbackView` waits on `ready` → redirect | ✅ (redirect param not carried — noted §6.8) |
+| Password signup | `SignupView` → `useAuth.signUpWithPassword` → `supabase.auth.signUp` → confirmation notice or `router.push(redirect)` | ✅ |
 | Auth callback | `detectSessionInUrl` parses token → `onAuthStateChange` → store → `AuthCallbackView` routes to target or `/login` | ✅ |
 | Logout | `UserMenu` → `useAuth.signOut` → `supabase.auth.signOut` + `queryClient.clear()` + store reset → `/login` | ✅ |
 | Dashboard / project list / overview / People | composable → service → RLS-protected view/RPC; skeleton/error/empty/content branches present | ✅ |
@@ -273,8 +273,8 @@ old root routes remain** (grep-verified).
 | Path | Name | Component | Guard | Notes |
 |---|---|---|---|---|
 | `/` | `landing` | `LandingView` | — (public) | marketing page; auth-aware CTAs |
-| `/login` | `login` | `auth/LoginView` | `requireGuest` | password + magic link; honours `?redirect`; links to `/signup` |
-| `/signup` | `signup` | `auth/SignupView` | `requireGuest` | email+password + magic link; honours `?redirect`; links to `/login` |
+| `/login` | `login` | `auth/LoginView` | `requireGuest` | email + password; honours `?redirect`; links to `/signup` |
+| `/signup` | `signup` | `auth/SignupView` | `requireGuest` | email + password; honours `?redirect`; links to `/login` |
 | `/auth/callback` | `auth.callback` | `auth/AuthCallbackView` | — | resolves session → `?redirect` or `/app` |
 | `/invite/:token` | `invite` | `auth/AcceptInviteView` | — | unchanged flow |
 | `/app` | `dashboard` | `DashboardView` (child of `AppShell`) | `requireAuth` | the existing dashboard, reused as-is |
@@ -290,27 +290,36 @@ old root routes remain** (grep-verified).
 | `/app/calendar` | `calendar` | `CalendarView` (FeaturePending) | `requireAuth` | |
 | `/app/people` | `people-global` | `PeopleView` (FeaturePending) | `requireAuth` | |
 | `/app/settings` | `settings` | `SettingsView` (partial — profile read-only) | `requireAuth` | |
+| `/admin` | `admin.dashboard` | `AdminDashboardView` (child of `AdminShell`) | `requirePlatformAdmin` | platform operational overview |
+| `/admin/users` | `admin.users` | `AdminUsersView` | `requirePlatformAdmin` | read-only account list/search |
+| `/admin/users/:userId` | `admin.user` | `AdminUserDetailView` | `requirePlatformAdmin` | user details, memberships, audit |
+| `/admin/projects` | `admin.projects` | `AdminProjectsView` | `requirePlatformAdmin` | read-only project list/search |
+| `/admin/projects/:projectId` | `admin.project` | `AdminProjectDetailView` | `requirePlatformAdmin` | project details, members, finance, planning health, audit |
+| `/admin/invitations` | `admin.invitations` | `AdminInvitationsView` | `requirePlatformAdmin` | read-only invitation list/search |
+| `/admin/audit` | `admin.audit` | `AdminAuditView` | `requirePlatformAdmin` | immutable global audit inspection |
+| `/access-denied` | `access-denied` | `AccessDeniedView` | — | non-admin destination for blocked admin access |
 | `/:pathMatch(.*)*` | `not-found` | `NotFoundView` | — | |
 
 ### 8.4 Guard behaviour
 
 - **`requireAuth`** (`/app` shell): unauthenticated → `{ name: 'login', query: { redirect: to.fullPath } }`. e.g. `/app/projects/abc123` → `/login?redirect=/app/projects/abc123`.
+- **`requirePlatformAdmin`** (`/admin` shell): unauthenticated → `/login?redirect=/admin…`; authenticated non-admin → `access-denied`; platform admin → admin route. This is UX only; backend authorization is enforced by `app.is_platform_admin()`, admin RLS policies, and admin-only read models/RPCs.
 - **`requireGuest`** (`/login`, `/signup`): authenticated → `safeRedirect(?redirect)` if safe, else `{ name: 'dashboard' }`.
 - **`hydrateProjectContext`** (global `beforeEach`): unchanged. For a `project.*` route while signed out → `{ name: 'login', query: { redirect: to.fullPath } }`; while signed in but not a member → `{ name: 'not-found' }`.
 - **`safeRedirect(raw)`** (new, exported from `router/guards.ts`): allows only internal, non-protocol-relative paths (`/…`, not `//`, not `/\`, no backslash, no `scheme:`). Unit-tested (11 cases). **Guards remain UX only — Supabase RLS is the security boundary.**
-- **Post-login destination**: `safeRedirect(route.query.redirect) ?? '/app'` for password + callback. Magic-link login/signup carries the redirect through `emailRedirectTo=…/auth/callback?redirect=<path>` (requires the `additional_redirect_urls` wildcard entries added to `supabase/config.toml`; mirror in the hosted project's Auth URL config).
+- **Post-login destination**: `safeRedirect(route.query.redirect) ?? '/app'` for password login/signup and auth callbacks.
 
 ### 8.5 LandingView structure (`src/views/LandingView.vue`)
 
 `overflow-x-hidden` root → skip-link → `<MarketingHeader>` → `<main id="main">` → `<MarketingFooter>`. `main` contains, in order:
 
-1. **HeroSection** — h1 "Turn complex plans into coordinated execution.", the approved positioning sentence, primary CTA (`Start planning` / `Open Orchestr`), secondary CTA `See how it works` (scrolls to `#how-it-works`), and a static `ProductPreview`.
+1. **HeroSection** — h1 "Turn complex plans into coordinated execution.", the approved positioning sentence, primary CTA (`Start planning` / `Open Orchestrio`), secondary CTA `See how it works` (scrolls to `#how-it-works`), and a static `ProductPreview`.
 2. **ProblemSection** — fragmentation across WhatsApp/email/spreadsheets/PDFs/confirmations/notes/reminders; consequence: nobody has one reliable view.
 3. **PillarsSection** (`#product`) — Commitments · Ownership · Money · Timeline · People · Planning health.
 4. **HowItWorksSection** (`#how-it-works`) — 4 steps: create a plan → add commitments and people → track costs/ownership/deadlines → resolve risks and execute.
 5. **UseCasesSection** (`#use-cases`) — group trips, weddings/events, house moves, product/startup launches, team projects, any complex group plan — "different plans, the same problem".
-6. **PlanningHealthSection** (`#features`) — deterministic-rules framing ("Orchestr continuously checks your plan for things that need attention"), explicit "no AI guesswork / won't make bookings / won't plan on its own", and an illustrative findings list.
-7. **FinalCtaSection** — "Keep the whole plan moving." + `Create your first plan` / `Open Orchestr` + secondary "Log in" when signed out.
+6. **PlanningHealthSection** (`#features`) — deterministic-rules framing ("Orchestrio continuously checks your plan for things that need attention"), explicit "no AI guesswork / won't make bookings / won't plan on its own", and an illustrative findings list.
+7. **FinalCtaSection** — "Keep the whole plan moving." + `Create your first plan` / `Open Orchestrio` + secondary "Log in" when signed out.
 
 Header nav (`#product`, `#how-it-works`, `#use-cases`, `#features`) uses real `<a href="#…">` anchors with `@click.prevent` smooth-scroll (respects `prefers-reduced-motion`) + `scroll-margin-top` on `[id]`. Mobile menu is a Headless UI `Disclosure` (keyboard + `aria-expanded` handled). The marketing header/footer do **not** reuse `AppShell`.
 
@@ -320,24 +329,24 @@ Header nav (`#product`, `#how-it-works`, `#use-cases`, `#features`) uses real `<
 
 | Location | Signed out | Signed in |
 |---|---|---|
-| Header (desktop + mobile) | `Log in` (ghost) + `Get started` (primary) | `Open Orchestr` → `/app` |
-| Hero primary CTA | `Start planning` → `/signup` | `Open Orchestr` → `/app` |
+| Header (desktop + mobile) | `Log in` (ghost) + `Get started` (primary) | `Open Orchestrio` → `/app` |
+| Hero primary CTA | `Start planning` → `/signup` | `Open Orchestrio` → `/app` |
 | Hero secondary CTA | `See how it works` → scroll to `#how-it-works` (both states) | ↑ |
-| Final CTA | `Create your first plan` → `/signup` (+ "Log in" link) | `Open Orchestr` → `/app` |
+| Final CTA | `Create your first plan` → `/signup` (+ "Log in" link) | `Open Orchestrio` → `/app` |
 
 State comes from `useAuth().isAuthenticated` (Pinia session store). No database calls in landing components.
 
 ### 8.7 Signup / login behaviour
 
-- **`/signup`** (`SignupView`, new — separate screen): email + password (min 8, `new-password`), or "Email me a link instead" (magic link). On password sign-up: if Supabase returns **no session** (email confirmation required) → shows a "confirm your email" state and explicitly says *"You're not signed in yet"* — it never fakes a logged-in state (spec §15). If a session **is** returned (confirmations off) → `router.push(dest())`. Magic-link → "check your email". Footer link: *"Already have an account? Log in"* → `/login`.
-- **`/login`** (`LoginView`, updated): unchanged auth logic (password + magic link), restyled header + `<h1>Log in</h1>`, wordmark links to `/`, honours `?redirect` (password immediately; magic link via `emailRedirectTo`). Footer link: *"Don't have an account? Sign up"* → `/signup` (carrying `?redirect`).
-- `useAuth` gained `signUpWithPassword(email, password, redirect?) → { needsConfirmation }` and `signInWithOtp` gained an optional `redirect` arg.
+- **`/signup`** (`SignupView`, new — separate screen): email + password (min 8, `new-password`). If Supabase returns **no session** (email confirmation required) → shows a "confirm your email" state and explicitly says *"You're not signed in yet"* — it never fakes a logged-in state (spec §15). If a session **is** returned (confirmations off) → `router.push(dest())`. Footer link: *"Already have an account? Log in"* → `/login`.
+- **`/login`** (`LoginView`, updated): email + password only, restyled header + `<h1>Log in</h1>`, wordmark links to `/`, honours `?redirect`. Footer link: *"Don't have an account? Sign up"* → `/signup` (carrying `?redirect`).
+- `useAuth` exposes `signUpWithPassword(email, password, redirect?) → { needsConfirmation }` and `signInWithPassword(email, password)`.
 
 ### 8.8 SEO / metadata
 
 `usePageMeta({ title, description, url? })` composable sets `document.title` + `<meta name="description">` + `og:title`/`og:description`/`og:type`/`og:url` + `twitter:card` on mount. `index.html` carries static defaults. `router.afterEach` sets `document.title` from `route.meta.title` (fallback for app routes) and resets the description to the product default on non-public routes. **No SSR / Nuxt** — client-side metadata only, sufficient for a public SPA.
 
-Default title: `Orchestr — Plan together. Execute clearly.`
+Default title: `Orchestrio — Plan together. Execute clearly.`
 
 ### 8.9 Files
 
@@ -347,7 +356,7 @@ Default title: `Orchestr — Plan together. Execute clearly.`
 
 **Modified (11):** `src/router/index.ts` (new table, scrollBehavior for hash, title afterEach),
 `src/router/guards.ts` (`safeRedirect`, `requireGuest` honours redirect),
-`src/composables/useAuth.ts` (`signUpWithPassword`, redirect-aware `signInWithOtp`),
+`src/composables/useAuth.ts` (`signUpWithPassword`, `signInWithPassword`),
 `src/views/auth/LoginView.vue`, `src/views/auth/AuthCallbackView.vue`, `src/views/NotFoundView.vue`,
 `src/components/ui/AppButton.vue` (`to`/`href` → RouterLink/anchor, `lg` size),
 `src/components/ui/icons.ts` (`menu`, `arrowRight`, `coins`, `flag`),
@@ -360,7 +369,7 @@ Default title: `Orchestr — Plan together. Execute clearly.`
 |---|---|
 | `vue-tsc --noEmit` (strict, `noUncheckedIndexedAccess`, `noUnusedLocals/Params`) | ✅ exit 0 |
 | `vite build` (`vue-tsc && vite build`) | ✅ exit 0 — 327 modules, ~1.7 s, no warnings; `LandingView` + `SignupView` are lazy chunks |
-| `npm run lint` | ⚠️ not runnable here (sandbox blocks installing `@eslint/js` / `typescript-eslint` / `eslint-plugin-vue`); `eslint.config.js` committed; `vue-tsc` unused-locals covers TS-level lint |
+| `npm run lint` | ⚠️ runs, but fails on existing `src/views/project/HealthTab.vue` `vue/no-deprecated-filter`; new admin code typechecks and builds |
 | `safeRedirect` unit logic | ✅ 11/11 cases (internal ok; `//`, `https:`, `/\`, `\`, `javascript:`, empty, undefined → null) |
 | SPA deep-link refresh — `vite` dev **and** `vite preview` | ✅ `/`, `/app`, `/app/projects/abc/overview`, `/nonsense` all serve `index.html` (200) |
 | Vite/Vue compile of all new modules (dev server) | ✅ clean |
@@ -370,6 +379,10 @@ Default title: `Orchestr — Plan together. Execute clearly.`
 SIGNED OUT — `/` → landing ✅ · `/login` → login ✅ · `/signup` → signup ✅ · `/app` → `/login?redirect=/app` ✅ · `/app/projects` → `/login?redirect=/app/projects` ✅ · `/app/projects/abc123` → `/login?redirect=/app/projects/abc123` ✅ (exact path).
 
 SIGNED IN — `/` → landing (still reachable) ✅ · landing CTA → `/app` ✅ · `/login` → `/app` (or `?redirect`) ✅ · `/signup` → `/app` ✅ · `/app` → Dashboard ✅ · project routes hydrate + render normally ✅. No redirect loops (traced).
+
+PLATFORM ADMIN — `/admin` → Admin Overview once `requirePlatformAdmin` resolves ✅ · `/admin/users`, `/admin/projects`, `/admin/invitations`, `/admin/audit` render through `AdminShell` ✅ · normal-user `/admin` routes redirect to `AccessDeniedView` by code inspection; database views/RPCs remain the authorization boundary.
+
+Navigation — normal `AppShell` desktop wordmark routes to `/` ✅ · `AdminShell` desktop/mobile wordmark routes to `/` ✅ · authenticated users are not forced away from `/` ✅ · admins see an `Admin` entry in normal app navigation, normal users do not.
 
 ### 8.11 Production host (Vercel) — SPA rewrite
 

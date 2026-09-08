@@ -1,14 +1,14 @@
-# Orchestr
+# Orchestrio
 
 **Plan together. Execute clearly.**
 
-Orchestr is a collaborative planning and execution platform that brings **commitments, people, costs, responsibilities, deadlines, and progress** into one shared workspace.
+Orchestrio is a collaborative planning and execution platform that brings **commitments, people, costs, responsibilities, deadlines, and progress** into one shared workspace.
 
-Instead of coordinating complex plans across WhatsApp, email, spreadsheets, PDFs, booking confirmations, and notes, Orchestr provides one place to see what is happening, who owns it, what it costs, and what needs attention.
+Instead of coordinating complex plans across WhatsApp, email, spreadsheets, PDFs, booking confirmations, and notes, Orchestrio provides one place to see what is happening, who owns it, what it costs, and what needs attention.
 
 ## What can you plan?
 
-Orchestr is designed for plans involving multiple people, moving parts, costs, and deadlines, including:
+Orchestrio is designed for plans involving multiple people, moving parts, costs, and deadlines, including:
 
 * Group trips
 * Weddings and events
@@ -45,7 +45,7 @@ Orchestr is designed for plans involving multiple people, moving parts, costs, a
 
 ## Status
 
-Orchestr is currently under active development.
+Orchestrio is currently under active development.
 
 The application foundation, authentication, project management, public landing experience, backend schema, security model, and core project workspace are in place.
 
@@ -112,4 +112,4 @@ Never commit `.env` files or expose the Supabase `service_role` key in frontend 
 
 ---
 
-**Orchestr** — from scattered planning to coordinated execution.
+**Orchestrio** — from scattered planning to coordinated execution.
