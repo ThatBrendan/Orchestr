@@ -60,6 +60,7 @@ const routes: RouteRecordRaw[] = [
           { path: "budget", name: "project.budget", component: () => import("@/views/project/BudgetTab.vue") },
           { path: "timeline", name: "project.timeline", component: () => import("@/views/project/TimelineTab.vue") },
           { path: "people", name: "project.people", component: () => import("@/views/project/PeopleTab.vue") },
+          { path: "notes", name: "project.notes", component: () => import("@/views/project/NotesTab.vue") },
           { path: "health", name: "project.health", component: () => import("@/views/project/HealthTab.vue") },
           { path: "settings", name: "project.settings", component: () => import("@/views/project/ProjectSettingsView.vue") },
         ],

@@ -37,6 +37,10 @@ Native enums — chosen because each set is closed, referenced in `CHECK`/transi
 |------|--------|---------|
 | `platform_role` | `user`, `admin` | `users.platform_role` |
 | `project_status` | `draft`, `active`, `completed`, `archived` | `projects.status` |
+| `project_profile` | `group_trip`, `wedding_event`, `house_move`, `recurring_process`, `team_project`, `launch`, `blank` | `projects.profile` — presentation defaults only |
+| `activity_type` | `task`, `booking`, `purchase`, `event`, `other` | `commitments.activity_type` — workflow/presentation type, separate from category |
+| `recurrence_frequency` | `weekly`, `monthly` | `commitments.recurrence_frequency`, `tasks.recurrence_frequency` — MVP recurrence cadence |
+| `occurrence_status` | `completed`, `skipped` | `commitment_occurrences.status`, `task_occurrences.status` — persisted per-occurrence exceptions |
 | `member_role` | `organizer`, `member`, `viewer` | `project_members.role`, `invitations.role` |
 | `member_status` | `invited`, `active`, `removed` | `project_members.status` |
 | `invitation_status` | `pending`, `accepted`, `expired`, `revoked` | `invitations.status` |
@@ -125,12 +129,15 @@ Native enums — chosen because each set is closed, referenced in `CHECK`/transi
 | `name` | `text` | no | — | `CHECK (char_length(btrim(name)) BETWEEN 1 AND 120)` (VAL‑2) |
 | `description` | `text` | yes | — | |
 | `status` | `project_status` | no | `'draft'` | (PRJ‑5) |
+| `profile` | `project_profile` | no | `'blank'` | Presentation preset for labels/default module visibility only. No auth/RLS meaning; existing projects remain `blank`. |
+| `module_visibility` | `jsonb` | no | `'{}'::jsonb` | Per-project presentation overrides such as `{ "budget": false }`. Hidden modules remain routable and data is preserved. `CHECK (jsonb_typeof(module_visibility) = 'object')` |
 | `starts_on` | `date` | yes | — | (PRJ‑15) |
 | `ends_on` | `date` | yes | — | |
 | `timezone` | `text` | no | — | IANA; trigger-validated. Defaults from creator app-side (PRJ‑4) |
 | `currency` | `text` | no | — | `REFERENCES currencies(code) ON DELETE RESTRICT`. Immutable once money exists ([§7.5](#75-currency-immutability)) |
 | `cover_theme` | `text` | yes | — | cosmetic (prototype `cover`) |
 | `health_config` | `jsonb` | no | `'{}'::jsonb` | per-project threshold overrides ([HLT‑I]); keys: `inactive_days`, `due_soon_days`, `tight_connection_minutes`, `unconfirmed_near_days`, `on_budget_window_days`. Missing keys fall back to defaults in `app.get_project_health()`. `CHECK (jsonb_typeof(health_config) = 'object')` |
+| `notes` | `text` | yes | — | plain project-level notes for information that does not belong to a specific activity/task/payment/milestone. `CHECK (notes IS NULL OR char_length(notes) <= 10000)` |
 | `created_by` | `uuid` | yes | — | → `project_members.id` (the founding organizer); nullable because the member row is created *after* the project in the same transaction |
 | `created_at` | `timestamptz` | no | `now()` | |
 | `updated_at` | `timestamptz` | no | `now()` | |
@@ -214,6 +221,11 @@ Native enums — chosen because each set is closed, referenced in `CHECK`/transi
 
 ### 4.5 `commitments`
 
+Recurrence phase note: recurring Activities are stored as one `commitments` row with nullable structured recurrence columns:
+`recurrence_frequency`, `recurrence_interval`, `recurrence_start_date`, `recurrence_end_date`, and `recurrence_active`.
+Future instances are derived over bounded windows; the source Activity is not duplicated for every future date.
+Monthly recurrence clamps to the last valid day of the target month.
+
 - **Purpose:** the core unit of planning and execution — one owned, accountable line item ([DOMAIN_MODEL §5.5]). UI label "Activity".
 - **Source of truth for:** a commitment's planned/agreed cost (used by every financial calculation — [§6](#6-financial-source-of-truth)).
 
@@ -223,6 +235,7 @@ Native enums — chosen because each set is closed, referenced in `CHECK`/transi
 | `project_id` | `uuid` | no | — | `REFERENCES projects(id) ON DELETE CASCADE` |
 | `title` | `text` | no | — | `CHECK (char_length(btrim(title)) BETWEEN 1 AND 120)` (VAL‑9) |
 | `kind` | `commitment_kind` | no | — | doubles as budget category (COM‑6) |
+| `activity_type` | `activity_type` | no | `'other'` | Activity workflow/presentation type. Existing rows default conservatively to `other`; does not replace `kind`. |
 | `status` | `commitment_status` | no | `'researching'` | user-set lifecycle (COM‑3, COM‑15) |
 | `owner_member_id` | `uuid` | yes | — | **the single ownership link** (COM‑22). NULL = "Unassigned" |
 | `estimated_cost_minor` | `bigint` | yes | — | `CHECK (estimated_cost_minor IS NULL OR estimated_cost_minor >= 0)` (VAL‑11) |
@@ -239,7 +252,7 @@ Native enums — chosen because each set is closed, referenced in `CHECK`/transi
 | `supplier_name` | `text` | yes | — | embedded booking value object (COM‑39) |
 | `supplier_contact` | `text` | yes | — | |
 | `booking_reference` | `text` | yes | — | |
-| `booking_confirmed` | `boolean` | no | `false` | drives `missing_booking_reference` finding (COM‑41) |
+| `booking_confirmed` | `boolean` | no | `false` | drives `missing_booking_reference` finding only for `activity_type = 'booking'` (COM‑41) |
 | `notes` | `text` | yes | — | |
 | `created_by` | `uuid` | yes | — | composite FK → `project_members` |
 | `created_at` | `timestamptz` | no | `now()` | |
@@ -360,6 +373,10 @@ Native enums — chosen because each set is closed, referenced in `CHECK`/transi
 
 ### 4.9 `tasks`
 
+Recurrence phase note: standalone `tasks` have the same structured recurrence columns as Activities:
+`recurrence_frequency`, `recurrence_interval`, `recurrence_start_date`, `recurrence_end_date`, and `recurrence_active`.
+Completing a recurring task occurrence writes occurrence state and does not mark the entire task series `done`.
+
 - **Purpose:** a small unit of work; lighter than a commitment; no cost/participants/booking ([DOMAIN_MODEL §5.9]).
 
 | Column | Type | Null | Default | Notes |
@@ -387,6 +404,23 @@ Native enums — chosen because each set is closed, referenced in `CHECK`/transi
 - **Unique:** none.
 - **Check:** title length; `chk_task_completed` `CHECK ((status='done') = (completed_at IS NOT NULL))` (TSK‑9).
 - **Indexes:** PK; `(project_id, status) WHERE deleted_at IS NULL`; `(project_id, status, due_on) WHERE deleted_at IS NULL AND status IN ('open','in_progress')` (overdue findings, timeline); `(assignee_member_id) WHERE deleted_at IS NULL`; `(commitment_id) WHERE deleted_at IS NULL`.
+
+### 4.9a `commitment_occurrences`
+
+- **Purpose:** persisted exception/state rows for individual recurring Activity occurrences.
+- **Columns:** `id`, `project_id`, `commitment_id`, `occurrence_date`, `status`, `completed_at`, `skipped_at`, `created_by`, `created_at`, `updated_at`.
+- **State:** only `completed` and `skipped` are stored. Upcoming/overdue are derived.
+- **Unique:** `(commitment_id, occurrence_date)`.
+- **RLS:** project members can read; organizers/members can insert/update through the same project-role checks as Activity work. No client delete policy.
+
+### 4.9b `task_occurrences`
+
+- **Purpose:** persisted exception/state rows for individual recurring standalone task occurrences.
+- **Columns:** `id`, `project_id`, `task_id`, `occurrence_date`, `status`, `completed_at`, `skipped_at`, `created_by`, `created_at`, `updated_at`.
+- **State:** only `completed` and `skipped` are stored. Upcoming/overdue are derived.
+- **Unique:** `(task_id, occurrence_date)`.
+- **FKs:** `(project_id, task_id) → tasks(project_id, id)`; the recurrence migration adds `UNIQUE (project_id, id)` to `tasks` as the composite-FK target.
+- **RLS:** project members can read; organizers/members can insert/update. No client delete policy.
 - **Triggers:** `tg_set_updated_at`, `tg_set_created_by`, `tg_block_project_id_change`, `tg_task_status_transition`, `tg_task_assignee_role_check` (assignee role ∈ {organizer,member}, active — TSK‑4), `tg_enforce_project_writable`, `tg_audit_row`.
 - **Delete behaviour:** soft. Cascades (soft) when the parent commitment is soft-deleted ([§7.4](#74-soft-delete-cascade)); restorable if the commitment is restored.
 
@@ -539,7 +573,7 @@ Per the explicit instruction and [BUSINESS_RULES GC‑7], the following are **co
 
 ### 5.2 Timeline
 - **Not stored:** any timeline/`upcoming` event list.
-- **Home:** view `app.v_timeline_events` — `UNION ALL` of the seven sources in [BUSINESS_RULES TML‑1] (commitments, scheduled payments, paid payments, tasks, milestones, project start, project end).
+- **Home:** bounded RPC `public.get_project_timeline_events(project, start, end)` and compatibility view `public.v_timeline_events`. The timeline includes the original seven sources plus derived recurring Activity/Task due occurrences. Recurrence is generated in Postgres over the requested date window, not in Vue.
 - **Why not a table:** every event is a projection of a row that already exists; a table would need triggers on five other tables to stay correct.
 
 ### 5.3 Health
@@ -805,8 +839,15 @@ All views: `WITH (security_invoker = true)` (base-table RLS applies to the query
 | `app.v_budget_category_actuals` | project × kind | `target_minor`, `actual_minor`, `variance_minor` (BUD‑9/10) |
 | `app.v_member_balances` | project × member | `owed_minor`, `contributed_minor`, `balance_minor` (BUD‑13/14/15); default equal split computed from `commitment_participants` when the commitment has no `cost_shares` (BUD‑11); deterministic minor-unit rounding (BUD‑16) |
 | `app.v_timeline_events` | event | `project_id`, `occurs_at timestamptz`, `event_type`, `title`, `subject_type`, `subject_id`, `status` — `UNION ALL` of the 7 sources (TML‑1), ordered by `occurs_at` |
+| `public.get_project_timeline_events(uuid,timestamptz,timestamptz)` | RPC | bounded project timeline including recurring Activity/Task occurrences |
+| `public.get_my_timeline_events(timestamptz,timestamptz)` | RPC | bounded cross-project calendar timeline, enriched with project context |
+| `public.get_commitment_occurrences(uuid,date,date)` | RPC | bounded occurrence list for one recurring Activity |
+| `public.complete_commitment_occurrence(uuid,date)` / `skip_commitment_occurrence` / `stop_commitment_recurrence` | RPC | per-occurrence execution state and series stop control |
+| `public.get_task_occurrences(uuid,date,date)` | RPC | bounded occurrence list for one recurring task |
+| `public.complete_task_occurrence(uuid,date)` / `skip_task_occurrence` / `stop_task_recurrence` | RPC | per-occurrence task execution state and series stop control |
 | `app.v_member_directory` | project × member | `member_id`, `display_name`, `avatar_url`, `role`, `status` — the columns co-members may see (feeds People tab, owner pickers) |
-| `app.v_my_projects` | project | project columns + caller's `role` + `v_project_financials` summary + `attention_count` (from `get_project_health_summary`) + `next_event_at` (from `v_timeline_events`) — for Dashboard / Projects list |
+| `app.v_my_projects` | project | project columns including `profile` and `module_visibility` + caller's `role` + `v_project_financials` summary + `attention_count` (from `get_project_health_summary`) + `next_event_at` (from `v_timeline_events`) — for Dashboard / Projects list |
+| `public.v_project_overview` | project | profile-aware overview counts: activities by workflow type/status, overdue/unowned work, members, milestones, payment due counts, financial summary, and Planning Health summary |
 | `public.v_admin_users` | user | admin-only user listing with email, display name, platform role, timestamps, and membership counts |
 | `public.v_admin_user_memberships` | user × membership | admin-only user detail memberships with project, role, status, and dates |
 | `public.v_admin_projects` | project | admin-only project listing/detail with status, creator signal, member counts, commitment count, and finance summary |

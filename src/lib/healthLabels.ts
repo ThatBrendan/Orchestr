@@ -22,6 +22,8 @@ export const HEALTH_CODE_TITLES: Record<string, string> = {
   outside_project_dates: "Outside project dates",
   unallocated_cost: "Cost not split",
   on_budget: "On budget",
+  activity_occurrence_overdue: "Overdue occurrence",
+  task_occurrence_overdue: "Overdue task occurrence",
 };
 
 export function healthCodeTitle(code: string): string {

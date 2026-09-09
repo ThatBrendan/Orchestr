@@ -80,7 +80,14 @@ function statusTone(status: string | null) {
 
 function eventRoute(event: GlobalTimelineEvent) {
   if (event.subject_type === "commitment") {
-    return { name: "project.commitments", params: { projectId: event.project_id }, query: { commitment: event.subject_id } };
+    return {
+      name: "project.commitments",
+      params: { projectId: event.project_id },
+      query: {
+        commitment: event.subject_id,
+        ...(event.occurrence_date ? { occurrence: event.occurrence_date } : {}),
+      },
+    };
   }
   if (event.subject_type === "payment") return { name: "project.budget", params: { projectId: event.project_id } };
   if (event.subject_type === "task") return { name: "project.commitments", params: { projectId: event.project_id } };
@@ -156,7 +163,7 @@ function isPast(event: GlobalTimelineEvent): boolean {
           <div class="mt-2 space-y-1.5">
             <RouterLink
               v-for="event in eventsByDay.get(cell.key) ?? []"
-              :key="event.event_type + event.subject_id + event.occurs_at"
+              :key="event.event_type + event.subject_id + event.occurs_at + (event.occurrence_date ?? '')"
               :to="eventRoute(event)"
               class="block rounded-md border border-line px-2 py-1.5 text-12 hover:bg-[#F6F6F4] focus-ring"
             >
@@ -175,7 +182,7 @@ function isPast(event: GlobalTimelineEvent): boolean {
       <div class="mt-5 space-y-2 md:hidden">
         <RouterLink
           v-for="event in filteredEvents"
-          :key="event.event_type + event.subject_id + event.occurs_at"
+          :key="event.event_type + event.subject_id + event.occurs_at + (event.occurrence_date ?? '')"
           :to="eventRoute(event)"
           class="block rounded-xl border border-line bg-surface p-4 focus-ring"
         >

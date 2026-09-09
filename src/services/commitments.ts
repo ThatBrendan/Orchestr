@@ -1,6 +1,7 @@
 import { supabase } from "@/lib/supabase";
 import { toAppError } from "@/lib/errors";
 import type { Tables, TablesInsert, TablesUpdate, CommitmentStatus } from "@/types/database";
+import type { CommitmentOccurrence } from "@/types/derived";
 
 export type Commitment = Tables<"commitments">;
 export type CommitmentParticipant = Tables<"commitment_participants">;
@@ -23,7 +24,7 @@ export async function createCommitment(input: TablesInsert<"commitments">): Prom
   return data;
 }
 
-/** Field edit (title, kind, owner, schedule, location, booking, notes) — status changes separately. */
+/** Field edit (title, type, category, owner, schedule, location, supplier/booking, notes) — status changes separately. */
 export async function updateCommitment(
   id: string,
   patch: Omit<TablesUpdate<"commitments">, "status" | "deleted_at">,
@@ -38,6 +39,44 @@ export async function setCommitmentStatus(id: string, status: CommitmentStatus):
   const { data, error } = await supabase.from("commitments").update({ status }).eq("id", id).select("*").single();
   if (error) throw toAppError(error);
   return data;
+}
+
+export async function listCommitmentOccurrences(
+  commitmentId: string,
+  startDate: string,
+  endDate: string,
+): Promise<CommitmentOccurrence[]> {
+  const { data, error } = await supabase.rpc("get_commitment_occurrences", {
+    p_commitment: commitmentId,
+    p_start: startDate,
+    p_end: endDate,
+  });
+  if (error) throw toAppError(error);
+  return data ?? [];
+}
+
+export async function completeCommitmentOccurrence(commitmentId: string, occurrenceDate: string): Promise<void> {
+  const { error } = await supabase.rpc("complete_commitment_occurrence", {
+    p_commitment: commitmentId,
+    p_occurrence_date: occurrenceDate,
+  });
+  if (error) throw toAppError(error);
+}
+
+export async function skipCommitmentOccurrence(commitmentId: string, occurrenceDate: string): Promise<void> {
+  const { error } = await supabase.rpc("skip_commitment_occurrence", {
+    p_commitment: commitmentId,
+    p_occurrence_date: occurrenceDate,
+  });
+  if (error) throw toAppError(error);
+}
+
+export async function stopCommitmentRecurrence(commitmentId: string, stopAfter: string): Promise<void> {
+  const { error } = await supabase.rpc("stop_commitment_recurrence", {
+    p_commitment: commitmentId,
+    p_stop_after: stopAfter,
+  });
+  if (error) throw toAppError(error);
 }
 
 /** Soft delete — organizer, creator, or owner only (docs/SECURITY_RLS.md §5.5). */

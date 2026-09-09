@@ -27,6 +27,9 @@ export function useCreateCommitment(projectId: string) {
       void client.invalidateQueries({ queryKey: qk.project.commitments(projectId) });
       void client.invalidateQueries({ queryKey: qk.project.financials(projectId) });
       void client.invalidateQueries({ queryKey: qk.project.health(projectId) });
+      void client.invalidateQueries({ queryKey: qk.project.timeline(projectId) });
+      void client.invalidateQueries({ queryKey: qk.project.upcoming(projectId) });
+      void client.invalidateQueries({ queryKey: qk.project.overview(projectId) });
     },
   });
 }
@@ -39,6 +42,10 @@ export function useUpdateCommitment(projectId: string) {
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: qk.project.commitments(projectId) });
       void client.invalidateQueries({ queryKey: qk.project.financials(projectId) });
+      void client.invalidateQueries({ queryKey: qk.project.health(projectId) });
+      void client.invalidateQueries({ queryKey: qk.project.timeline(projectId) });
+      void client.invalidateQueries({ queryKey: qk.project.upcoming(projectId) });
+      void client.invalidateQueries({ queryKey: qk.project.overview(projectId) });
     },
   });
 }
@@ -54,6 +61,95 @@ export function useSetCommitmentStatus(projectId: string) {
       void client.invalidateQueries({ queryKey: qk.project.health(projectId) });
       void client.invalidateQueries({ queryKey: qk.project.timeline(projectId) });
       void client.invalidateQueries({ queryKey: qk.commitment.payments(input.id) });
+    },
+  });
+}
+
+export function useCommitmentOccurrences(
+  commitmentId: MaybeRefOrGetter<string>,
+  startDate: MaybeRefOrGetter<string>,
+  endDate: MaybeRefOrGetter<string>,
+) {
+  const q = useQuery({
+    queryKey: computed(() => qk.commitment.occurrences(toValue(commitmentId), toValue(startDate), toValue(endDate))),
+    queryFn: () =>
+      commitmentsService.listCommitmentOccurrences(
+        toValue(commitmentId),
+        toValue(startDate),
+        toValue(endDate),
+      ),
+    staleTime: 0,
+  });
+  return {
+    occurrences: computed(() => q.data.value ?? []),
+    isPending: q.isPending,
+    isError: q.isError,
+    error: q.error,
+    refetch: q.refetch,
+  };
+}
+
+export function useCompleteCommitmentOccurrence(
+  projectId: MaybeRefOrGetter<string>,
+  commitmentId: MaybeRefOrGetter<string>,
+) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (occurrenceDate: string) =>
+      commitmentsService.completeCommitmentOccurrence(toValue(commitmentId), occurrenceDate),
+    onSuccess: () => {
+      const pid = toValue(projectId);
+      const cid = toValue(commitmentId);
+      void client.invalidateQueries({ queryKey: qk.project.commitments(pid) });
+      void client.invalidateQueries({ queryKey: qk.project.timeline(pid) });
+      void client.invalidateQueries({ queryKey: qk.project.upcoming(pid) });
+      void client.invalidateQueries({ queryKey: qk.project.health(pid) });
+      void client.invalidateQueries({ queryKey: qk.project.overview(pid) });
+      void client.invalidateQueries({ queryKey: qk.commitment.occurrencesRoot(cid) });
+      void client.invalidateQueries({ queryKey: qk.me.attention() });
+    },
+  });
+}
+
+export function useSkipCommitmentOccurrence(
+  projectId: MaybeRefOrGetter<string>,
+  commitmentId: MaybeRefOrGetter<string>,
+) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (occurrenceDate: string) =>
+      commitmentsService.skipCommitmentOccurrence(toValue(commitmentId), occurrenceDate),
+    onSuccess: () => {
+      const pid = toValue(projectId);
+      const cid = toValue(commitmentId);
+      void client.invalidateQueries({ queryKey: qk.project.timeline(pid) });
+      void client.invalidateQueries({ queryKey: qk.project.upcoming(pid) });
+      void client.invalidateQueries({ queryKey: qk.project.health(pid) });
+      void client.invalidateQueries({ queryKey: qk.project.overview(pid) });
+      void client.invalidateQueries({ queryKey: qk.commitment.occurrencesRoot(cid) });
+      void client.invalidateQueries({ queryKey: qk.me.attention() });
+    },
+  });
+}
+
+export function useStopCommitmentRecurrence(
+  projectId: MaybeRefOrGetter<string>,
+  commitmentId: MaybeRefOrGetter<string>,
+) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (stopAfter: string) =>
+      commitmentsService.stopCommitmentRecurrence(toValue(commitmentId), stopAfter),
+    onSuccess: () => {
+      const pid = toValue(projectId);
+      const cid = toValue(commitmentId);
+      void client.invalidateQueries({ queryKey: qk.project.commitments(pid) });
+      void client.invalidateQueries({ queryKey: qk.project.timeline(pid) });
+      void client.invalidateQueries({ queryKey: qk.project.upcoming(pid) });
+      void client.invalidateQueries({ queryKey: qk.project.health(pid) });
+      void client.invalidateQueries({ queryKey: qk.project.overview(pid) });
+      void client.invalidateQueries({ queryKey: qk.commitment.occurrencesRoot(cid) });
+      void client.invalidateQueries({ queryKey: qk.me.attention() });
     },
   });
 }

@@ -66,12 +66,15 @@ export interface Database {
           name: string;
           description: string | null;
           status: Database["public"]["Enums"]["project_status"];
+          profile: Database["public"]["Enums"]["project_profile"];
+          module_visibility: Json;
           starts_on: string | null;
           ends_on: string | null;
           timezone: string;
           currency: string;
           cover_theme: string | null;
           health_config: Json;
+          notes: string | null;
           created_by: string | null;
           created_at: string;
           updated_at: string;
@@ -82,19 +85,25 @@ export interface Database {
           name: string;
           timezone: string;
           currency: string;
+          profile?: Database["public"]["Enums"]["project_profile"];
+          module_visibility?: Json;
           description?: string | null;
           starts_on?: string | null;
           ends_on?: string | null;
           cover_theme?: string | null;
+          notes?: string | null;
         };
         Update: {
           name?: string;
           description?: string | null;
           status?: Database["public"]["Enums"]["project_status"];
+          profile?: Database["public"]["Enums"]["project_profile"];
+          module_visibility?: Json;
           starts_on?: string | null;
           ends_on?: string | null;
           cover_theme?: string | null;
           health_config?: Json;
+          notes?: string | null;
           deleted_at?: string | null;
         };
         Relationships: [];
@@ -168,6 +177,7 @@ export interface Database {
           project_id: string;
           title: string;
           kind: Database["public"]["Enums"]["commitment_kind"];
+          activity_type: Database["public"]["Enums"]["activity_type"];
           status: Database["public"]["Enums"]["commitment_status"];
           owner_member_id: string | null;
           estimated_cost_minor: number | null;
@@ -186,6 +196,11 @@ export interface Database {
           booking_reference: string | null;
           booking_confirmed: boolean;
           notes: string | null;
+          recurrence_frequency: Database["public"]["Enums"]["recurrence_frequency"] | null;
+          recurrence_interval: number | null;
+          recurrence_start_date: string | null;
+          recurrence_end_date: string | null;
+          recurrence_active: boolean;
           created_by: string | null;
           created_at: string;
           updated_at: string;
@@ -195,6 +210,7 @@ export interface Database {
           project_id: string;
           title: string;
           kind: Database["public"]["Enums"]["commitment_kind"];
+          activity_type?: Database["public"]["Enums"]["activity_type"];
           status?: Database["public"]["Enums"]["commitment_status"];
           owner_member_id?: string | null;
           estimated_cost_minor?: number | null;
@@ -213,6 +229,11 @@ export interface Database {
           booking_reference?: string | null;
           booking_confirmed?: boolean;
           notes?: string | null;
+          recurrence_frequency?: Database["public"]["Enums"]["recurrence_frequency"] | null;
+          recurrence_interval?: number | null;
+          recurrence_start_date?: string | null;
+          recurrence_end_date?: string | null;
+          recurrence_active?: boolean;
         };
         Update: Partial<Database["public"]["Tables"]["commitments"]["Insert"]> & {
           deleted_at?: string | null;
@@ -317,6 +338,11 @@ export interface Database {
           due_on: string | null;
           notes: string | null;
           completed_at: string | null;
+          recurrence_frequency: Database["public"]["Enums"]["recurrence_frequency"] | null;
+          recurrence_interval: number | null;
+          recurrence_start_date: string | null;
+          recurrence_end_date: string | null;
+          recurrence_active: boolean;
           created_by: string | null;
           created_at: string;
           updated_at: string;
@@ -330,10 +356,73 @@ export interface Database {
           assignee_member_id?: string | null;
           due_on?: string | null;
           notes?: string | null;
+          recurrence_frequency?: Database["public"]["Enums"]["recurrence_frequency"] | null;
+          recurrence_interval?: number | null;
+          recurrence_start_date?: string | null;
+          recurrence_end_date?: string | null;
+          recurrence_active?: boolean;
         };
         Update: Partial<Database["public"]["Tables"]["tasks"]["Insert"]> & {
           status?: Database["public"]["Enums"]["task_status"];
           deleted_at?: string | null;
+        };
+        Relationships: [];
+      };
+      commitment_occurrences: {
+        Row: {
+          id: string;
+          project_id: string;
+          commitment_id: string;
+          occurrence_date: string;
+          status: Database["public"]["Enums"]["occurrence_status"];
+          completed_at: string | null;
+          skipped_at: string | null;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          project_id: string;
+          commitment_id: string;
+          occurrence_date: string;
+          status: Database["public"]["Enums"]["occurrence_status"];
+          completed_at?: string | null;
+          skipped_at?: string | null;
+          created_by?: string | null;
+        };
+        Update: {
+          status?: Database["public"]["Enums"]["occurrence_status"];
+          completed_at?: string | null;
+          skipped_at?: string | null;
+        };
+        Relationships: [];
+      };
+      task_occurrences: {
+        Row: {
+          id: string;
+          project_id: string;
+          task_id: string;
+          occurrence_date: string;
+          status: Database["public"]["Enums"]["occurrence_status"];
+          completed_at: string | null;
+          skipped_at: string | null;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          project_id: string;
+          task_id: string;
+          occurrence_date: string;
+          status: Database["public"]["Enums"]["occurrence_status"];
+          completed_at?: string | null;
+          skipped_at?: string | null;
+          created_by?: string | null;
+        };
+        Update: {
+          status?: Database["public"]["Enums"]["occurrence_status"];
+          completed_at?: string | null;
+          skipped_at?: string | null;
         };
         Relationships: [];
       };
@@ -435,6 +524,8 @@ export interface Database {
           project_id: string;
           name: string;
           status: Database["public"]["Enums"]["project_status"];
+          profile: Database["public"]["Enums"]["project_profile"];
+          module_visibility: Json;
           starts_on: string | null;
           ends_on: string | null;
           timezone: string;
@@ -470,6 +561,43 @@ export interface Database {
           progress_pct: number;
           commitment_count: number;
           open_commitment_count: number;
+        };
+        Relationships: [];
+      };
+      v_project_overview: {
+        Row: {
+          project_id: string;
+          profile: Database["public"]["Enums"]["project_profile"];
+          starts_on: string | null;
+          ends_on: string | null;
+          days_until_start: number | null;
+          days_until_end: number | null;
+          activity_count: number;
+          open_activity_count: number;
+          completed_activity_count: number;
+          booking_count: number;
+          booked_booking_count: number;
+          task_count: number;
+          purchase_count: number;
+          event_count: number;
+          overdue_activity_count: number;
+          unowned_activity_count: number;
+          supplier_count: number;
+          active_member_count: number;
+          milestone_count: number;
+          upcoming_milestone_count: number;
+          next_milestone_on: string | null;
+          payment_overdue_count: number;
+          payment_due_soon_count: number;
+          total_cost_minor: number | null;
+          committed_spend_minor: number | null;
+          net_actual_spend_minor: number | null;
+          outstanding_minor: number | null;
+          total_target_minor: number | null;
+          remaining_budget_minor: number | null;
+          progress_pct: number | null;
+          health_status: string | null;
+          attention_count: number | null;
         };
         Relationships: [];
       };
@@ -519,6 +647,10 @@ export interface Database {
           subject_type: string;
           subject_id: string;
           status: string | null;
+          occurrence_date: string | null;
+          series_id: string | null;
+          is_recurring_occurrence: boolean;
+          occurrence_status: string | null;
         };
         Relationships: [];
       };
@@ -536,6 +668,10 @@ export interface Database {
           subject_id: string;
           status: string | null;
           amount_minor: number | null;
+          occurrence_date: string | null;
+          series_id: string | null;
+          is_recurring_occurrence: boolean;
+          occurrence_status: string | null;
         };
         Relationships: [];
       };
@@ -685,6 +821,7 @@ export interface Database {
           p_currency: string;
           p_starts_on?: string | null;
           p_ends_on?: string | null;
+          p_profile?: Database["public"]["Enums"]["project_profile"];
         };
         Returns: string;
       };
@@ -714,6 +851,90 @@ export interface Database {
           info_count: number;
           attention_count: number;
         }[];
+      };
+      get_project_timeline_events: {
+        Args: { p_project: string; p_start: string; p_end: string };
+        Returns: {
+          project_id: string;
+          occurs_at: string;
+          all_day: boolean;
+          event_type: string;
+          title: string;
+          subject_type: string;
+          subject_id: string;
+          status: string | null;
+          occurrence_date: string | null;
+          series_id: string | null;
+          is_recurring_occurrence: boolean;
+          occurrence_status: string | null;
+        }[];
+      };
+      get_my_timeline_events: {
+        Args: { p_start: string; p_end: string };
+        Returns: {
+          project_id: string;
+          project_name: string;
+          project_timezone: string;
+          currency: string;
+          occurs_at: string;
+          all_day: boolean;
+          event_type: string;
+          title: string;
+          subject_type: string;
+          subject_id: string;
+          status: string | null;
+          amount_minor: number | null;
+          occurrence_date: string | null;
+          series_id: string | null;
+          is_recurring_occurrence: boolean;
+          occurrence_status: string | null;
+        }[];
+      };
+      get_commitment_occurrences: {
+        Args: { p_commitment: string; p_start: string; p_end: string };
+        Returns: {
+          project_id: string;
+          commitment_id: string;
+          occurrence_date: string;
+          status: string;
+          completed_at: string | null;
+          skipped_at: string | null;
+        }[];
+      };
+      get_task_occurrences: {
+        Args: { p_task: string; p_start: string; p_end: string };
+        Returns: {
+          project_id: string;
+          task_id: string;
+          occurrence_date: string;
+          status: string;
+          completed_at: string | null;
+          skipped_at: string | null;
+        }[];
+      };
+      complete_commitment_occurrence: {
+        Args: { p_commitment: string; p_occurrence_date: string };
+        Returns: undefined;
+      };
+      skip_commitment_occurrence: {
+        Args: { p_commitment: string; p_occurrence_date: string };
+        Returns: undefined;
+      };
+      stop_commitment_recurrence: {
+        Args: { p_commitment: string; p_stop_after: string };
+        Returns: undefined;
+      };
+      complete_task_occurrence: {
+        Args: { p_task: string; p_occurrence_date: string };
+        Returns: undefined;
+      };
+      skip_task_occurrence: {
+        Args: { p_task: string; p_occurrence_date: string };
+        Returns: undefined;
+      };
+      stop_task_recurrence: {
+        Args: { p_task: string; p_stop_after: string };
+        Returns: undefined;
       };
       get_my_attention: {
         Args: Record<PropertyKey, never>;
@@ -772,7 +993,18 @@ export interface Database {
       };
     };
     Enums: {
+      activity_type: "task" | "booking" | "purchase" | "event" | "other";
+      recurrence_frequency: "weekly" | "monthly";
+      occurrence_status: "completed" | "skipped";
       platform_role: "user" | "admin";
+      project_profile:
+        | "group_trip"
+        | "wedding_event"
+        | "house_move"
+        | "recurring_process"
+        | "team_project"
+        | "launch"
+        | "blank";
       project_status: "draft" | "active" | "completed" | "archived";
       member_role: "organizer" | "member" | "viewer";
       member_status: "invited" | "active" | "removed";
@@ -804,6 +1036,9 @@ export type Enums<T extends keyof PublicSchema["Enums"]> = PublicSchema["Enums"]
 
 // ---- convenience unions referenced across the app --------------------------
 export type ProjectStatus = Enums<"project_status">;
+export type ProjectProfile = Enums<"project_profile">;
+export type ActivityType = Enums<"activity_type">;
+export type RecurrenceFrequency = Enums<"recurrence_frequency">;
 export type MemberRole = Enums<"member_role">;
 export type MemberStatus = Enums<"member_status">;
 export type PlatformRole = Enums<"platform_role">;

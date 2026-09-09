@@ -1,4 +1,4 @@
-import type { Database, MemberRole } from "./database";
+import type { Database, MemberRole, ProjectProfile, ProjectStatus } from "./database";
 
 type T = Database["public"]["Tables"];
 type V = Database["public"]["Views"];
@@ -20,11 +20,23 @@ export type AdminOverview = Database["public"]["Functions"]["get_admin_overview"
 export type AdminHealthSummary = Database["public"]["Functions"]["get_admin_project_health_summary"]["Returns"][number];
 
 /** Ergonomic view for the current-project context. */
+export interface ProjectContextProject {
+  id: string;
+  name: string;
+  status: ProjectStatus;
+  profile: ProjectProfile;
+  module_visibility: Record<string, boolean>;
+  starts_on: string | null;
+  ends_on: string | null;
+  timezone: string;
+  currency: string;
+}
+
 export interface ProjectContext {
   projectId: string;
   role: MemberRole;
   memberId: string | null;
-  project: Pick<Project, "id" | "name" | "status" | "starts_on" | "ends_on" | "timezone" | "currency">;
+  project: ProjectContextProject;
 }
 
 /** Money is always minor units in the project's single currency. */

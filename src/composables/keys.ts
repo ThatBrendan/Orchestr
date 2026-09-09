@@ -13,6 +13,7 @@ export const qk = {
     detail: (id: string) => ["project", id, "detail"] as const,
     membership: (id: string, userId: string) => ["project", id, "membership", userId] as const,
     members: (id: string) => ["project", id, "members"] as const,
+    overview: (id: string) => ["project", id, "overview"] as const,
     financials: (id: string) => ["project", id, "financials"] as const,
     health: (id: string) => ["project", id, "health"] as const,
     healthSummary: (id: string) => ["project", id, "health", "summary"] as const,
@@ -27,6 +28,12 @@ export const qk = {
     participants: (id: string) => ["commitment", id, "participants"] as const,
     financials: (id: string) => ["commitment", id, "financials"] as const,
     payments: (id: string) => ["commitment", id, "payments"] as const,
+    occurrencesRoot: (id: string) => ["commitment", id, "occurrences"] as const,
+    occurrences: (id: string, start: string, end: string) => ["commitment", id, "occurrences", start, end] as const,
+  },
+  task: {
+    occurrencesRoot: (id: string) => ["task", id, "occurrences"] as const,
+    occurrences: (id: string, start: string, end: string) => ["task", id, "occurrences", start, end] as const,
   },
   admin: {
     overview: () => ["admin", "overview"] as const,

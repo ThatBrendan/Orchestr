@@ -3,6 +3,7 @@ import { computed } from "vue";
 import type { MyProject } from "@/types/domain";
 import { useMoney } from "@/composables/useMoney";
 import { useProjectTime } from "@/composables/useProjectTime";
+import { isProjectModuleVisible, profileDefinition } from "@/lib/projectProfiles";
 import AppIcon from "@/components/ui/AppIcon.vue";
 import ProgressBar from "@/components/ui/ProgressBar.vue";
 
@@ -12,6 +13,10 @@ const { format } = useMoney();
 const time = computed(() => useProjectTime(props.project.timezone));
 
 const dates = computed(() => time.value.dateRange(props.project.starts_on, props.project.ends_on));
+const profile = computed(() => profileDefinition(props.project.profile));
+const showBudget = computed(() =>
+  isProjectModuleVisible(props.project.profile, props.project.module_visibility, "budget"),
+);
 
 const spendLine = computed(() => {
   const p = props.project;
@@ -37,9 +42,10 @@ const attention = computed(() => props.project.attention_count ?? 0);
         <div class="mt-3 flex items-center gap-2 text-13 text-ink-soft flex-wrap">
           <span class="tnum">{{ project.progress_pct ?? 0 }}%</span>
           <span class="text-muted">complete</span>
-          <span class="text-line">·</span>
-          <span class="tnum">{{ spendLine }}</span>
+          <span v-if="showBudget" class="text-line">·</span>
+          <span v-if="showBudget" class="tnum">{{ spendLine }}</span>
         </div>
+        <div class="mt-2 text-13 text-muted">{{ profile.label }}</div>
       </div>
       <div class="text-right shrink-0">
         <div v-if="attention > 0" class="text-13 font-medium text-amber">

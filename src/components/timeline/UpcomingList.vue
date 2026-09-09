@@ -12,7 +12,7 @@ const t = computed(() => useProjectTime(props.timezone));
 // that have slipped into the past while still open (a due payment/task) are flagged —
 // this is a purely visual read of already-derived fields, not a second health engine.
 const DONE_STATUSES = new Set(["completed", "cancelled", "paid"]);
-const DEADLINE_TYPES = new Set(["payment_due", "task_due"]);
+const DEADLINE_TYPES = new Set(["payment_due", "task_due", "recurring_commitment_due", "recurring_task_due"]);
 
 interface Item {
   label: string;

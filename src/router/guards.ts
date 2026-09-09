@@ -116,6 +116,8 @@ export async function hydrateProjectContext(to: RouteLocationNormalized) {
         id: project.id,
         name: project.name,
         status: project.status,
+        profile: project.profile,
+        module_visibility: project.module_visibility as Record<string, boolean>,
         starts_on: project.starts_on,
         ends_on: project.ends_on,
         timezone: project.timezone,

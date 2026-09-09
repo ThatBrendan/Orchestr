@@ -111,7 +111,7 @@ Ported unchanged: the paper/ink/accent/amber palette, Inter + Space Grotesk, the
 | Dashboard greeting | `public.users.display_name` |
 | Dashboard project rows + Projects list | `v_my_projects` |
 | Dashboard "Needs attention" | `public.get_my_attention()` — ONE set-based call across all your projects (blocker+warning, non-dismissed) |
-| New project | `insert into projects` (trigger creates the organizer membership) |
+| New project | `create_project` RPC (transactionally creates the project + founding organizer membership, with optional presentation profile) |
 | Project header tiles | `v_project_financials` |
 | Project navigation / role gate | `project_members` (own row) + `projects` |
 | Overview → Needs attention | `get_project_health` |
@@ -137,10 +137,13 @@ Each `FeaturePending` block states plainly what's missing and whether the backen
 2. **Product name is resolved: "Orchestrio"** — one constant, `APP_NAME` in `src/config.ts`.
 3. **`v_my_projects.total_target_minor`** is now provided by the backend (migration `20260904120800`). `ProjectSummaryRow` consumes it directly — no client-side budget math.
 4. **Dashboard "Needs attention" is one set-based call** (`public.get_my_attention()`, migration `20260904120800`). The former per-project `get_project_health` fan-out (client N+1) is gone. The headline count still comes from `v_my_projects.attention_count` (already in the view).
-5. **No realtime yet** — vue-query `refetchOnWindowFocus` + manual invalidation only (TECHNICAL_ARCHITECTURE §8.1, SHOULD — later pass).
-6. **`initAuth()` runs before the router**; guards `await` a `ready` watcher.
-7. **Project-header financial tiles degrade gracefully** on a `v_project_financials` error (show "Not set" / "—" / "0%") rather than blocking the tab content — a deliberate choice for a secondary stat panel.
-8. **Password login honours `?redirect=`** via `safeRedirect`.
+5. **Project profiles are presentation-only.** `NewProjectDialog` asks "What are you planning?" first, passes the selected profile to `create_project`, and project navigation hides profile-default modules such as Budget without blocking direct routes or deleting data.
+6. **Activity Type is separate from Category.** `commitments.activity_type` controls workflow labels, presented status actions, and type-specific field disclosure. `commitments.kind` remains the category/budget grouping.
+7. **Project Notes are plain text.** `projects.notes` backs the Notes tab with read/edit mode, Save/Cancel, organizer-only editing, archived read-only behavior, and a 10,000-character limit.
+8. **No realtime yet** — vue-query `refetchOnWindowFocus` + manual invalidation only (TECHNICAL_ARCHITECTURE §8.1, SHOULD — later pass).
+9. **`initAuth()` runs before the router**; guards `await` a `ready` watcher.
+10. **Project-header financial tiles degrade gracefully** on a `v_project_financials` error (show "Not set" / "—" / "0%") rather than blocking the tab content — a deliberate choice for a secondary stat panel.
+11. **Password login honours `?redirect=`** via `safeRedirect`.
 
 ---
 
@@ -673,3 +676,9 @@ outcome, including working through which of the 17 rules would and wouldn't fire
 the seeded fixture so the attention-count deltas are exact rather than approximate.
 No live browser/backend E2E was possible either, for the same reason.
 - Live E2E of the auth-entry redirects (needs the Supabase stack).
+
+## 11. Recurring Activities/Tasks
+
+`CommitmentFormDialog` and `TasksPanel` expose Repeat options: Does not repeat, Every week, Every 2 weeks, Every month. The frontend sends structured recurrence fields (`recurrence_frequency`, `recurrence_interval`, `recurrence_start_date`) and never creates future duplicate Activity/Task rows.
+
+Project Timeline, Overview Upcoming, and Global Calendar call bounded timeline RPCs so Postgres derives only the occurrences in the requested window. Activity detail can complete/skip the next generated occurrence and stop a series after a selected date. Standalone recurring task checkboxes complete the next occurrence rather than marking the entire task series done.

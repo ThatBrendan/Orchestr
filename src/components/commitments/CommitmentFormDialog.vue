@@ -5,9 +5,11 @@ import { useCreateCommitment, useUpdateCommitment } from "@/composables/useCommi
 import { useToast } from "@/composables/useToast";
 import { useMoney } from "@/composables/useMoney";
 import { toAppError } from "@/lib/errors";
+import { ACTIVITY_WORKFLOWS, activityWorkflow, defaultActivityTypeForProjectProfile } from "@/lib/activityWorkflows";
 import { COMMITMENT_CATEGORY_OPTIONS, DEFAULT_COMMITMENT_KIND } from "@/lib/commitmentCategories";
+import { REPEAT_OPTIONS, repeatOption, repeatOptionFromParts, type RepeatOptionValue } from "@/lib/recurrence";
 import type { Commitment } from "@/services/commitments";
-import type { CommitmentKind } from "@/types/database";
+import type { ActivityType, CommitmentKind, ProjectProfile } from "@/types/database";
 import type { MemberDirectoryEntry } from "@/types/derived";
 import AppModal from "@/components/ui/AppModal.vue";
 import AppButton from "@/components/ui/AppButton.vue";
@@ -17,6 +19,7 @@ const props = defineProps<{
   projectId: string;
   currency: string;
   timezone: string;
+  projectProfile: ProjectProfile;
   memberOptions: MemberDirectoryEntry[];
   /** null = create mode */
   commitment: Commitment | null;
@@ -29,6 +32,7 @@ const toast = useToast();
 const { toMinor, toMajor } = useMoney();
 
 const ownerCandidates = computed(() => props.memberOptions.filter((m) => m.role !== "viewer" && m.status === "active"));
+const defaultActivityType = computed(() => defaultActivityTypeForProjectProfile(props.projectProfile));
 
 function localDateInput(iso: string | null): string {
   if (!iso) return "";
@@ -38,6 +42,7 @@ function localDateInput(iso: string | null): string {
 
 const form = reactive({
   title: "",
+  activity_type: defaultActivityType.value as ActivityType,
   kind: DEFAULT_COMMITMENT_KIND as CommitmentKind,
   owner_member_id: "" as string,
   starts_at: "",
@@ -49,6 +54,7 @@ const form = reactive({
   booking_reference: "",
   booking_confirmed: false,
   estimated_cost_major: "",
+  repeat: "none" as RepeatOptionValue,
   notes: "",
 });
 const fieldError = ref<string | null>(null);
@@ -56,6 +62,16 @@ const showEndDate = ref(false);
 const showLocation = ref(false);
 const showSupplier = ref(false);
 const showCost = ref(false);
+const selectedWorkflow = computed(() => activityWorkflow(form.activity_type));
+const dateLabel = computed(() => (form.activity_type === "task" || form.activity_type === "purchase" ? "Due date" : "Date"));
+
+function syncDisclosureFromWorkflow() {
+  const fields = selectedWorkflow.value.preferredFields;
+  showEndDate.value = fields.endDate || !!form.ends_at;
+  showLocation.value = fields.location || !!(form.location_label || form.location_address);
+  showSupplier.value = fields.supplier || fields.booking || !!(form.supplier_name || form.supplier_contact || form.booking_reference || form.booking_confirmed);
+  showCost.value = fields.cost || !!form.estimated_cost_major;
+}
 
 function hasLocation(c: Commitment): boolean {
   return !!(c.location_label || c.location_address);
@@ -74,6 +90,7 @@ function resetFromCommitment() {
   if (!c) {
     Object.assign(form, {
       title: "",
+      activity_type: defaultActivityType.value,
       kind: DEFAULT_COMMITMENT_KIND,
       owner_member_id: "",
       starts_at: "",
@@ -85,15 +102,14 @@ function resetFromCommitment() {
       booking_reference: "",
       booking_confirmed: false,
       estimated_cost_major: "",
+      repeat: "none",
       notes: "",
     });
-    showEndDate.value = false;
-    showLocation.value = false;
-    showSupplier.value = false;
-    showCost.value = false;
+    syncDisclosureFromWorkflow();
     return;
   }
   form.title = c.title;
+  form.activity_type = c.activity_type;
   form.kind = c.kind;
   form.owner_member_id = c.owner_member_id ?? "";
   form.starts_at = localDateInput(c.starts_at);
@@ -106,6 +122,7 @@ function resetFromCommitment() {
   form.booking_confirmed = c.booking_confirmed;
   const major = toMajor(c.estimated_cost_minor, props.currency);
   form.estimated_cost_major = major != null ? String(major) : "";
+  form.repeat = repeatOptionFromParts(c.recurrence_frequency, c.recurrence_interval);
   form.notes = c.notes ?? "";
   showEndDate.value = !!c.ends_at;
   showLocation.value = hasLocation(c);
@@ -120,6 +137,10 @@ function toIsoDate(local: string): string | null {
   return dt.isValid ? dt.toUTC().toISO() : null;
 }
 
+function onActivityTypeChange() {
+  syncDisclosureFromWorkflow();
+}
+
 async function submit() {
   fieldError.value = null;
   if (!form.title.trim()) {
@@ -132,6 +153,11 @@ async function submit() {
     fieldError.value = "The end must be on or after the start.";
     return;
   }
+  const repeat = repeatOption(form.repeat);
+  if (repeat.value !== "none" && !form.starts_at) {
+    fieldError.value = "Choose a date before making this activity repeat.";
+    return;
+  }
   const estimatedCost = form.estimated_cost_major.trim() ? toMinor(form.estimated_cost_major, props.currency) : null;
   if (form.estimated_cost_major.trim() && (estimatedCost == null || estimatedCost < 0)) {
     fieldError.value = "Estimated cost must be a valid, non-negative amount.";
@@ -140,6 +166,7 @@ async function submit() {
 
   const payload = {
     title: form.title.trim(),
+    activity_type: form.activity_type,
     kind: form.kind,
     owner_member_id: form.owner_member_id || null,
     is_all_day: true,
@@ -152,6 +179,11 @@ async function submit() {
     booking_reference: form.booking_reference.trim() || null,
     booking_confirmed: form.booking_confirmed,
     estimated_cost_minor: estimatedCost,
+    recurrence_frequency: repeat.frequency,
+    recurrence_interval: repeat.interval,
+    recurrence_start_date: repeat.value === "none" ? null : form.starts_at,
+    recurrence_end_date: repeat.value === "none" ? null : props.commitment?.recurrence_end_date ?? null,
+    recurrence_active: repeat.value === "none" ? true : props.commitment?.recurrence_active ?? true,
     notes: form.notes.trim() || null,
   };
 
@@ -160,7 +192,7 @@ async function submit() {
       await update.mutateAsync({ id: props.commitment.id, patch: payload });
       toast.success("Activity updated.");
     } else {
-      await create.mutateAsync({ ...payload, project_id: props.projectId });
+      await create.mutateAsync({ ...payload, project_id: props.projectId, status: selectedWorkflow.value.defaultStatus });
       toast.success("Activity created.");
     }
     emit("close");
@@ -187,11 +219,26 @@ const isPending = computed(() => create.isPending.value || update.isPending.valu
 
       <div class="grid gap-3 sm:grid-cols-2">
         <label class="block">
+          <span class="text-13 font-medium block mb-1.5 text-ink-soft">Activity Type</span>
+          <select
+            v-model="form.activity_type"
+            class="w-full border rounded-lg px-3 py-2.5 text-14 focus-ring border-line bg-surface"
+            @change="onActivityTypeChange"
+          >
+            <option v-for="type in ACTIVITY_WORKFLOWS" :key="type.value" :value="type.value">{{ type.label }}</option>
+          </select>
+          <span class="text-12 text-muted mt-1 block">Controls how this activity behaves.</span>
+        </label>
+        <label class="block">
           <span class="text-13 font-medium block mb-1.5 text-ink-soft">Category</span>
           <select v-model="form.kind" class="w-full border rounded-lg px-3 py-2.5 text-14 focus-ring border-line bg-surface">
             <option v-for="k in COMMITMENT_CATEGORY_OPTIONS" :key="k.value" :value="k.value">{{ k.label }}</option>
           </select>
+          <span class="text-12 text-muted mt-1 block">Groups this activity within the project.</span>
         </label>
+      </div>
+
+      <div class="grid gap-3 sm:grid-cols-2">
         <label class="block">
           <span class="text-13 font-medium block mb-1.5 text-ink-soft">Owner</span>
           <select
@@ -206,12 +253,23 @@ const isPending = computed(() => create.isPending.value || update.isPending.valu
 
       <div class="grid gap-3 sm:grid-cols-2">
         <label class="block">
-          <span class="text-13 font-medium block mb-1.5 text-ink-soft">Date</span>
+          <span class="text-13 font-medium block mb-1.5 text-ink-soft">{{ dateLabel }}</span>
           <input
             v-model="form.starts_at"
             type="date"
             class="w-full border rounded-lg px-3 py-2.5 text-14 focus-ring border-line"
           />
+        </label>
+        <label class="block">
+          <span class="text-13 font-medium block mb-1.5 text-ink-soft">Repeat</span>
+          <select
+            v-model="form.repeat"
+            class="w-full border rounded-lg px-3 py-2.5 text-14 focus-ring border-line bg-surface"
+          >
+            <option v-for="option in REPEAT_OPTIONS" :key="option.value" :value="option.value">
+              {{ option.label }}
+            </option>
+          </select>
         </label>
       </div>
 
@@ -284,10 +342,12 @@ const isPending = computed(() => create.isPending.value || update.isPending.valu
                 </label>
               </div>
               <label class="block">
-                <span class="text-13 font-medium block mb-1.5 text-ink-soft">Booking reference</span>
+                <span class="text-13 font-medium block mb-1.5 text-ink-soft">
+                  {{ selectedWorkflow.preferredFields.booking ? "Booking reference" : "Reference" }}
+                </span>
                 <input v-model="form.booking_reference" class="w-full border rounded-lg px-3.5 py-2.5 text-14 focus-ring border-line" />
               </label>
-              <label class="flex items-center gap-2 text-13.5 text-ink-soft">
+              <label v-if="selectedWorkflow.preferredFields.booking || form.booking_confirmed" class="flex items-center gap-2 text-13.5 text-ink-soft">
                 <input v-model="form.booking_confirmed" type="checkbox" class="rounded border-line" />
                 Booking confirmed
               </label>

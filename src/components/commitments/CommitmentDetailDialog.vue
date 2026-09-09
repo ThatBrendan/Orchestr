@@ -1,11 +1,24 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
-import { useSetCommitmentStatus, useDeleteCommitment, useParticipants, useAddParticipant, useRemoveParticipant } from "@/composables/useCommitments";
+import { DateTime } from "luxon";
+import {
+  useSetCommitmentStatus,
+  useDeleteCommitment,
+  useParticipants,
+  useAddParticipant,
+  useRemoveParticipant,
+  useCommitmentOccurrences,
+  useCompleteCommitmentOccurrence,
+  useSkipCommitmentOccurrence,
+  useStopCommitmentRecurrence,
+} from "@/composables/useCommitments";
 import { useMoney } from "@/composables/useMoney";
 import { useProjectTime } from "@/composables/useProjectTime";
 import { useToast } from "@/composables/useToast";
 import { toAppError } from "@/lib/errors";
+import { activityTypeLabel, activityWorkflow, commitmentStatusActions, commitmentStatusLabel } from "@/lib/activityWorkflows";
 import { categoryLabel } from "@/lib/commitmentCategories";
+import { recurrenceLabel } from "@/lib/recurrence";
 import type { Commitment } from "@/services/commitments";
 import type { CommitmentStatus } from "@/types/database";
 import type { MemberDirectoryEntry } from "@/types/derived";
@@ -38,31 +51,25 @@ const del = useDeleteCommitment(props.projectId);
 const { participants, isPending: partPending } = useParticipants(computed(() => props.commitment.id));
 const addParticipant = useAddParticipant(props.commitment.id);
 const removeParticipant = useRemoveParticipant(props.commitment.id);
+const commitmentId = computed(() => props.commitment.id);
+const occurrenceStart = computed(() => DateTime.now().setZone(props.timezone).minus({ days: 30 }).toISODate() ?? "");
+const occurrenceEnd = computed(() => DateTime.now().setZone(props.timezone).plus({ months: 6 }).toISODate() ?? "");
+const { occurrences } = useCommitmentOccurrences(commitmentId, occurrenceStart, occurrenceEnd);
+const completeOccurrence = useCompleteCommitmentOccurrence(
+  computed(() => props.projectId),
+  commitmentId,
+);
+const skipOccurrence = useSkipCommitmentOccurrence(
+  computed(() => props.projectId),
+  commitmentId,
+);
+const stopRecurrence = useStopCommitmentRecurrence(
+  computed(() => props.projectId),
+  commitmentId,
+);
 
-const TRANSITIONS: Record<CommitmentStatus, { to: CommitmentStatus; label: string }[]> = {
-  idea: [
-    { to: "researching", label: "Move to researching" },
-    { to: "cancelled", label: "Cancel" },
-  ],
-  researching: [
-    { to: "idea", label: "Back to idea" },
-    { to: "confirmed", label: "Confirm" },
-    { to: "cancelled", label: "Cancel" },
-  ],
-  confirmed: [
-    { to: "researching", label: "Back to researching" },
-    { to: "booked", label: "Mark booked" },
-    { to: "cancelled", label: "Cancel" },
-  ],
-  booked: [
-    { to: "confirmed", label: "Back to confirmed" },
-    { to: "completed", label: "Mark completed" },
-    { to: "cancelled", label: "Cancel" },
-  ],
-  completed: [{ to: "booked", label: "Reopen" }],
-  cancelled: [{ to: "researching", label: "Reinstate" }],
-};
-const nextTransitions = computed(() => TRANSITIONS[props.commitment.status]);
+const workflow = computed(() => activityWorkflow(props.commitment.activity_type));
+const nextTransitions = computed(() => commitmentStatusActions(props.commitment.activity_type, props.commitment.status));
 const statusTone = (s: string) => (s === "cancelled" ? "neutral" : s === "completed" || s === "booked" ? "accent" : "amber");
 
 async function transition(to: CommitmentStatus) {
@@ -125,6 +132,48 @@ const hasSupplierBooking = computed(
       props.commitment.booking_confirmed
     ),
 );
+const showPayments = computed(() => workflow.value.preferredFields.payments || props.commitment.estimated_cost_minor != null);
+const dateStartLabel = computed(() => (props.commitment.activity_type === "task" || props.commitment.activity_type === "purchase" ? "Due" : "Starts"));
+const supplierLabel = computed(() => (workflow.value.preferredFields.booking ? "Supplier / booking" : "Supplier"));
+const isRecurring = computed(() => props.commitment.recurrence_frequency != null);
+const repeatLabel = computed(() =>
+  recurrenceLabel(props.commitment.recurrence_frequency, props.commitment.recurrence_interval),
+);
+const nextOccurrence = computed(() =>
+  occurrences.value.find((occurrence) => occurrence.status === "overdue" || occurrence.status === "upcoming") ?? null,
+);
+const stopAfterDate = ref("");
+
+async function completeNextOccurrence() {
+  if (!nextOccurrence.value) return;
+  try {
+    await completeOccurrence.mutateAsync(nextOccurrence.value.occurrence_date);
+    toast.success("Occurrence completed.");
+  } catch (e) {
+    toast.error(toAppError(e).message);
+  }
+}
+
+async function skipNextOccurrence() {
+  if (!nextOccurrence.value) return;
+  try {
+    await skipOccurrence.mutateAsync(nextOccurrence.value.occurrence_date);
+    toast.success("Occurrence skipped.");
+  } catch (e) {
+    toast.error(toAppError(e).message);
+  }
+}
+
+async function stopSeries() {
+  const stopAfter = stopAfterDate.value || DateTime.now().setZone(props.timezone).toISODate();
+  if (!stopAfter) return;
+  try {
+    await stopRecurrence.mutateAsync(stopAfter);
+    toast.success("Recurrence stopped.");
+  } catch (e) {
+    toast.error(toAppError(e).message);
+  }
+}
 </script>
 
 <template>
@@ -132,7 +181,8 @@ const hasSupplierBooking = computed(
     <div class="space-y-6">
       <div class="flex items-center justify-between flex-wrap gap-2">
         <div class="flex items-center gap-2">
-          <StatusBadge :label="props.commitment.status" :tone="statusTone(props.commitment.status)" />
+          <StatusBadge :label="commitmentStatusLabel(props.commitment.activity_type, props.commitment.status)" :tone="statusTone(props.commitment.status)" />
+          <span class="text-13 text-muted">{{ activityTypeLabel(props.commitment.activity_type) }}</span>
           <span class="text-13 text-muted">Category: {{ categoryLabel(props.commitment.kind) }}</span>
         </div>
         <div class="flex flex-wrap gap-2">
@@ -152,7 +202,7 @@ const hasSupplierBooking = computed(
 
       <div class="grid sm:grid-cols-2 gap-x-6 gap-y-3 text-14">
         <div v-if="props.commitment.starts_at">
-          <div class="text-13 text-muted">Starts</div>
+          <div class="text-13 text-muted">{{ dateStartLabel }}</div>
           <div>{{ props.commitment.is_all_day ? time.dateOnly(props.commitment.starts_at) : time.dateTime(props.commitment.starts_at) }}</div>
         </div>
         <div v-if="props.commitment.ends_at">
@@ -169,20 +219,75 @@ const hasSupplierBooking = computed(
           <div>{{ memberName(props.commitment.owner_member_id) }}</div>
         </div>
         <div v-if="hasSupplierBooking">
-          <div class="text-13 text-muted">Supplier / booking</div>
+          <div class="text-13 text-muted">{{ supplierLabel }}</div>
           <div v-if="props.commitment.supplier_name">{{ props.commitment.supplier_name }}</div>
           <div v-if="props.commitment.supplier_contact" class="text-13 text-muted">{{ props.commitment.supplier_contact }}</div>
           <div v-if="props.commitment.booking_reference" class="text-13 text-muted">
             {{ props.commitment.booking_reference }}
           </div>
-          <StatusBadge v-if="props.commitment.booking_confirmed" label="Confirmed" tone="accent" />
+          <StatusBadge v-if="workflow.preferredFields.booking && props.commitment.booking_confirmed" label="Confirmed" tone="accent" />
         </div>
         <div v-if="props.commitment.estimated_cost_minor != null">
           <div class="text-13 text-muted">Estimated cost</div>
           <div>{{ format(props.commitment.estimated_cost_minor, props.currency) }}</div>
         </div>
+        <div v-if="isRecurring">
+          <div class="text-13 text-muted">Repeats</div>
+          <div>{{ repeatLabel }}</div>
+          <div v-if="!props.commitment.recurrence_active && props.commitment.recurrence_end_date" class="text-13 text-muted">
+            Stopped after {{ DateTime.fromISO(props.commitment.recurrence_end_date).toFormat("d LLL yyyy") }}
+          </div>
+        </div>
       </div>
       <p v-if="props.commitment.notes" class="text-14 text-ink-soft whitespace-pre-wrap">{{ props.commitment.notes }}</p>
+
+      <div v-if="isRecurring" class="rounded-xl border border-line bg-surface p-4">
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h3 class="text-13 font-semibold uppercase tracking-wide text-ink-soft">Recurring activity</h3>
+            <p v-if="nextOccurrence" class="mt-1 text-14 text-ink-soft">
+              Next occurrence: {{ DateTime.fromISO(nextOccurrence.occurrence_date).toFormat("d LLL yyyy") }}
+            </p>
+            <p v-else class="mt-1 text-14 text-muted">No upcoming occurrences in the current window.</p>
+          </div>
+          <div v-if="props.canEdit && nextOccurrence" class="flex flex-wrap gap-2">
+            <AppButton
+              variant="secondary"
+              size="sm"
+              :loading="completeOccurrence.isPending.value"
+              @click="completeNextOccurrence"
+            >
+              Complete occurrence
+            </AppButton>
+            <AppButton
+              variant="secondary"
+              size="sm"
+              :loading="skipOccurrence.isPending.value"
+              @click="skipNextOccurrence"
+            >
+              Skip occurrence
+            </AppButton>
+          </div>
+        </div>
+        <div v-if="props.canEdit && props.commitment.recurrence_active" class="mt-4 flex flex-col gap-2 sm:flex-row sm:items-end">
+          <label class="block">
+            <span class="text-13 font-medium block mb-1.5 text-ink-soft">Stop after</span>
+            <input
+              v-model="stopAfterDate"
+              type="date"
+              class="w-full border rounded-lg px-3 py-2.5 text-14 focus-ring border-line"
+            />
+          </label>
+          <AppButton
+            variant="secondary"
+            size="sm"
+            :loading="stopRecurrence.isPending.value"
+            @click="stopSeries"
+          >
+            Stop recurrence
+          </AppButton>
+        </div>
+      </div>
 
       <div>
         <h3 class="text-13 font-semibold text-ink-soft uppercase tracking-wide mb-2">Participants</h3>
@@ -209,6 +314,7 @@ const hasSupplierBooking = computed(
       </div>
 
       <PaymentsPanel
+        v-if="showPayments"
         :project-id="props.projectId"
         :commitment-id="props.commitment.id"
         :currency="props.currency"

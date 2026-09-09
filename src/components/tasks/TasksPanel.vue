@@ -1,9 +1,14 @@
 <script setup lang="ts">
 import { computed, reactive, ref } from "vue";
+import { DateTime } from "luxon";
+import { useQueryClient } from "@tanstack/vue-query";
 import { useTasks, useCreateTask, useUpdateTask, useSetTaskStatus, useDeleteTask } from "@/composables/useTasks";
 import { useProjectTime } from "@/composables/useProjectTime";
 import { useToast } from "@/composables/useToast";
 import { toAppError } from "@/lib/errors";
+import { qk } from "@/composables/keys";
+import { REPEAT_OPTIONS, recurrenceLabel, repeatOption, type RepeatOptionValue } from "@/lib/recurrence";
+import * as tasksService from "@/services/tasks";
 import type { TaskStatus } from "@/services/tasks";
 import type { MemberDirectoryEntry } from "@/types/derived";
 import type { Commitment } from "@/services/commitments";
@@ -24,6 +29,7 @@ const props = defineProps<{
 const { tasks, isPending, isError, error, refetch } = useTasks(props.projectId);
 const time = useProjectTime(props.timezone);
 const toast = useToast();
+const client = useQueryClient();
 
 const create = useCreateTask(props.projectId);
 const update = useUpdateTask(props.projectId);
@@ -40,13 +46,24 @@ const NEXT: Record<TaskStatus, TaskStatus[]> = {
 };
 
 const showAddForm = ref(false);
-const addForm = reactive({ title: "", assignee_member_id: "", due_on: "", commitment_id: "" });
+const addForm = reactive({
+  title: "",
+  assignee_member_id: "",
+  due_on: "",
+  commitment_id: "",
+  repeat: "none" as RepeatOptionValue,
+});
 const addError = ref<string | null>(null);
 
 async function submitAdd() {
   addError.value = null;
   if (!addForm.title.trim()) {
     addError.value = "Give the task a title.";
+    return;
+  }
+  const repeat = repeatOption(addForm.repeat);
+  if (repeat.value !== "none" && !addForm.due_on) {
+    addError.value = "Choose a due date before making this task repeat.";
     return;
   }
   try {
@@ -56,21 +73,81 @@ async function submitAdd() {
       assignee_member_id: addForm.assignee_member_id || null,
       due_on: addForm.due_on || null,
       commitment_id: addForm.commitment_id || null,
+      recurrence_frequency: repeat.frequency,
+      recurrence_interval: repeat.interval,
+      recurrence_start_date: repeat.value === "none" ? null : addForm.due_on,
     });
     toast.success("Task added.");
     addForm.title = "";
     addForm.assignee_member_id = "";
     addForm.due_on = "";
     addForm.commitment_id = "";
+    addForm.repeat = "none";
     showAddForm.value = false;
   } catch (e) {
     addError.value = toAppError(e).message;
   }
 }
 
-async function toggleDone(id: string, current: TaskStatus) {
+function invalidateTaskDerived(taskId: string) {
+  void client.invalidateQueries({ queryKey: qk.project.tasks(props.projectId) });
+  void client.invalidateQueries({ queryKey: qk.project.timeline(props.projectId) });
+  void client.invalidateQueries({ queryKey: qk.project.upcoming(props.projectId) });
+  void client.invalidateQueries({ queryKey: qk.project.health(props.projectId) });
+  void client.invalidateQueries({ queryKey: qk.project.overview(props.projectId) });
+  void client.invalidateQueries({ queryKey: qk.task.occurrencesRoot(taskId) });
+  void client.invalidateQueries({ queryKey: qk.me.attention() });
+}
+
+async function completeNextTaskOccurrence(id: string) {
+  const today = DateTime.now().setZone(props.timezone);
+  const occurrences = await tasksService.listTaskOccurrences(
+    id,
+    today.minus({ days: 30 }).toISODate() ?? "",
+    today.plus({ months: 6 }).toISODate() ?? "",
+  );
+  const next = occurrences.find((occurrence) => occurrence.status === "overdue" || occurrence.status === "upcoming");
+  if (!next) {
+    toast.info("No upcoming occurrence found.");
+    return;
+  }
+  await tasksService.completeTaskOccurrence(id, next.occurrence_date);
+  invalidateTaskDerived(id);
+}
+
+async function skipNextTaskOccurrence(id: string) {
+  const today = DateTime.now().setZone(props.timezone);
+  const occurrences = await tasksService.listTaskOccurrences(
+    id,
+    today.minus({ days: 30 }).toISODate() ?? "",
+    today.plus({ months: 6 }).toISODate() ?? "",
+  );
+  const next = occurrences.find((occurrence) => occurrence.status === "overdue" || occurrence.status === "upcoming");
+  if (!next) {
+    toast.info("No upcoming occurrence found.");
+    return;
+  }
+  await tasksService.skipTaskOccurrence(id, next.occurrence_date);
+  invalidateTaskDerived(id);
+}
+
+async function toggleDone(id: string, current: TaskStatus, recurring: boolean) {
   try {
+    if (recurring && current !== "done") {
+      await completeNextTaskOccurrence(id);
+      toast.success("Task occurrence completed.");
+      return;
+    }
     await setStatus.mutateAsync({ id, status: current === "done" ? "open" : "done" });
+  } catch (e) {
+    toast.error(toAppError(e).message);
+  }
+}
+
+async function skipRecurringTask(id: string) {
+  try {
+    await skipNextTaskOccurrence(id);
+    toast.success("Task occurrence skipped.");
   } catch (e) {
     toast.error(toAppError(e).message);
   }
@@ -122,12 +199,15 @@ function memberName(id: string | null): string {
 
     <form v-if="showAddForm" class="border rounded-xl p-3.5 mb-3 space-y-2.5 border-line bg-[#FBFBFA]" @submit.prevent="submitAdd">
       <input v-model="addForm.title" placeholder="Task title" class="w-full border rounded-lg px-3 py-2 text-14 focus-ring border-line" />
-      <div class="grid sm:grid-cols-3 gap-2">
+      <div class="grid sm:grid-cols-4 gap-2">
         <select v-model="addForm.assignee_member_id" class="border rounded-lg px-2.5 py-2 text-13.5 focus-ring border-line bg-surface">
           <option value="">Unassigned</option>
           <option v-for="m in assigneeCandidates" :key="m.member_id" :value="m.member_id">{{ m.display_name }}</option>
         </select>
         <input v-model="addForm.due_on" type="date" class="border rounded-lg px-2.5 py-2 text-13.5 focus-ring border-line" />
+        <select v-model="addForm.repeat" class="border rounded-lg px-2.5 py-2 text-13.5 focus-ring border-line bg-surface">
+          <option v-for="option in REPEAT_OPTIONS" :key="option.value" :value="option.value">{{ option.label }}</option>
+        </select>
         <select v-model="addForm.commitment_id" class="border rounded-lg px-2.5 py-2 text-13.5 focus-ring border-line bg-surface">
           <option value="">No linked activity</option>
           <option v-for="c in props.commitments" :key="c.id" :value="c.id">{{ c.title }}</option>
@@ -149,16 +229,25 @@ function memberName(id: string | null): string {
           class="rounded border-line"
           :checked="t.status === 'done'"
           :disabled="!props.canEdit"
-          @change="toggleDone(t.id, t.status)"
+          @change="toggleDone(t.id, t.status, !!t.recurrence_frequency)"
         />
         <div class="min-w-0 flex-1">
           <div class="text-14" :class="{ 'line-through text-muted': t.status === 'done' }">{{ t.title }}</div>
           <div class="text-13 text-muted">
             {{ memberName(t.assignee_member_id) }}
             <span v-if="t.due_on"> · Due {{ time.dateOnly(t.due_on) }}</span>
+            <span v-if="t.recurrence_frequency"> · {{ recurrenceLabel(t.recurrence_frequency, t.recurrence_interval) }}</span>
           </div>
         </div>
         <template v-if="props.canEdit">
+          <AppButton
+            v-if="t.recurrence_frequency"
+            variant="secondary"
+            size="sm"
+            @click="skipRecurringTask(t.id)"
+          >
+            Skip next
+          </AppButton>
           <select
             class="border rounded-lg px-2 py-1.5 text-13 focus-ring border-line bg-surface"
             :value="t.status"

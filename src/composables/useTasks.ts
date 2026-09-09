@@ -26,6 +26,9 @@ export function useCreateTask(projectId: string) {
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: qk.project.tasks(projectId) });
       void client.invalidateQueries({ queryKey: qk.project.health(projectId) });
+      void client.invalidateQueries({ queryKey: qk.project.timeline(projectId) });
+      void client.invalidateQueries({ queryKey: qk.project.upcoming(projectId) });
+      void client.invalidateQueries({ queryKey: qk.project.overview(projectId) });
     },
   });
 }
@@ -37,6 +40,10 @@ export function useUpdateTask(projectId: string) {
       tasksService.updateTask(input.id, input.patch),
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: qk.project.tasks(projectId) });
+      void client.invalidateQueries({ queryKey: qk.project.health(projectId) });
+      void client.invalidateQueries({ queryKey: qk.project.timeline(projectId) });
+      void client.invalidateQueries({ queryKey: qk.project.upcoming(projectId) });
+      void client.invalidateQueries({ queryKey: qk.project.overview(projectId) });
     },
   });
 }
@@ -49,6 +56,8 @@ export function useSetTaskStatus(projectId: string) {
       void client.invalidateQueries({ queryKey: qk.project.tasks(projectId) });
       void client.invalidateQueries({ queryKey: qk.project.health(projectId) });
       void client.invalidateQueries({ queryKey: qk.project.timeline(projectId) });
+      void client.invalidateQueries({ queryKey: qk.project.upcoming(projectId) });
+      void client.invalidateQueries({ queryKey: qk.project.overview(projectId) });
     },
   });
 }
@@ -60,6 +69,63 @@ export function useDeleteTask(projectId: string) {
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: qk.project.tasks(projectId) });
       void client.invalidateQueries({ queryKey: qk.project.health(projectId) });
+      void client.invalidateQueries({ queryKey: qk.project.timeline(projectId) });
+      void client.invalidateQueries({ queryKey: qk.project.upcoming(projectId) });
+      void client.invalidateQueries({ queryKey: qk.project.overview(projectId) });
+    },
+  });
+}
+
+export function useTaskOccurrences(
+  taskId: MaybeRefOrGetter<string>,
+  startDate: MaybeRefOrGetter<string>,
+  endDate: MaybeRefOrGetter<string>,
+) {
+  const q = useQuery({
+    queryKey: computed(() => qk.task.occurrences(toValue(taskId), toValue(startDate), toValue(endDate))),
+    queryFn: () => tasksService.listTaskOccurrences(toValue(taskId), toValue(startDate), toValue(endDate)),
+    staleTime: 0,
+  });
+  return {
+    occurrences: computed(() => q.data.value ?? []),
+    isPending: q.isPending,
+    isError: q.isError,
+    error: q.error,
+    refetch: q.refetch,
+  };
+}
+
+export function useCompleteTaskOccurrence(projectId: MaybeRefOrGetter<string>, taskId: MaybeRefOrGetter<string>) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (occurrenceDate: string) => tasksService.completeTaskOccurrence(toValue(taskId), occurrenceDate),
+    onSuccess: () => {
+      const pid = toValue(projectId);
+      const tid = toValue(taskId);
+      void client.invalidateQueries({ queryKey: qk.project.tasks(pid) });
+      void client.invalidateQueries({ queryKey: qk.project.timeline(pid) });
+      void client.invalidateQueries({ queryKey: qk.project.upcoming(pid) });
+      void client.invalidateQueries({ queryKey: qk.project.health(pid) });
+      void client.invalidateQueries({ queryKey: qk.project.overview(pid) });
+      void client.invalidateQueries({ queryKey: qk.task.occurrencesRoot(tid) });
+      void client.invalidateQueries({ queryKey: qk.me.attention() });
+    },
+  });
+}
+
+export function useSkipTaskOccurrence(projectId: MaybeRefOrGetter<string>, taskId: MaybeRefOrGetter<string>) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (occurrenceDate: string) => tasksService.skipTaskOccurrence(toValue(taskId), occurrenceDate),
+    onSuccess: () => {
+      const pid = toValue(projectId);
+      const tid = toValue(taskId);
+      void client.invalidateQueries({ queryKey: qk.project.timeline(pid) });
+      void client.invalidateQueries({ queryKey: qk.project.upcoming(pid) });
+      void client.invalidateQueries({ queryKey: qk.project.health(pid) });
+      void client.invalidateQueries({ queryKey: qk.project.overview(pid) });
+      void client.invalidateQueries({ queryKey: qk.task.occurrencesRoot(tid) });
+      void client.invalidateQueries({ queryKey: qk.me.attention() });
     },
   });
 }

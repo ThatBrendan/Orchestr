@@ -6,7 +6,9 @@ import { useMemberDirectory } from "@/composables/useProject";
 import { useProjectContext } from "@/composables/useProjectContext";
 import { useMoney } from "@/composables/useMoney";
 import { useProjectTime } from "@/composables/useProjectTime";
+import { activityTypeLabel, commitmentStatusLabel } from "@/lib/activityWorkflows";
 import { categoryLabel } from "@/lib/commitmentCategories";
+import { recurrenceLabel } from "@/lib/recurrence";
 import type { Commitment } from "@/services/commitments";
 import SkeletonBlock from "@/components/ui/SkeletonBlock.vue";
 import ErrorState from "@/components/ui/ErrorState.vue";
@@ -116,13 +118,14 @@ const time = computed(() => useProjectTime(timezone.value));
         <div class="min-w-0 flex-1">
           <div class="text-14 font-medium truncate">{{ c.title }}</div>
           <div class="text-13 text-muted capitalize">
-            {{ categoryLabel(c.kind) }}
+            {{ activityTypeLabel(c.activity_type) }} · {{ categoryLabel(c.kind) }}
             <span v-if="c.starts_at"> · {{ time.dateOnly(c.starts_at) }}</span>
+            <span v-if="c.recurrence_frequency"> · {{ recurrenceLabel(c.recurrence_frequency, c.recurrence_interval) }}</span>
             <span v-if="ownerName(c.owner_member_id)"> · {{ ownerName(c.owner_member_id) }}</span>
           </div>
         </div>
         <span v-if="c.estimated_cost_minor != null" class="text-13.5 text-ink-soft">{{ format(c.estimated_cost_minor, currency) }}</span>
-        <StatusBadge :label="c.status" :tone="statusTone(c.status)" />
+        <StatusBadge :label="commitmentStatusLabel(c.activity_type, c.status)" :tone="statusTone(c.status)" />
       </button>
     </div>
 
@@ -139,6 +142,7 @@ const time = computed(() => useProjectTime(timezone.value));
       :project-id="projectId"
       :currency="currency"
       :timezone="timezone"
+      :project-profile="project?.profile ?? 'blank'"
       :member-options="members"
       :commitment="editingCommitment"
       @close="closeForm"

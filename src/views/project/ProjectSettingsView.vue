@@ -2,18 +2,23 @@
 import { computed, reactive, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useProjectContext } from "@/composables/useProjectContext";
+import { useProjectContextStore } from "@/stores/project-context";
 import { useProject } from "@/composables/useProject";
 import { useUpdateProject, useSetProjectStatus, useDeleteProject } from "@/composables/useProjects";
 import { useToast } from "@/composables/useToast";
 import { toAppError } from "@/lib/errors";
+import { PROJECT_PROFILES, isProjectModuleVisible, profileDefinition, setModuleVisibility } from "@/lib/projectProfiles";
 import AppButton from "@/components/ui/AppButton.vue";
 import AppConfirmDialog from "@/components/ui/AppConfirmDialog.vue";
 import SectionHeading from "@/components/ui/SectionHeading.vue";
+import type { ProjectProfile } from "@/types/database";
+import type { Project } from "@/types/domain";
 
 const route = useRoute();
 const router = useRouter();
 const projectId = computed(() => String(route.params.projectId));
-const { allowed } = useProjectContext();
+const { allowed, context } = useProjectContext();
+const ctxStore = useProjectContextStore();
 const { project } = useProject(projectId);
 const toast = useToast();
 
@@ -25,8 +30,16 @@ const update = useUpdateProject(projectId.value);
 const setStatus = useSetProjectStatus(projectId.value);
 const del = useDeleteProject(projectId.value);
 
-const form = reactive({ name: "", description: "", starts_on: "", ends_on: "" });
+const form = reactive({
+  name: "",
+  description: "",
+  starts_on: "",
+  ends_on: "",
+  profile: "blank" as ProjectProfile,
+  budget_visible: true,
+});
 const fieldError = ref<string | null>(null);
+const workspaceError = ref<string | null>(null);
 watch(
   project,
   (p) => {
@@ -35,9 +48,29 @@ watch(
     form.description = p.description ?? "";
     form.starts_on = p.starts_on ?? "";
     form.ends_on = p.ends_on ?? "";
+    form.profile = p.profile;
+    form.budget_visible = isProjectModuleVisible(p.profile, p.module_visibility, "budget");
   },
   { immediate: true },
 );
+
+function syncContext(nextProject: Project) {
+  if (!context.value || context.value.projectId !== nextProject.id) return;
+  ctxStore.set({
+    ...context.value,
+    project: {
+      id: nextProject.id,
+      name: nextProject.name,
+      status: nextProject.status,
+      profile: nextProject.profile,
+      module_visibility: nextProject.module_visibility as Record<string, boolean>,
+      starts_on: nextProject.starts_on,
+      ends_on: nextProject.ends_on,
+      timezone: nextProject.timezone,
+      currency: nextProject.currency,
+    },
+  });
+}
 
 async function saveDetails() {
   fieldError.value = null;
@@ -50,15 +83,35 @@ async function saveDetails() {
     return;
   }
   try {
-    await update.mutateAsync({
+    const saved = await update.mutateAsync({
       name: form.name.trim(),
       description: form.description.trim() || null,
       starts_on: form.starts_on || null,
       ends_on: form.ends_on || null,
     });
+    syncContext(saved);
     toast.success("Project details saved.");
   } catch (e) {
     fieldError.value = toAppError(e).message;
+  }
+}
+
+function onProfileChange() {
+  form.budget_visible = isProjectModuleVisible(form.profile, null, "budget");
+}
+
+async function saveWorkspace() {
+  workspaceError.value = null;
+  if (!project.value) return;
+  try {
+    const saved = await update.mutateAsync({
+      profile: form.profile,
+      module_visibility: setModuleVisibility(project.value.module_visibility, "budget", form.budget_visible),
+    });
+    syncContext(saved);
+    toast.success("Workspace settings saved.");
+  } catch (e) {
+    workspaceError.value = toAppError(e).message;
   }
 }
 
@@ -119,6 +172,32 @@ const status = computed(() => project.value?.status);
           <p v-if="fieldError" class="text-13 text-danger">{{ fieldError }}</p>
           <AppButton size="sm" :loading="update.isPending.value" @click="saveDetails">Save changes</AppButton>
         </form>
+      </div>
+
+      <div>
+        <SectionHeading label="Workspace" />
+        <div class="mt-3 space-y-4 rounded-xl border border-line bg-surface p-4">
+          <label class="block">
+            <span class="text-13 font-medium block mb-1.5 text-ink-soft">Project profile</span>
+            <select
+              v-model="form.profile"
+              class="w-full border rounded-lg px-3 py-2.5 text-14 focus-ring border-line bg-surface"
+              @change="onProfileChange"
+            >
+              <option v-for="profileOption in PROJECT_PROFILES" :key="profileOption.value" :value="profileOption.value">
+                {{ profileOption.label }}
+              </option>
+            </select>
+            <span class="text-13 text-muted mt-1 block">{{ profileDefinition(form.profile).description }}</span>
+          </label>
+          <label class="flex items-center gap-2 text-13.5 text-ink-soft">
+            <input v-model="form.budget_visible" type="checkbox" class="rounded border-line" />
+            Show Budget module in this project
+          </label>
+          <p class="text-13 text-muted">Changing this only affects navigation and workspace emphasis. Existing data is preserved.</p>
+          <p v-if="workspaceError" class="text-13 text-danger">{{ workspaceError }}</p>
+          <AppButton size="sm" :loading="update.isPending.value" @click="saveWorkspace">Save workspace</AppButton>
+        </div>
       </div>
 
       <div>

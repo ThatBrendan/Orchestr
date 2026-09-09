@@ -33,7 +33,7 @@ supabase/
 ```
 
 ### 1.1 Enums (15) — `20260904120000`
-`project_status, member_role, member_status, invitation_status, commitment_kind, commitment_status, payment_type, payment_direction, payment_status, task_status, cost_share_basis, rsvp_status, finding_dismissal_state, audit_action, audit_source` — exactly as [DATABASE_SCHEMA §2].
+`project_status, member_role, member_status, invitation_status, commitment_kind, commitment_status, payment_type, payment_direction, payment_status, task_status, cost_share_basis, rsvp_status, finding_dismissal_state, audit_action, audit_source` — exactly as [DATABASE_SCHEMA §2]. `project_profile` is added later by `20260909100000_project_profiles.sql` as an additive presentation preset.
 
 ### 1.2 Tables (15) — `20260904120100` (+ `currencies` in `…120000`)
 `currencies, users, projects, project_members, invitations, commitments, commitment_participants, cost_shares, payments, tasks, milestones, budgets, budget_category_targets, finding_dismissals, audit_log`.
@@ -52,10 +52,18 @@ Budget actuals, timeline, health findings, per-member balances, progress %, outs
 | `public.v_member_balances` | view | owed / contributed / balance, default equal split + `cost_shares` overrides, deterministic rounding |
 | `public.v_timeline_events` | view | UNION ALL of the 7 sources ([BUSINESS_RULES TML-1]) |
 | `public.v_member_directory` | view (**definer**, column-whitelisted) | co-member name + avatar without a broad `users` policy |
-| `public.v_my_projects` | view | dashboard/list: project + role + financials summary + health status + next event |
+| `public.v_my_projects` | view | dashboard/list: project + role + profile/module visibility + financials summary + health status + next event |
 | `app._health_findings(uuid)` | function (invoker) | the 17 deterministic rules HLT-1…HLT-17 |
 | `public.get_project_health(uuid)` | RPC (invoker) | membership check + dismissal join |
 | `public.get_project_health_summary(uuid)` | RPC (invoker) | rollup: `needs_attention` / `at_risk` / `healthy` + counts |
+
+Activity Type phase note: `commitments.activity_type` now suppresses booking-reference health findings for non-booking activities. The remaining commitment health rules still use the original MVP status semantics (`idea`, `researching`, `confirmed`, `booked`, `completed`, `cancelled`) and should be revisited in the later profile-aware Health phase.
+
+Project Notes phase note: `projects.notes` is a nullable plain-text field with a 10,000-character check. It uses the existing organizer-only project update policy, plus a narrow trigger preventing note edits while a project is archived.
+
+Dynamic Overview + profile-aware Health phase note: `public.v_project_overview` is the backend-owned summary for profile-specific Overview cards. `app._health_findings` now gates booking-reference findings to Booking activities, missing-cost findings to Booking/Purchase activities, budget findings to projects where Budget is visible, and tight-connection findings to event-like activities in event-like profiles. HLT-18 adds a deterministic overdue dated-activity warning.
+
+Recurring Activities/Tasks phase note: `20260909140000_recurring_activities_tasks.sql` adds structured recurrence columns to `commitments` and `tasks`, plus `commitment_occurrences` / `task_occurrences` exception tables. `app.recurrence_dates()` generates weekly, fortnightly, and monthly dates inside bounded ranges; monthly recurrence clamps to the target month's last valid day. Project/global timeline services now call bounded RPCs (`get_project_timeline_events`, `get_my_timeline_events`) so recurring occurrences reach Timeline and Calendar without duplicating future Activity rows. `get_project_health` suppresses the series-level overdue finding for recurring commitments and adds per-occurrence overdue findings that resolve when that occurrence is completed or skipped.
 
 ### 1.4 Functions & triggers — `…120000`, `…120150`, `…120200`, `…120300`, `…120500`
 - **Generic triggers** (`…120000`, table-independent): `tg_set_updated_at`, `tg_block_immutable_columns` (project_id/created_at/created_by), `tg_validate_timezone`, `tg_lowercase_email`, `finding_is_dismissible`.

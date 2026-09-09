@@ -6,6 +6,7 @@ import { useProjectContextStore } from "@/stores/project-context";
 import { useProjectFinancials } from "@/composables/useProject";
 import { useProjectTime } from "@/composables/useProjectTime";
 import { useMoney } from "@/composables/useMoney";
+import { isProjectModuleVisible, profileDefinition } from "@/lib/projectProfiles";
 import PageContainer from "@/components/ui/PageContainer.vue";
 import StatTile from "@/components/ui/StatTile.vue";
 import SkeletonBlock from "@/components/ui/SkeletonBlock.vue";
@@ -27,6 +28,10 @@ const dates = computed(() =>
 );
 const currency = computed(() => project.value?.currency ?? "GBP");
 const archived = computed(() => project.value?.status === "archived");
+const showBudgetModule = computed(() =>
+  isProjectModuleVisible(project.value?.profile, project.value?.module_visibility, "budget"),
+);
+const profileLabel = computed(() => profileDefinition(project.value?.profile).label);
 
 // ProjectLayout stays mounted while switching tabs / projects (the guard re-hydrates
 // context on a projectId change); it only unmounts when leaving the project area.
@@ -39,6 +44,7 @@ onBeforeUnmount(() => ctxStore.clear());
       <div>
         <h1 class="font-display text-[24px] font-semibold tracking-tight">{{ project?.name }}</h1>
         <p class="mt-1 text-[13.5px] text-muted">{{ dates }}</p>
+        <p class="mt-1 text-13 text-muted">{{ profileLabel }}</p>
         <p v-if="archived" class="mt-1 text-13 text-amber font-medium">Archived — read only</p>
       </div>
       <div class="flex items-center gap-2">
@@ -61,18 +67,20 @@ onBeforeUnmount(() => ctxStore.clear());
         <SkeletonBlock v-for="i in 4" :key="i" width="90px" height="44px" />
       </template>
       <template v-else>
-        <StatTile
-          :value="financials?.total_target_minor != null ? format(financials.total_target_minor, currency) : 'Not set'"
-          label="Total budget"
-        />
-        <StatTile :value="format(financials?.committed_spend_minor ?? 0, currency)" label="Committed" />
-        <StatTile
-          :value="financials?.remaining_budget_minor != null ? format(financials.remaining_budget_minor, currency) : '—'"
-          label="Remaining"
-          :tone="
-            financials?.remaining_budget_minor != null && financials.remaining_budget_minor < 0 ? 'amber' : 'default'
-          "
-        />
+        <template v-if="showBudgetModule">
+          <StatTile
+            :value="financials?.total_target_minor != null ? format(financials.total_target_minor, currency) : 'Not set'"
+            label="Total budget"
+          />
+          <StatTile :value="format(financials?.committed_spend_minor ?? 0, currency)" label="Committed" />
+          <StatTile
+            :value="financials?.remaining_budget_minor != null ? format(financials.remaining_budget_minor, currency) : '—'"
+            label="Remaining"
+            :tone="
+              financials?.remaining_budget_minor != null && financials.remaining_budget_minor < 0 ? 'amber' : 'default'
+            "
+          />
+        </template>
         <StatTile :value="(financials?.progress_pct ?? 0) + '%'" label="Complete" />
       </template>
     </div>

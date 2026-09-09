@@ -1,7 +1,8 @@
-import { computed } from "vue";
-import { storeToRefs } from "pinia";
+import { computed, type ComputedRef } from "vue";
 import { useProjectContextStore } from "@/stores/project-context";
 import { can, type PermissionKey } from "@/lib/permissions";
+import type { ProjectContext, ProjectContextProject } from "@/types/domain";
+import type { MemberRole } from "@/types/database";
 
 /**
  * The currently-open project + the caller's role.
@@ -9,11 +10,11 @@ import { can, type PermissionKey } from "@/lib/permissions";
  */
 export function useProjectContext() {
   const store = useProjectContextStore();
-  const { context } = storeToRefs(store);
+  const context: ComputedRef<ProjectContext | null> = computed(() => store.context);
 
-  const projectId = computed(() => context.value?.projectId ?? null);
-  const role = computed(() => context.value?.role ?? null);
-  const project = computed(() => context.value?.project ?? null);
+  const projectId: ComputedRef<string | null> = computed(() => context.value?.projectId ?? null);
+  const role: ComputedRef<MemberRole | null> = computed(() => context.value?.role ?? null);
+  const project: ComputedRef<ProjectContextProject | null> = computed(() => context.value?.project ?? null);
   const isOrganizer = computed(() => role.value === "organizer");
 
   /** ADVISORY permission check — RLS is the real gate. */

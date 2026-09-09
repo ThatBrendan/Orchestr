@@ -22,6 +22,15 @@ export function useProjectFinancials(projectId: MaybeRefOrGetter<string>) {
   return { financials: q.data, isPending: q.isPending, isError: q.isError, error: q.error, refetch: q.refetch };
 }
 
+export function useProjectOverview(projectId: MaybeRefOrGetter<string>) {
+  const q = useQuery({
+    queryKey: computed(() => qk.project.overview(toValue(projectId))),
+    queryFn: () => derived.getProjectOverview(toValue(projectId)),
+    staleTime: 0,
+  });
+  return { overview: q.data, isPending: q.isPending, isError: q.isError, error: q.error, refetch: q.refetch };
+}
+
 export function useProjectHealth(projectId: MaybeRefOrGetter<string>) {
   const q = useQuery({
     queryKey: computed(() => qk.project.health(toValue(projectId))),

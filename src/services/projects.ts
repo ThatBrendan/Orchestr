@@ -30,6 +30,7 @@ export async function createProject(input: ProjectInsert): Promise<{ id: string 
     p_name: input.name,
     p_timezone: input.timezone,
     p_currency: input.currency,
+    p_profile: input.profile ?? "blank",
     p_starts_on: input.starts_on ?? null,
     p_ends_on: input.ends_on ?? null,
   });
