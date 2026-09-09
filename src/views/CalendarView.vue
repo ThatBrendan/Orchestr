@@ -6,9 +6,12 @@ import { useGlobalCalendar } from "@/composables/useGlobalCalendar";
 import { useMyProjects } from "@/composables/useProjects";
 import { useMyProfile } from "@/composables/useDashboard";
 import { useMoney } from "@/composables/useMoney";
+import { CALENDAR_SEMANTICS, calendarPresentation, calendarTypeLabel } from "@/lib/calendarPresentation";
 import type { GlobalTimelineEvent } from "@/types/derived";
 import PageContainer from "@/components/ui/PageContainer.vue";
 import AppButton from "@/components/ui/AppButton.vue";
+import AppIcon from "@/components/ui/AppIcon.vue";
+import AppModal from "@/components/ui/AppModal.vue";
 import SkeletonBlock from "@/components/ui/SkeletonBlock.vue";
 import ErrorState from "@/components/ui/ErrorState.vue";
 import EmptyState from "@/components/ui/EmptyState.vue";
@@ -22,6 +25,8 @@ const zone = computed(() => profile.value?.timezone ?? "UTC");
 const selectedMonth = ref(DateTime.now().setZone(zone.value).startOf("month"));
 const selectedProject = ref("");
 const selectedType = ref("");
+const selectedDay = ref<string | null>(null);
+const VISIBLE_MARKERS = 3;
 
 const queryStart = computed(() => selectedMonth.value.minus({ days: 2 }).toUTC().toISO() ?? "");
 const queryEnd = computed(() => selectedMonth.value.endOf("month").plus({ days: 2 }).toUTC().toISO() ?? "");
@@ -69,7 +74,7 @@ function goToday() {
 }
 
 function typeLabel(type: string): string {
-  return type.replace(/_/g, " ");
+  return calendarTypeLabel(type);
 }
 
 function statusTone(status: string | null) {
@@ -98,6 +103,41 @@ function eventRoute(event: GlobalTimelineEvent) {
 function eventTime(event: GlobalTimelineEvent): string | null {
   if (event.all_day) return null;
   return DateTime.fromISO(event.occurs_at, { zone: event.project_timezone }).toFormat("HH:mm");
+}
+
+function eventDate(event: GlobalTimelineEvent): string {
+  return DateTime.fromISO(event.occurs_at, { zone: event.project_timezone }).toFormat("d LLL yyyy");
+}
+
+function eventKey(event: GlobalTimelineEvent): string {
+  return event.event_type + event.subject_id + event.occurs_at + (event.occurrence_date ?? "");
+}
+
+function eventAccessibleLabel(event: GlobalTimelineEvent): string {
+  const presentation = calendarPresentation(event.event_type);
+  const amount = event.amount_minor != null ? `, ${format(event.amount_minor, event.currency)}` : "";
+  return `${presentation.label}: ${event.title}, ${event.project_name}, ${eventDate(event)}${amount}`;
+}
+
+function eventStatusClass(event: GlobalTimelineEvent): string {
+  if (["completed", "paid", "booked", "cancelled", "waived"].includes(event.status ?? "")) {
+    return "opacity-50 grayscale";
+  }
+  if (event.status === "overdue" || isPast(event)) return "ring-1 ring-amber-400";
+  return "";
+}
+
+function eventsForDay(key: string): GlobalTimelineEvent[] {
+  return eventsByDay.value.get(key) ?? [];
+}
+
+const selectedDayEvents = computed(() => (selectedDay.value ? eventsForDay(selectedDay.value) : []));
+const selectedDayLabel = computed(() =>
+  selectedDay.value ? DateTime.fromISO(selectedDay.value, { zone: zone.value }).toFormat("d LLLL yyyy") : "",
+);
+
+function openDayAgenda(day: string) {
+  selectedDay.value = day;
 }
 
 function isPast(event: GlobalTimelineEvent): boolean {
@@ -133,6 +173,15 @@ function isPast(event: GlobalTimelineEvent): boolean {
       </div>
     </div>
 
+    <div class="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-12 text-muted" aria-label="Calendar legend">
+      <span v-for="semantic in CALENDAR_SEMANTICS" :key="semantic.semantic" class="inline-flex items-center gap-1.5">
+        <span class="inline-flex h-5 w-5 items-center justify-center rounded border" :class="semantic.markerClass">
+          <AppIcon :name="semantic.icon" :size="12" />
+        </span>
+        {{ semantic.label }}
+      </span>
+    </div>
+
     <div v-if="calendar.isPending.value" class="mt-5 grid gap-2 md:grid-cols-7">
       <SkeletonBlock v-for="i in 14" :key="i" height="96px" rounded="0.5rem" />
     </div>
@@ -145,7 +194,7 @@ function isPast(event: GlobalTimelineEvent): boolean {
     <template v-else>
       <EmptyState v-if="filteredEvents.length === 0" class="mt-5" message="Nothing scheduled this month." />
 
-      <div class="mt-5 hidden overflow-hidden rounded-xl border border-line bg-surface md:grid md:grid-cols-7">
+      <div class="mt-5 hidden rounded-xl border border-line bg-surface md:grid md:grid-cols-7">
         <div
           v-for="label in ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']"
           :key="label"
@@ -160,21 +209,34 @@ function isPast(event: GlobalTimelineEvent): boolean {
           :class="cell.inMonth ? 'bg-surface' : 'bg-[#FBFBFA] text-muted'"
         >
           <div class="text-12 font-medium">{{ cell.day.day }}</div>
-          <div class="mt-2 space-y-1.5">
+          <div class="mt-2 flex min-h-12 flex-wrap content-start gap-1">
             <RouterLink
-              v-for="event in eventsByDay.get(cell.key) ?? []"
-              :key="event.event_type + event.subject_id + event.occurs_at + (event.occurrence_date ?? '')"
+              v-for="event in eventsForDay(cell.key).slice(0, VISIBLE_MARKERS)"
+              :key="eventKey(event)"
               :to="eventRoute(event)"
-              class="block rounded-md border border-line px-2 py-1.5 text-12 hover:bg-[#F6F6F4] focus-ring"
+              class="group relative inline-flex h-8 w-8 items-center justify-center rounded-md border focus-ring hover:brightness-95"
+              :class="[calendarPresentation(event.event_type).markerClass, eventStatusClass(event)]"
+              :aria-label="eventAccessibleLabel(event)"
+              :title="eventAccessibleLabel(event)"
             >
-              <div class="font-medium truncate">{{ event.title }}</div>
-              <div class="mt-0.5 truncate text-muted">{{ event.project_name }}</div>
-              <div class="mt-1 flex items-center gap-1.5">
-                <span class="capitalize text-muted">{{ typeLabel(event.event_type) }}</span>
-                <span v-if="eventTime(event)" class="text-muted">{{ eventTime(event) }}</span>
-                <span v-if="event.amount_minor != null" class="font-medium">{{ format(event.amount_minor, event.currency) }}</span>
-              </div>
+              <AppIcon :name="calendarPresentation(event.event_type).icon" :size="16" />
+              <span class="pointer-events-none absolute left-0 top-9 z-30 hidden w-56 rounded-lg border border-line bg-surface p-2.5 text-left text-12 shadow-lg group-hover:block group-focus:block">
+                <span class="block font-medium text-ink">{{ event.title }}</span>
+                <span class="mt-0.5 block text-muted">{{ event.project_name }}</span>
+                <span class="mt-1 block" :class="calendarPresentation(event.event_type).softClass">
+                  {{ typeLabel(event.event_type) }} · {{ eventDate(event) }}
+                </span>
+              </span>
             </RouterLink>
+            <button
+              v-if="eventsForDay(cell.key).length > VISIBLE_MARKERS"
+              type="button"
+              class="h-8 rounded-md px-1.5 text-12 font-semibold text-ink-soft hover:bg-paper focus-ring"
+              :aria-label="`Show all ${eventsForDay(cell.key).length} events for ${cell.day.toFormat('d LLLL yyyy')}`"
+              @click="openDayAgenda(cell.key)"
+            >
+              +{{ eventsForDay(cell.key).length - VISIBLE_MARKERS }} more
+            </button>
           </div>
         </div>
       </div>
@@ -182,7 +244,7 @@ function isPast(event: GlobalTimelineEvent): boolean {
       <div class="mt-5 space-y-2 md:hidden">
         <RouterLink
           v-for="event in filteredEvents"
-          :key="event.event_type + event.subject_id + event.occurs_at + (event.occurrence_date ?? '')"
+          :key="eventKey(event)"
           :to="eventRoute(event)"
           class="block rounded-xl border border-line bg-surface p-4 focus-ring"
         >
@@ -198,12 +260,44 @@ function isPast(event: GlobalTimelineEvent): boolean {
             <StatusBadge v-else-if="event.status" :label="event.status" :tone="statusTone(event.status)" />
           </div>
           <div class="mt-2 flex flex-wrap gap-2 text-13 text-muted">
-            <span class="capitalize">{{ typeLabel(event.event_type) }}</span>
+            <span class="inline-flex items-center gap-1" :class="calendarPresentation(event.event_type).softClass">
+              <AppIcon :name="calendarPresentation(event.event_type).icon" :size="14" />
+              {{ typeLabel(event.event_type) }}
+            </span>
             <span v-if="eventTime(event)">{{ eventTime(event) }}</span>
             <span v-if="event.amount_minor != null" class="font-medium text-ink-soft">{{ format(event.amount_minor, event.currency) }}</span>
           </div>
         </RouterLink>
       </div>
     </template>
+
+    <AppModal :open="!!selectedDay" :title="selectedDayLabel" size="lg" @close="selectedDay = null">
+      <div class="space-y-2">
+        <RouterLink
+          v-for="event in selectedDayEvents"
+          :key="eventKey(event)"
+          :to="eventRoute(event)"
+          class="flex items-start gap-3 rounded-lg border border-line p-3 hover:bg-paper focus-ring"
+          :class="eventStatusClass(event)"
+          :aria-label="eventAccessibleLabel(event)"
+          @click="selectedDay = null"
+        >
+          <span
+            class="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border"
+            :class="calendarPresentation(event.event_type).markerClass"
+          >
+            <AppIcon :name="calendarPresentation(event.event_type).icon" :size="16" />
+          </span>
+          <span class="min-w-0 flex-1">
+            <span class="block truncate text-14 font-medium">{{ event.title }}</span>
+            <span class="mt-0.5 block text-13 text-muted">{{ event.project_name }}</span>
+            <span class="mt-1 block text-13" :class="calendarPresentation(event.event_type).softClass">
+              {{ typeLabel(event.event_type) }}<span v-if="event.occurrence_date"> · Recurring</span>
+              <span v-if="event.amount_minor != null"> · {{ format(event.amount_minor, event.currency) }}</span>
+            </span>
+          </span>
+        </RouterLink>
+      </div>
+    </AppModal>
   </PageContainer>
 </template>
