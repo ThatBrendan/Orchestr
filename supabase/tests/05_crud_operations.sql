@@ -3,7 +3,7 @@
 -- RLS enforcement, and the status-transition/guard triggers the UI relies on.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(37);
+select plan(40);
 
 create function pg_temp.login(p_uid uuid, p_email text) returns void language plpgsql as $$
 begin
@@ -128,6 +128,12 @@ select is((select ever_paid from public.payments where id='5e000000-0000-0000-00
   'PAYMENT: ever_paid latches true once paid');
 select throws_ok($$update public.payments set deleted_at=now() where id='5e000000-0000-0000-0000-00000000005e'$$,
   'P0001', null, 'PAYMENT: a payment that has ever been paid cannot be soft-deleted');
+select is(pg_temp.wc($$update public.commitments set deleted_at=now() where id='5d000000-0000-0000-0000-00000000005d'$$),
+  1, 'COMMITMENT: organizer can soft-delete an activity');
+select is((select count(*)::int from public.commitments where id='5d000000-0000-0000-0000-00000000005d'), 0,
+  'COMMITMENT: soft-deleted activity is excluded from normal reads');
+select is((select count(*)::int from public.payments where id='5e000000-0000-0000-0000-00000000005e'), 1,
+  'COMMITMENT: soft deletion preserves paid payment history');
 select pg_temp.logout();
 
 select pg_temp.login('c5000000-0000-0000-0000-00000000005c','c5@t.co');

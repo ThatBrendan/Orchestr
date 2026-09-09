@@ -10,6 +10,7 @@ export function useInviteMember(projectId: string) {
       members.inviteMember(projectId, input.email, input.role),
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: qk.project.members(projectId) });
+      void client.invalidateQueries({ queryKey: qk.me.people() });
     },
   });
 }
@@ -21,6 +22,7 @@ export function useUpdateMemberRole(projectId: string) {
       members.updateMemberRole(input.memberId, input.role),
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: qk.project.members(projectId) });
+      void client.invalidateQueries({ queryKey: qk.me.people() });
     },
   });
 }
@@ -31,6 +33,7 @@ export function useRemoveMember(projectId: string) {
     mutationFn: (memberId: string) => members.removeMember(memberId),
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: qk.project.members(projectId) });
+      void client.invalidateQueries({ queryKey: qk.me.people() });
     },
   });
 }
@@ -41,6 +44,7 @@ export function useReactivateMember(projectId: string) {
     mutationFn: (memberId: string) => members.reactivateMember(memberId),
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: qk.project.members(projectId) });
+      void client.invalidateQueries({ queryKey: qk.me.people() });
     },
   });
 }

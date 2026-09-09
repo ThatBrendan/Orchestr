@@ -1,5 +1,5 @@
 import { supabase } from "@/lib/supabase";
-import { toAppError } from "@/lib/errors";
+import { AppError, toAppError } from "@/lib/errors";
 import type { Tables, TablesInsert, TablesUpdate, Enums } from "@/types/database";
 import type { TaskOccurrence } from "@/types/derived";
 
@@ -71,6 +71,10 @@ export async function skipTaskOccurrence(taskId: string, occurrenceDate: string)
 
 /** Soft delete — organizer, creator, or assignee only (docs/SECURITY_RLS.md §5.9). */
 export async function softDeleteTask(id: string): Promise<void> {
-  const { error } = await supabase.from("tasks").update({ deleted_at: new Date().toISOString() }).eq("id", id);
+  const { error, count } = await supabase
+    .from("tasks")
+    .update({ deleted_at: new Date().toISOString() }, { count: "exact" })
+    .eq("id", id);
   if (error) throw toAppError(error);
+  if (count !== 1) throw new AppError("permission", "You don't have permission to delete this task.");
 }

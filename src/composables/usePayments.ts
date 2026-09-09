@@ -29,6 +29,10 @@ function invalidatePaymentEffects(
   void client.invalidateQueries({ queryKey: qk.project.financials(projectId) });
   void client.invalidateQueries({ queryKey: qk.project.health(projectId) });
   void client.invalidateQueries({ queryKey: qk.project.timeline(projectId) });
+  void client.invalidateQueries({ queryKey: qk.project.upcoming(projectId) });
+  void client.invalidateQueries({ queryKey: qk.project.overview(projectId) });
+  void client.invalidateQueries({ queryKey: qk.me.calendarRoot() });
+  void client.invalidateQueries({ queryKey: qk.me.attention() });
 }
 
 export function useCreatePayment(projectId: string, commitmentId: string) {

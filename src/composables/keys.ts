@@ -6,6 +6,7 @@ export const qk = {
     projects: () => ["me", "projects"] as const,
     attention: () => ["me", "attention"] as const,
     calendar: (start: string, end: string) => ["me", "calendar", start, end] as const,
+    calendarRoot: () => ["me", "calendar"] as const,
     people: () => ["me", "people"] as const,
   },
   project: {

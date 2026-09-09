@@ -1,5 +1,5 @@
 import { supabase } from "@/lib/supabase";
-import { toAppError } from "@/lib/errors";
+import { AppError, toAppError } from "@/lib/errors";
 import type { Tables, TablesInsert, TablesUpdate, CommitmentStatus } from "@/types/database";
 import type { CommitmentOccurrence } from "@/types/derived";
 
@@ -81,11 +81,12 @@ export async function stopCommitmentRecurrence(commitmentId: string, stopAfter: 
 
 /** Soft delete — organizer, creator, or owner only (docs/SECURITY_RLS.md §5.5). */
 export async function softDeleteCommitment(id: string): Promise<void> {
-  const { error } = await supabase.from("commitments").update({ deleted_at: new Date().toISOString() }).eq(
-    "id",
-    id,
-  );
+  const { error, count } = await supabase
+    .from("commitments")
+    .update({ deleted_at: new Date().toISOString() }, { count: "exact" })
+    .eq("id", id);
   if (error) throw toAppError(error);
+  if (count !== 1) throw new AppError("not_found", "Activity not found or cannot be deleted.");
 }
 
 export async function listParticipants(commitmentId: string): Promise<CommitmentParticipant[]> {

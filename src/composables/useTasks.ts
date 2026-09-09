@@ -29,6 +29,8 @@ export function useCreateTask(projectId: string) {
       void client.invalidateQueries({ queryKey: qk.project.timeline(projectId) });
       void client.invalidateQueries({ queryKey: qk.project.upcoming(projectId) });
       void client.invalidateQueries({ queryKey: qk.project.overview(projectId) });
+      void client.invalidateQueries({ queryKey: qk.me.calendarRoot() });
+      void client.invalidateQueries({ queryKey: qk.me.attention() });
     },
   });
 }
@@ -44,6 +46,8 @@ export function useUpdateTask(projectId: string) {
       void client.invalidateQueries({ queryKey: qk.project.timeline(projectId) });
       void client.invalidateQueries({ queryKey: qk.project.upcoming(projectId) });
       void client.invalidateQueries({ queryKey: qk.project.overview(projectId) });
+      void client.invalidateQueries({ queryKey: qk.me.calendarRoot() });
+      void client.invalidateQueries({ queryKey: qk.me.attention() });
     },
   });
 }
@@ -58,6 +62,8 @@ export function useSetTaskStatus(projectId: string) {
       void client.invalidateQueries({ queryKey: qk.project.timeline(projectId) });
       void client.invalidateQueries({ queryKey: qk.project.upcoming(projectId) });
       void client.invalidateQueries({ queryKey: qk.project.overview(projectId) });
+      void client.invalidateQueries({ queryKey: qk.me.calendarRoot() });
+      void client.invalidateQueries({ queryKey: qk.me.attention() });
     },
   });
 }
@@ -72,6 +78,8 @@ export function useDeleteTask(projectId: string) {
       void client.invalidateQueries({ queryKey: qk.project.timeline(projectId) });
       void client.invalidateQueries({ queryKey: qk.project.upcoming(projectId) });
       void client.invalidateQueries({ queryKey: qk.project.overview(projectId) });
+      void client.invalidateQueries({ queryKey: qk.me.calendarRoot() });
+      void client.invalidateQueries({ queryKey: qk.me.attention() });
     },
   });
 }
@@ -109,6 +117,7 @@ export function useCompleteTaskOccurrence(projectId: MaybeRefOrGetter<string>, t
       void client.invalidateQueries({ queryKey: qk.project.overview(pid) });
       void client.invalidateQueries({ queryKey: qk.task.occurrencesRoot(tid) });
       void client.invalidateQueries({ queryKey: qk.me.attention() });
+      void client.invalidateQueries({ queryKey: qk.me.calendarRoot() });
     },
   });
 }
@@ -126,6 +135,7 @@ export function useSkipTaskOccurrence(projectId: MaybeRefOrGetter<string>, taskI
       void client.invalidateQueries({ queryKey: qk.project.overview(pid) });
       void client.invalidateQueries({ queryKey: qk.task.occurrencesRoot(tid) });
       void client.invalidateQueries({ queryKey: qk.me.attention() });
+      void client.invalidateQueries({ queryKey: qk.me.calendarRoot() });
     },
   });
 }

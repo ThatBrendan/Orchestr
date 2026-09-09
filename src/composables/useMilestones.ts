@@ -25,6 +25,8 @@ export function useCreateMilestone(projectId: string) {
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: qk.project.milestones(projectId) });
       void client.invalidateQueries({ queryKey: qk.project.timeline(projectId) });
+      void client.invalidateQueries({ queryKey: qk.project.overview(projectId) });
+      void client.invalidateQueries({ queryKey: qk.me.calendarRoot() });
     },
   });
 }
@@ -37,6 +39,8 @@ export function useUpdateMilestone(projectId: string) {
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: qk.project.milestones(projectId) });
       void client.invalidateQueries({ queryKey: qk.project.timeline(projectId) });
+      void client.invalidateQueries({ queryKey: qk.project.overview(projectId) });
+      void client.invalidateQueries({ queryKey: qk.me.calendarRoot() });
     },
   });
 }
@@ -48,6 +52,8 @@ export function useDeleteMilestone(projectId: string) {
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: qk.project.milestones(projectId) });
       void client.invalidateQueries({ queryKey: qk.project.timeline(projectId) });
+      void client.invalidateQueries({ queryKey: qk.project.overview(projectId) });
+      void client.invalidateQueries({ queryKey: qk.me.calendarRoot() });
     },
   });
 }

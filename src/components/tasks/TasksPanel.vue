@@ -3,13 +3,14 @@ import { computed, reactive, ref } from "vue";
 import { DateTime } from "luxon";
 import { useQueryClient } from "@tanstack/vue-query";
 import { useTasks, useCreateTask, useUpdateTask, useSetTaskStatus, useDeleteTask } from "@/composables/useTasks";
+import { useProjectContext } from "@/composables/useProjectContext";
 import { useProjectTime } from "@/composables/useProjectTime";
 import { useToast } from "@/composables/useToast";
 import { toAppError } from "@/lib/errors";
 import { qk } from "@/composables/keys";
 import { REPEAT_OPTIONS, recurrenceLabel, repeatOption, type RepeatOptionValue } from "@/lib/recurrence";
 import * as tasksService from "@/services/tasks";
-import type { TaskStatus } from "@/services/tasks";
+import type { Task, TaskStatus } from "@/services/tasks";
 import type { MemberDirectoryEntry } from "@/types/derived";
 import type { Commitment } from "@/services/commitments";
 import SkeletonBlock from "@/components/ui/SkeletonBlock.vue";
@@ -27,6 +28,7 @@ const props = defineProps<{
 }>();
 
 const { tasks, isPending, isError, error, refetch } = useTasks(props.projectId);
+const { context } = useProjectContext();
 const time = useProjectTime(props.timezone);
 const toast = useToast();
 const client = useQueryClient();
@@ -186,6 +188,12 @@ function memberName(id: string | null): string {
   if (!id) return "Unassigned";
   return props.members.find((m) => m.member_id === id)?.display_name ?? "Unknown";
 }
+
+function canDeleteTask(task: Task): boolean {
+  if (context.value?.role === "organizer") return true;
+  const memberId = context.value?.memberId;
+  return !!memberId && (task.created_by === memberId || task.assignee_member_id === memberId);
+}
 </script>
 
 <template>
@@ -264,7 +272,15 @@ function memberName(id: string | null): string {
             <option value="">Unassigned</option>
             <option v-for="m in assigneeCandidates" :key="m.member_id" :value="m.member_id">{{ m.display_name }}</option>
           </select>
-          <AppButton variant="ghost" size="sm" class="!text-danger" @click="confirmDeleteId = t.id">Delete</AppButton>
+          <AppButton
+            v-if="canDeleteTask(t)"
+            variant="ghost"
+            size="sm"
+            class="!text-danger"
+            @click="confirmDeleteId = t.id"
+          >
+            Delete
+          </AppButton>
         </template>
       </div>
     </div>

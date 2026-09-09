@@ -1,5 +1,5 @@
 import { supabase } from "@/lib/supabase";
-import { toAppError } from "@/lib/errors";
+import { AppError, toAppError } from "@/lib/errors";
 import type { MyProject, Project, ProjectInsert } from "@/types/domain";
 import type { ProjectStatus, TablesUpdate } from "@/types/database";
 
@@ -62,9 +62,10 @@ export async function setProjectStatus(projectId: string, status: ProjectStatus)
 
 /** Soft delete — organizer only. There is no hard-delete client path (docs/SECURITY_RLS.md §5.2). */
 export async function softDeleteProject(projectId: string): Promise<void> {
-  const { error } = await supabase.from("projects").update({ deleted_at: new Date().toISOString() }).eq(
-    "id",
-    projectId,
-  );
+  const { error, count } = await supabase
+    .from("projects")
+    .update({ deleted_at: new Date().toISOString() }, { count: "exact" })
+    .eq("id", projectId);
   if (error) throw toAppError(error);
+  if (count !== 1) throw new AppError("permission", "You don't have permission to delete this project.");
 }
