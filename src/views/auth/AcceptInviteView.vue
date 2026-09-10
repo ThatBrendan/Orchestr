@@ -7,6 +7,7 @@ import { useInvitation } from "@/composables/useInvitation";
 import { useToast } from "@/composables/useToast";
 import { toAppError } from "@/lib/errors";
 import { APP_NAME } from "@/config";
+import orchestrioIcon from "@/assets/orchestrio-icon.svg";
 import AppButton from "@/components/ui/AppButton.vue";
 
 const route = useRoute();
@@ -37,7 +38,7 @@ async function accept() {
 <template>
   <div class="min-h-screen flex items-center justify-center px-6 bg-paper">
     <div class="w-full max-w-sm fade-in text-center">
-      <div class="font-display font-semibold text-[20px] tracking-tight">{{ APP_NAME }}</div>
+      <img :src="orchestrioIcon" :alt="APP_NAME" class="mx-auto h-10 w-auto" />
 
       <!-- signed out: send the user through password auth, then back here -->
       <template v-if="ready && !isAuthenticated">

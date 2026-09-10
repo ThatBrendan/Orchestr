@@ -2,7 +2,7 @@
 import { computed } from "vue";
 import { useRoute } from "vue-router";
 import { NAV_ITEMS } from "./navItems";
-import { APP_NAME } from "@/config";
+import orchestrioIcon from "@/assets/orchestrio-icon.svg";
 import { useMyProfile } from "@/composables/useDashboard";
 import AppIcon from "@/components/ui/AppIcon.vue";
 import CurrentProjectLink from "./CurrentProjectLink.vue";
@@ -24,7 +24,7 @@ function isActive(match: readonly string[]) {
 <template>
   <aside class="hidden md:flex w-60 shrink-0 border-r border-line bg-surface flex-col">
     <RouterLink to="/" class="h-16 flex items-center px-5 border-b border-line focus-ring">
-      <span class="font-display font-semibold text-[17px] tracking-tight">{{ APP_NAME }}</span>
+      <img :src="orchestrioIcon" alt="Orchestrio" class="h-12 w-auto" />
     </RouterLink>
 
     <nav class="flex-1 px-3 py-4 space-y-0.5">

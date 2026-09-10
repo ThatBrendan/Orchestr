@@ -2,6 +2,7 @@
 import { computed } from "vue";
 import { RouterView, useRoute } from "vue-router";
 import { APP_NAME } from "@/config";
+import orchestrioIcon from "@/assets/orchestrio-icon.svg";
 import AppIcon from "@/components/ui/AppIcon.vue";
 import UserMenu from "@/components/layout/UserMenu.vue";
 
@@ -25,7 +26,7 @@ function isActive(match: readonly string[]) {
   <div class="min-h-screen bg-canvas md:flex">
     <aside class="hidden md:flex w-64 shrink-0 border-r border-line bg-surface flex-col">
       <RouterLink to="/" class="h-16 flex items-center px-5 border-b border-line focus-ring">
-        <span class="font-display font-semibold text-[17px]">{{ APP_NAME }}</span>
+        <img :src="orchestrioIcon" :alt="APP_NAME" class="h-12 w-auto" />
         <span class="ml-2 rounded bg-ink px-1.5 py-0.5 text-[11px] font-semibold uppercase text-white">Admin</span>
       </RouterLink>
 
@@ -58,7 +59,7 @@ function isActive(match: readonly string[]) {
       <header class="md:hidden sticky top-0 z-10 border-b border-line bg-surface">
         <div class="h-14 flex items-center justify-between px-4">
           <RouterLink to="/" class="flex items-center gap-2 focus-ring">
-            <span class="font-display font-semibold text-[16px]">{{ APP_NAME }}</span>
+            <img :src="orchestrioIcon" :alt="APP_NAME" class="h-7 w-auto" />
             <span class="rounded bg-ink px-1.5 py-0.5 text-[10px] font-semibold uppercase text-white">Admin</span>
           </RouterLink>
           <RouterLink :to="{ name: 'dashboard' }" class="text-13 font-medium text-ink-soft focus-ring">

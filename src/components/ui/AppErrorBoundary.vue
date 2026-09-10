@@ -4,6 +4,7 @@ import { logger } from "@/lib/logger";
 import { toAppError } from "@/lib/errors";
 import AppButton from "./AppButton.vue";
 import { APP_NAME } from "@/config";
+import orchestrioIcon from "@/assets/orchestrio-icon.svg";
 
 const crashed = ref<string | null>(null);
 
@@ -22,7 +23,7 @@ function reload() {
 <template>
   <div v-if="crashed" class="min-h-screen flex items-center justify-center p-6 bg-paper">
     <div class="max-w-sm text-center">
-      <div class="font-display font-semibold text-[17px]">{{ APP_NAME }}</div>
+      <img :src="orchestrioIcon" :alt="APP_NAME" class="h-12 w-auto" />
       <p class="mt-3 text-14 text-ink-soft">Something went wrong on this screen.</p>
       <p class="mt-1 text-13 text-muted">{{ crashed }}</p>
       <div class="mt-5 flex justify-center">

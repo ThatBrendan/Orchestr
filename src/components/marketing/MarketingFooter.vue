@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { RouterLink } from "vue-router";
 import { APP_NAME } from "@/config";
+import orchestrioIcon from "@/assets/orchestrio-icon.svg";
 import { scrollToId } from "./scroll";
 
 const year = new Date().getFullYear();
@@ -25,7 +26,7 @@ const columns = [
     <div class="max-w-6xl mx-auto px-5 md:px-8 py-14">
       <div class="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
         <div>
-          <div class="font-display font-semibold text-[17px] tracking-tight">{{ APP_NAME }}</div>
+          <img :src="orchestrioIcon" :alt="APP_NAME" class="h-12 w-auto" />
           <p class="mt-2 text-13 text-muted max-w-[16rem]">Plan together. Execute clearly.</p>
         </div>
 

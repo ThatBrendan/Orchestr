@@ -6,6 +6,7 @@ import { useAuth } from "@/composables/useAuth";
 import { APP_NAME } from "@/config";
 import AppButton from "@/components/ui/AppButton.vue";
 import AppIcon from "@/components/ui/AppIcon.vue";
+import orchestrioIcon from "@/assets/orchestrio-icon.svg";
 import { MARKETING_NAV, scrollToId } from "./scroll";
 
 const { isAuthenticated } = useAuth();
@@ -34,8 +35,8 @@ function go(href: string, close?: () => void) {
     >
       <div class="max-w-6xl mx-auto px-5 md:px-8">
         <div class="h-16 flex items-center justify-between gap-4">
-          <RouterLink :to="{ name: 'landing' }" class="font-display font-semibold text-[18px] tracking-tight focus-ring">
-            {{ APP_NAME }}
+          <RouterLink :to="{ name: 'landing' }" class="flex items-center focus-ring" :aria-label="APP_NAME">
+            <img :src="orchestrioIcon" :alt="APP_NAME" class="h-12 w-auto" />
           </RouterLink>
 
           <nav class="hidden md:flex items-center gap-1" aria-label="Marketing">

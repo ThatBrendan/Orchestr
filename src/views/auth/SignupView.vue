@@ -7,6 +7,7 @@ import { usePageMeta } from "@/composables/usePageMeta";
 import { safeRedirect } from "@/router/guards";
 import { toAppError } from "@/lib/errors";
 import { APP_NAME } from "@/config";
+import orchestrioIcon from "@/assets/orchestrio-icon.svg";
 import AppButton from "@/components/ui/AppButton.vue";
 
 usePageMeta({
@@ -56,9 +57,10 @@ async function submit() {
     <div class="w-full max-w-sm fade-in">
       <RouterLink
         :to="{ name: 'landing' }"
-        class="font-display font-semibold text-[20px] tracking-tight block text-center focus-ring"
+        class="block text-center focus-ring"
+        :aria-label="APP_NAME"
       >
-        {{ APP_NAME }}
+        <img :src="orchestrioIcon" :alt="APP_NAME" class="mx-auto h-12 w-auto" />
       </RouterLink>
       <h1 class="mt-6 text-center font-display text-[19px] font-semibold tracking-tight">Create your account</h1>
 
