@@ -33,14 +33,20 @@ export function usePageMeta(meta: PageMeta) {
   // Runs after the router's afterEach (component mount is later in the cycle),
   // so a view that calls usePageMeta() wins over the meta.title fallback.
   onMounted(() => {
-    document.title = title;
-    upsertMeta('meta[name="description"]', "name", "description", description);
-    upsertMeta('meta[property="og:title"]', "property", "og:title", title);
-    upsertMeta('meta[property="og:description"]', "property", "og:description", description);
-    upsertMeta('meta[property="og:type"]', "property", "og:type", "website");
-    if (meta.url) upsertMeta('meta[property="og:url"]', "property", "og:url", meta.url);
-    upsertMeta('meta[name="twitter:card"]', "name", "twitter:card", "summary_large_image");
+    setPageMeta({ ...meta, title, description });
   });
+}
+
+export function setPageMeta(meta: PageMeta) {
+  const title = meta.title ?? DEFAULT_TITLE;
+  const description = meta.description ?? DEFAULT_DESCRIPTION;
+  document.title = title;
+  upsertMeta('meta[name="description"]', "name", "description", description);
+  upsertMeta('meta[property="og:title"]', "property", "og:title", title);
+  upsertMeta('meta[property="og:description"]', "property", "og:description", description);
+  upsertMeta('meta[property="og:type"]', "property", "og:type", "website");
+  if (meta.url) upsertMeta('meta[property="og:url"]', "property", "og:url", meta.url);
+  upsertMeta('meta[name="twitter:card"]', "name", "twitter:card", "summary_large_image");
 }
 
 /** Reset description to the product default (used by the router for app routes). */

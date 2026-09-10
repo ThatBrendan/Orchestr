@@ -12,6 +12,24 @@ const routes: RouteRecordRaw[] = [
     meta: { public: true, title: DEFAULT_TITLE },
   },
   {
+    path: "/about",
+    name: "about",
+    component: () => import("@/views/PublicInfoView.vue"),
+    meta: { public: true, title: `About ${APP_NAME}` },
+  },
+  {
+    path: "/privacy",
+    name: "privacy",
+    component: () => import("@/views/PublicInfoView.vue"),
+    meta: { public: true, title: `Privacy · ${APP_NAME}` },
+  },
+  {
+    path: "/terms",
+    name: "terms",
+    component: () => import("@/views/PublicInfoView.vue"),
+    meta: { public: true, title: `Terms · ${APP_NAME}` },
+  },
+  {
     path: "/login",
     name: "login",
     component: () => import("@/views/auth/LoginView.vue"),
@@ -99,7 +117,7 @@ export const router = createRouter({
   routes,
   scrollBehavior(to, _from, savedPosition) {
     if (savedPosition) return savedPosition;
-    if (to.hash) return { el: to.hash, top: 80, behavior: "smooth" };
+    if (to.hash) return { el: to.hash, behavior: "smooth" };
     return { top: 0 };
   },
 });

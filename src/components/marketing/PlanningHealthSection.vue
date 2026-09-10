@@ -20,8 +20,8 @@ const CHECKS = [
           Orchestrio continuously checks your plan for things that need attention.
         </h2>
         <p class="mt-4 text-[16px] leading-relaxed text-ink-soft">
-          It's a set of clear, deterministic checks — not a black box. When something's missing, overdue or off budget,
-          it shows up on the dashboard with a plain explanation and what to do about it.
+          It's a set of clear, consistent checks — not a black box. When something's missing, overdue or off budget, it
+          shows up on the dashboard with a simple explanation and what to do next.
         </p>
         <p class="mt-3 text-13.5 text-muted">
           No AI guesswork. Orchestrio won't make bookings for you or plan the project on its own — it keeps you informed so

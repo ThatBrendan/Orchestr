@@ -1,17 +1,10 @@
-/** Smooth-scroll to an in-page section, honouring prefers-reduced-motion. */
-export function scrollToId(id: string) {
-  const el = document.getElementById(id.replace(/^#/, ""));
-  if (!el) return;
-  const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  el.scrollIntoView({ behavior: reduced ? "auto" : "smooth", block: "start" });
-  // move focus for keyboard users without stealing it visually on click
-  el.setAttribute("tabindex", "-1");
-  el.focus({ preventScroll: true });
-}
+import type { RouteLocationRaw } from "vue-router";
 
-export const MARKETING_NAV = [
-  { label: "Product", href: "#product" },
-  { label: "How it works", href: "#how-it-works" },
-  { label: "Use cases", href: "#use-cases" },
-  { label: "Features", href: "#features" },
+export const PUBLIC_SECTION_LINKS = [
+  { label: "Product", to: { path: "/", hash: "#product" } },
+  { label: "How it works", to: { path: "/", hash: "#how-it-works" } },
+  { label: "Use cases", to: { path: "/", hash: "#use-cases" } },
+  { label: "Features", to: { path: "/", hash: "#features" } },
 ] as const;
+
+export type PublicSectionLink = (typeof PUBLIC_SECTION_LINKS)[number] & { to: RouteLocationRaw };

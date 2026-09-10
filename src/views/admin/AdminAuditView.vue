@@ -12,6 +12,10 @@ const { events, isPending, isError, error, refetch } = useAdminAudit(search);
 function dateTime(value: string) {
   return new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
 }
+
+function actionLabel(action: string) {
+  return action === "soft-delete" ? "Delete" : action;
+}
 </script>
 
 <template>
@@ -33,13 +37,12 @@ function dateTime(value: string) {
       <SkeletonBlock v-if="isPending" height="420px" rounded="0" />
       <ErrorState v-else-if="isError" :error="error" :retry="() => refetch()" />
       <EmptyState v-else-if="events.length === 0" message="No audit activity found." />
-      <table v-else class="w-full min-w-[980px] text-left text-14">
+      <table v-else class="w-full min-w-[760px] text-left text-14">
         <thead class="border-b border-line text-12 uppercase text-muted">
           <tr>
             <th class="px-4 py-3 font-medium">Time</th>
             <th class="px-4 py-3 font-medium">Actor</th>
             <th class="px-4 py-3 font-medium">Action</th>
-            <th class="px-4 py-3 font-medium">Entity</th>
             <th class="px-4 py-3 font-medium">Project</th>
             <th class="px-4 py-3 font-medium">Request</th>
           </tr>
@@ -48,8 +51,7 @@ function dateTime(value: string) {
           <tr v-for="event in events" :key="event.id">
             <td class="px-4 py-3 text-muted">{{ dateTime(event.at) }}</td>
             <td class="px-4 py-3 text-ink-soft">{{ event.actor_display_name ?? event.actor_email ?? "System" }}</td>
-            <td class="px-4 py-3"><StatusBadge :label="event.action" /></td>
-            <td class="px-4 py-3 text-ink-soft">{{ event.entity_type }} · {{ event.entity_id }}</td>
+            <td class="px-4 py-3"><StatusBadge :label="actionLabel(event.action)" /></td>
             <td class="px-4 py-3 text-ink-soft">{{ event.project_name ?? "-" }}</td>
             <td class="px-4 py-3 text-muted">{{ event.request_id ?? "-" }}</td>
           </tr>

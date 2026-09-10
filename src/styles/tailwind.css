@@ -19,8 +19,11 @@
   body {
     @apply bg-paper text-ink font-sans text-[15px] antialiased;
   }
-  /* anchor-linked marketing sections clear the sticky header */
-  [id] {
+  /* Public hash targets clear the sticky marketing header. */
+  #product,
+  #how-it-works,
+  #use-cases,
+  #features {
     scroll-margin-top: 5rem;
   }
   /* prototype scrollbar */

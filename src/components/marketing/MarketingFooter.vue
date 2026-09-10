@@ -2,19 +2,16 @@
 import { RouterLink } from "vue-router";
 import { APP_NAME } from "@/config";
 import orchestrioIcon from "@/assets/orchestrio-icon.svg";
-import { scrollToId } from "./scroll";
+import { PUBLIC_SECTION_LINKS } from "./scroll";
 
 const year = new Date().getFullYear();
 
-// Section links scroll the landing page; auth links route. Legal/company pages
-// don't exist yet — rendered as disabled placeholders, not fake links (spec §14).
+// Section links scroll the landing page; public pages and auth links use the router.
 const columns = [
   {
     heading: "Product",
     links: [
-      { label: "Features", href: "#features" },
-      { label: "Use cases", href: "#use-cases" },
-      { label: "How it works", href: "#how-it-works" },
+      ...PUBLIC_SECTION_LINKS.slice().reverse(),
     ],
   },
 ];
@@ -26,7 +23,9 @@ const columns = [
     <div class="max-w-6xl mx-auto px-5 md:px-8 py-14">
       <div class="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
         <div>
-          <img :src="orchestrioIcon" :alt="APP_NAME" class="h-12 w-auto" />
+          <RouterLink to="/" :aria-label="`${APP_NAME} home`" class="inline-flex focus-ring">
+            <img :src="orchestrioIcon" alt="" class="h-12 w-auto" />
+          </RouterLink>
           <p class="mt-2 text-13 text-muted max-w-[16rem]">Plan together. Execute clearly.</p>
         </div>
 
@@ -34,13 +33,12 @@ const columns = [
           <div class="text-13 font-semibold text-ink">{{ col.heading }}</div>
           <ul class="mt-3 space-y-2">
             <li v-for="l in col.links" :key="l.label">
-              <a
-                :href="l.href"
+              <RouterLink
+                :to="l.to"
                 class="text-13.5 text-ink-soft hover:text-ink focus-ring"
-                @click.prevent="scrollToId(l.href)"
               >
                 {{ l.label }}
-              </a>
+              </RouterLink>
             </li>
           </ul>
         </nav>
@@ -48,7 +46,7 @@ const columns = [
         <nav aria-label="Company">
           <div class="text-13 font-semibold text-ink">Company</div>
           <ul class="mt-3 space-y-2">
-            <li><span class="text-13.5 text-muted cursor-default" aria-disabled="true" title="Coming soon">About</span></li>
+            <li><RouterLink :to="{ name: 'about' }" class="text-13.5 text-ink-soft hover:text-ink focus-ring">About</RouterLink></li>
           </ul>
         </nav>
 
@@ -57,10 +55,10 @@ const columns = [
             <div class="text-13 font-semibold text-ink">Legal</div>
             <ul class="mt-3 space-y-2">
               <li>
-                <span class="text-13.5 text-muted cursor-default" aria-disabled="true" title="Coming soon">Privacy</span>
+                <RouterLink :to="{ name: 'privacy' }" class="text-13.5 text-ink-soft hover:text-ink focus-ring">Privacy</RouterLink>
               </li>
               <li>
-                <span class="text-13.5 text-muted cursor-default" aria-disabled="true" title="Coming soon">Terms</span>
+                <RouterLink :to="{ name: 'terms' }" class="text-13.5 text-ink-soft hover:text-ink focus-ring">Terms</RouterLink>
               </li>
             </ul>
           </nav>
@@ -84,7 +82,7 @@ const columns = [
 
       <div class="mt-12 pt-6 border-t border-line flex flex-wrap items-center justify-between gap-3">
         <p class="text-13 text-muted">© {{ year }} {{ APP_NAME }}. All rights reserved.</p>
-        <p class="text-13 text-muted">Privacy and Terms pages are in progress.</p>
+        <p class="text-13 text-muted">Plan together. Execute clearly.</p>
       </div>
     </div>
   </footer>

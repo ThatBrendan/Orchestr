@@ -4,7 +4,6 @@ import { useAuth } from "@/composables/useAuth";
 import AppButton from "@/components/ui/AppButton.vue";
 import AppIcon from "@/components/ui/AppIcon.vue";
 import ProductPreview from "./ProductPreview.vue";
-import { scrollToId } from "./scroll";
 
 const { isAuthenticated } = useAuth();
 const primary = computed(() =>
@@ -30,7 +29,7 @@ const primary = computed(() =>
             {{ primary.label }}
             <AppIcon name="arrowRight" :size="16" />
           </AppButton>
-          <AppButton href="#how-it-works" variant="secondary" size="lg" @click.prevent="scrollToId('how-it-works')">
+          <AppButton :to="{ path: '/', hash: '#how-it-works' }" variant="secondary" size="lg">
             See how it works
           </AppButton>
         </div>

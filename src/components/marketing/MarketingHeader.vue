@@ -7,7 +7,7 @@ import { APP_NAME } from "@/config";
 import AppButton from "@/components/ui/AppButton.vue";
 import AppIcon from "@/components/ui/AppIcon.vue";
 import orchestrioIcon from "@/assets/orchestrio-icon.svg";
-import { MARKETING_NAV, scrollToId } from "./scroll";
+import { PUBLIC_SECTION_LINKS } from "./scroll";
 
 const { isAuthenticated } = useAuth();
 
@@ -21,10 +21,6 @@ onMounted(() => {
 });
 onUnmounted(() => window.removeEventListener("scroll", onScroll));
 
-function go(href: string, close?: () => void) {
-  scrollToId(href);
-  close?.();
-}
 </script>
 
 <template>
@@ -40,15 +36,14 @@ function go(href: string, close?: () => void) {
           </RouterLink>
 
           <nav class="hidden md:flex items-center gap-1" aria-label="Marketing">
-            <a
-              v-for="item in MARKETING_NAV"
-              :key="item.href"
-              :href="item.href"
+            <RouterLink
+              v-for="item in PUBLIC_SECTION_LINKS"
+              :key="item.label"
+              :to="item.to"
               class="px-3 py-2 rounded-lg text-14 font-medium text-ink-soft hover:text-ink hover:bg-[#F0F0EE] transition-colors focus-ring"
-              @click.prevent="go(item.href)"
             >
               {{ item.label }}
-            </a>
+            </RouterLink>
           </nav>
 
           <div class="hidden md:flex items-center gap-2">
@@ -71,15 +66,15 @@ function go(href: string, close?: () => void) {
 
     <DisclosurePanel class="md:hidden border-b border-line bg-surface shadow-sm">
       <nav class="max-w-6xl mx-auto px-5 py-3 flex flex-col" aria-label="Marketing">
-        <a
-          v-for="item in MARKETING_NAV"
-          :key="item.href"
-          :href="item.href"
+      <RouterLink
+          v-for="item in PUBLIC_SECTION_LINKS"
+          :key="item.label"
+          :to="item.to"
           class="px-2 py-2.5 rounded-lg text-14.5 font-medium text-ink-soft hover:bg-[#F0F0EE] focus-ring"
-          @click.prevent="go(item.href, close)"
+          @click="close"
         >
           {{ item.label }}
-        </a>
+        </RouterLink>
         <div class="mt-2 pt-3 border-t border-line flex flex-col gap-2">
           <AppButton v-if="isAuthenticated" :to="{ name: 'dashboard' }" block>Open {{ APP_NAME }}</AppButton>
           <template v-else>
