@@ -17,6 +17,7 @@ const fieldError = ref<string | null>(null);
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
 async function submit() {
+  if (invite.isPending.value) return;
   fieldError.value = null;
   const email = form.email.trim().toLowerCase();
   if (!EMAIL_RE.test(email)) {
@@ -35,7 +36,7 @@ async function submit() {
 </script>
 
 <template>
-  <AppModal :open="props.open" title="Invite someone" @close="emit('close')">
+  <AppModal :busy="invite.isPending.value" :open="props.open" title="Invite someone" @close="emit('close')">
     <form class="space-y-4" @submit.prevent="submit">
       <label class="block">
         <span class="text-13 font-medium block mb-1.5 text-ink-soft">Email address</span>
@@ -57,7 +58,7 @@ async function submit() {
       <p v-if="fieldError" class="text-13 text-danger">{{ fieldError }}</p>
     </form>
     <template #footer>
-      <AppButton variant="secondary" size="sm" @click="emit('close')">Cancel</AppButton>
+      <AppButton variant="secondary" size="sm" :disabled="invite.isPending.value" @click="emit('close')">Cancel</AppButton>
       <AppButton size="sm" :loading="invite.isPending.value" @click="submit">Send invitation</AppButton>
     </template>
   </AppModal>

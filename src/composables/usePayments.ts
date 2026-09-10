@@ -1,6 +1,7 @@
 import { computed, type MaybeRefOrGetter, toValue } from "vue";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/vue-query";
 import { qk } from "./keys";
+import { invalidatePlanning } from "./invalidation";
 import * as paymentsService from "@/services/payments";
 import type { TablesInsert, TablesUpdate } from "@/types/database";
 
@@ -24,15 +25,10 @@ function invalidatePaymentEffects(
   projectId: string,
   commitmentId: string,
 ) {
-  void client.invalidateQueries({ queryKey: qk.commitment.payments(commitmentId) });
-  void client.invalidateQueries({ queryKey: qk.commitment.financials(commitmentId) });
-  void client.invalidateQueries({ queryKey: qk.project.financials(projectId) });
-  void client.invalidateQueries({ queryKey: qk.project.health(projectId) });
-  void client.invalidateQueries({ queryKey: qk.project.timeline(projectId) });
-  void client.invalidateQueries({ queryKey: qk.project.upcoming(projectId) });
-  void client.invalidateQueries({ queryKey: qk.project.overview(projectId) });
-  void client.invalidateQueries({ queryKey: qk.me.calendarRoot() });
-  void client.invalidateQueries({ queryKey: qk.me.attention() });
+  return invalidatePlanning(client, projectId, [
+    qk.commitment.payments(commitmentId), qk.commitment.financials(commitmentId),
+    qk.project.budgetCategories(projectId),
+  ]);
 }
 
 export function useCreatePayment(projectId: string, commitmentId: string) {

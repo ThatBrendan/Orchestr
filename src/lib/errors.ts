@@ -50,6 +50,7 @@ export function fromPostgrestError(err: PostgrestError): AppError {
   if (orchestr) {
     const permissionCodes = new Set([
       "not_a_member",
+      "not_authorized",
       "not_organizer",
       "auth_required",
       "project_archived",
@@ -87,7 +88,7 @@ export function fromPostgrestError(err: PostgrestError): AppError {
     case "PGRST116":
       return new AppError("not_found", "Not found.", { code: err.code, cause: err });
     default:
-      return new AppError("server", err.message || "Something went wrong.", { code: err.code, cause: err });
+      return new AppError("server", "Something went wrong. Please try again.", { code: err.code, cause: err });
   }
 }
 

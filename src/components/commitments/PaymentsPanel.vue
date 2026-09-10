@@ -46,6 +46,7 @@ const addForm = reactive({
 const addError = ref<string | null>(null);
 
 async function submitAdd() {
+  if (createPayment.isPending.value || !props.canEdit) return;
   addError.value = null;
   const amountMinor = toMinor(addForm.amount_major, props.currency);
   if (amountMinor == null || amountMinor <= 0) {
@@ -57,7 +58,7 @@ async function submitAdd() {
       project_id: props.projectId,
       commitment_id: props.commitmentId,
       type: addForm.type,
-      direction: addForm.direction,
+      direction: addForm.type === "refund" ? "incoming" : addForm.direction,
       amount_minor: amountMinor,
       due_on: addForm.due_on || null,
     });
@@ -84,7 +85,7 @@ function openMarkPaid(id: string) {
 }
 
 async function submitMarkPaid() {
-  if (!markPaidRowId.value) return;
+  if (!markPaidRowId.value || markPaid.isPending.value) return;
   markPaidError.value = null;
   try {
     await markPaid.mutateAsync({
@@ -102,6 +103,7 @@ async function submitMarkPaid() {
 }
 
 async function cancelPayment(id: string) {
+  if (setStatus.isPending.value) return;
   try {
     await setStatus.mutateAsync({ id, status: "cancelled" });
     toast.success("Payment cancelled.");
@@ -170,7 +172,7 @@ const outstanding = computed(() => financials.value?.outstanding_minor ?? null);
 
         <div v-if="props.canEdit && p.status === 'scheduled'" class="mt-2 flex gap-2">
           <AppButton variant="secondary" size="sm" @click="openMarkPaid(p.id)">Mark paid</AppButton>
-          <AppButton variant="ghost" size="sm" @click="cancelPayment(p.id)">Cancel</AppButton>
+          <AppButton variant="ghost" size="sm" :loading="setStatus.isPending.value" @click="cancelPayment(p.id)">Cancel</AppButton>
         </div>
 
         <form v-if="markPaidRowId === p.id" class="mt-2.5 border rounded-lg p-3 space-y-2 border-line bg-[#FBFBFA]" @submit.prevent="submitMarkPaid">

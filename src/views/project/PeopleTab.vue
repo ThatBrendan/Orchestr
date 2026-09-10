@@ -35,13 +35,17 @@ const rowError = ref<Record<string, string>>({});
 const inviteOpen = ref(false);
 const confirmRemove = ref<{ id: string; name: string } | null>(null);
 
-async function onRoleChange(memberId: string, role: MemberRole) {
+async function onRoleChange(memberId: string, event: Event) {
+  const control = event.target as HTMLSelectElement;
+  const role = control.value as MemberRole;
   rowError.value = { ...rowError.value, [memberId]: "" };
   try {
     await updateRole.mutateAsync({ memberId, role });
     toast.success("Role updated.");
   } catch (e) {
     rowError.value = { ...rowError.value, [memberId]: toAppError(e).message };
+  } finally {
+    control.value = members.value.find((m) => m.member_id === memberId)?.role ?? "viewer";
   }
 }
 
@@ -93,8 +97,9 @@ const statusTone = (s: string) => (s === "invited" ? "amber" : s === "removed" ?
             <select
               v-if="canManage"
               class="border rounded-lg px-2 py-1.5 text-13 focus-ring border-line bg-surface"
+              :disabled="updateRole.isPending.value || removeMember.isPending.value"
               :value="m.role"
-              @change="onRoleChange(m.member_id, ($event.target as HTMLSelectElement).value as MemberRole)"
+              @change="onRoleChange(m.member_id, $event)"
             >
               <option value="organizer">Organizer</option>
               <option value="member">Member</option>

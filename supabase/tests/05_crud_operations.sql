@@ -128,8 +128,9 @@ select is((select ever_paid from public.payments where id='5e000000-0000-0000-00
   'PAYMENT: ever_paid latches true once paid');
 select throws_ok($$update public.payments set deleted_at=now() where id='5e000000-0000-0000-0000-00000000005e'$$,
   'P0001', null, 'PAYMENT: a payment that has ever been paid cannot be soft-deleted');
-select is(pg_temp.wc($$update public.commitments set deleted_at=now() where id='5d000000-0000-0000-0000-00000000005d'$$),
-  1, 'COMMITMENT: organizer can soft-delete an activity');
+select pg_temp.logout();
+select pg_temp.login('b5000000-0000-0000-0000-00000000005b','b5@t.co');
+select lives_ok($$select public.soft_delete_commitment('5d000000-0000-0000-0000-00000000005d')$$, 'COMMITMENT: organizer can soft-delete an activity');
 select is((select count(*)::int from public.commitments where id='5d000000-0000-0000-0000-00000000005d'), 0,
   'COMMITMENT: soft-deleted activity is excluded from normal reads');
 select is((select count(*)::int from public.payments where id='5e000000-0000-0000-0000-00000000005e'), 1,
@@ -166,8 +167,7 @@ select is(pg_temp.wc($$update public.tasks set status='open' where id='5f000000-
   1, 'TASK: assignee can reopen');
 select is((select completed_at from public.tasks where id='5f000000-0000-0000-0000-00000000005f'), null,
   'TASK: completed_at is cleared on reopen');
-select is(pg_temp.wc($$update public.tasks set deleted_at=now() where id='5f000000-0000-0000-0000-00000000005f'$$),
-  1, 'TASK: assignee can delete their own task');
+select lives_ok($$select public.soft_delete_task('5f000000-0000-0000-0000-00000000005f')$$, 'TASK: assignee can delete their own task');
 select pg_temp.logout();
 
 -- =====================================================================

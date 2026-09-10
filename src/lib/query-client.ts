@@ -18,9 +18,7 @@ export const queryClient = new QueryClient({
       retry: false,
       onError: (error) => {
         const e = toAppError(error);
-        if (e.kind === "unexpected" || e.kind === "server") {
-          logger.error("mutation failed", { kind: e.kind, code: e.code });
-        }
+        logger.error("mutation failed", { kind: e.kind, code: e.code });
       },
     },
   },

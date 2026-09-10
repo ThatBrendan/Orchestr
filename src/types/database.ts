@@ -814,6 +814,10 @@ export interface Database {
       };
     };
     Functions: {
+      soft_delete_commitment: { Args: { p_commitment: string }; Returns: string };
+      soft_delete_task: { Args: { p_task: string }; Returns: string };
+      soft_delete_project: { Args: { p_project: string }; Returns: string };
+
       create_project: {
         Args: {
           p_name: string;

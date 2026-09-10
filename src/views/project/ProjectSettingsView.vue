@@ -24,7 +24,7 @@ const toast = useToast();
 
 const canEdit = computed(() => allowed("project.settings"));
 const canArchive = computed(() => allowed("project.archive"));
-const canDelete = computed(() => allowed("project.delete"));
+const canDelete = computed(() => allowed("project.delete") && project.value?.status !== "archived");
 
 const update = useUpdateProject(projectId.value);
 const setStatus = useSetProjectStatus(projectId.value);
@@ -73,6 +73,7 @@ function syncContext(nextProject: Project) {
 }
 
 async function saveDetails() {
+  if (update.isPending.value || project.value?.status === "archived") return;
   fieldError.value = null;
   if (!form.name.trim()) {
     fieldError.value = "The project needs a name.";
@@ -101,6 +102,7 @@ function onProfileChange() {
 }
 
 async function saveWorkspace() {
+  if (update.isPending.value || project.value?.status === "archived") return;
   workspaceError.value = null;
   if (!project.value) return;
   try {
@@ -170,7 +172,7 @@ const status = computed(() => project.value?.status);
           </div>
           <p class="text-13 text-muted">Currency is {{ project?.currency }} — locked once activities or payments exist.</p>
           <p v-if="fieldError" class="text-13 text-danger">{{ fieldError }}</p>
-          <AppButton size="sm" :loading="update.isPending.value" @click="saveDetails">Save changes</AppButton>
+          <AppButton size="sm" :loading="update.isPending.value" :disabled="status === 'archived'" @click="saveDetails">Save changes</AppButton>
         </form>
       </div>
 
@@ -196,7 +198,7 @@ const status = computed(() => project.value?.status);
           </label>
           <p class="text-13 text-muted">Changing this only affects navigation and workspace emphasis. Existing data is preserved.</p>
           <p v-if="workspaceError" class="text-13 text-danger">{{ workspaceError }}</p>
-          <AppButton size="sm" :loading="update.isPending.value" @click="saveWorkspace">Save workspace</AppButton>
+          <AppButton size="sm" :loading="update.isPending.value" :disabled="status === 'archived'" @click="saveWorkspace">Save workspace</AppButton>
         </div>
       </div>
 

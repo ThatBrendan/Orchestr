@@ -1,5 +1,5 @@
 import { supabase } from "@/lib/supabase";
-import { toAppError } from "@/lib/errors";
+import { AppError, toAppError } from "@/lib/errors";
 import type { Tables, TablesInsert, TablesUpdate } from "@/types/database";
 
 export type Milestone = Tables<"milestones">;
@@ -32,6 +32,7 @@ export async function updateMilestone(id: string, patch: TablesUpdate<"milestone
 
 /** Hard delete — correct for milestones (docs/SECURITY_RLS.md §5.10). */
 export async function deleteMilestone(id: string): Promise<void> {
-  const { error } = await supabase.from("milestones").delete().eq("id", id);
+  const { error, count } = await supabase.from("milestones").delete({ count: "exact" }).eq("id", id);
   if (error) throw toAppError(error);
+  if (count !== 1) throw new AppError("not_found", "Not found or cannot be removed.");
 }

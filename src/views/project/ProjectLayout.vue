@@ -1,9 +1,13 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount } from "vue";
+import { useQuery } from "@tanstack/vue-query";
+import { useAuth } from "@/composables/useAuth";
+import { qk } from "@/composables/keys";
+import { getMyMembership } from "@/services/members";
+import { computed, onBeforeUnmount, watch } from "vue";
 import { RouterView, useRoute, useRouter } from "vue-router";
 import { useProjectContext } from "@/composables/useProjectContext";
 import { useProjectContextStore } from "@/stores/project-context";
-import { useProjectFinancials } from "@/composables/useProject";
+import { useProject, useProjectFinancials } from "@/composables/useProject";
 import { useProjectTime } from "@/composables/useProjectTime";
 import { useMoney } from "@/composables/useMoney";
 import { isProjectModuleVisible, profileDefinition } from "@/lib/projectProfiles";
@@ -18,6 +22,27 @@ const router = useRouter();
 const { project, allowed } = useProjectContext();
 const ctxStore = useProjectContextStore();
 const projectId = computed(() => String(route.params.projectId));
+
+const { userId } = useAuth();
+const membership = useQuery({
+  queryKey: computed(() => qk.project.membership(projectId.value, userId.value ?? "")),
+  queryFn: () => getMyMembership(projectId.value, userId.value!),
+  enabled: computed(() => !!userId.value),
+});
+watch(membership.data, (next) => {
+  if (next && ctxStore.context?.projectId === next.project_id) {
+    ctxStore.set({ ...ctxStore.context, role: next.role, memberId: next.id });
+  } else if (next === null) {
+    ctxStore.clear();
+    void router.replace({ name: "projects" });
+  }
+});
+const { project: liveProject } = useProject(projectId);
+watch(liveProject, (next) => {
+  if (next && ctxStore.context?.projectId === next.id) {
+    ctxStore.set({ ...ctxStore.context, project: { ...next, module_visibility: next.module_visibility as Record<string, boolean> } });
+  }
+});
 
 const { financials, isPending: finPending } = useProjectFinancials(projectId);
 const { format } = useMoney();
@@ -88,7 +113,7 @@ onBeforeUnmount(() => ctxStore.clear());
     <ProjectTabs :project-id="projectId" />
 
     <div class="mt-7">
-      <RouterView />
+      <RouterView :key="projectId + String(route.name)" />
     </div>
   </PageContainer>
 </template>

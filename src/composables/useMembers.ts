@@ -9,8 +9,11 @@ export function useInviteMember(projectId: string) {
     mutationFn: (input: { email: string; role: Extract<MemberRole, "member" | "viewer"> }) =>
       members.inviteMember(projectId, input.email, input.role),
     onSuccess: () => {
-      void client.invalidateQueries({ queryKey: qk.project.members(projectId) });
+      void client.invalidateQueries({ queryKey: qk.project.root(projectId) });
       void client.invalidateQueries({ queryKey: qk.me.people() });
+      void client.invalidateQueries({ queryKey: qk.me.projects() });
+      void client.invalidateQueries({ queryKey: qk.me.attention() });
+      void client.invalidateQueries({ queryKey: qk.me.calendarRoot() });
     },
   });
 }
@@ -21,8 +24,11 @@ export function useUpdateMemberRole(projectId: string) {
     mutationFn: (input: { memberId: string; role: MemberRole }) =>
       members.updateMemberRole(input.memberId, input.role),
     onSuccess: () => {
-      void client.invalidateQueries({ queryKey: qk.project.members(projectId) });
+      void client.invalidateQueries({ queryKey: qk.project.root(projectId) });
       void client.invalidateQueries({ queryKey: qk.me.people() });
+      void client.invalidateQueries({ queryKey: qk.me.projects() });
+      void client.invalidateQueries({ queryKey: qk.me.attention() });
+      void client.invalidateQueries({ queryKey: qk.me.calendarRoot() });
     },
   });
 }
@@ -32,8 +38,11 @@ export function useRemoveMember(projectId: string) {
   return useMutation({
     mutationFn: (memberId: string) => members.removeMember(memberId),
     onSuccess: () => {
-      void client.invalidateQueries({ queryKey: qk.project.members(projectId) });
+      void client.invalidateQueries({ queryKey: qk.project.root(projectId) });
       void client.invalidateQueries({ queryKey: qk.me.people() });
+      void client.invalidateQueries({ queryKey: qk.me.projects() });
+      void client.invalidateQueries({ queryKey: qk.me.attention() });
+      void client.invalidateQueries({ queryKey: qk.me.calendarRoot() });
     },
   });
 }
@@ -43,8 +52,11 @@ export function useReactivateMember(projectId: string) {
   return useMutation({
     mutationFn: (memberId: string) => members.reactivateMember(memberId),
     onSuccess: () => {
-      void client.invalidateQueries({ queryKey: qk.project.members(projectId) });
+      void client.invalidateQueries({ queryKey: qk.project.root(projectId) });
       void client.invalidateQueries({ queryKey: qk.me.people() });
+      void client.invalidateQueries({ queryKey: qk.me.projects() });
+      void client.invalidateQueries({ queryKey: qk.me.attention() });
+      void client.invalidateQueries({ queryKey: qk.me.calendarRoot() });
     },
   });
 }

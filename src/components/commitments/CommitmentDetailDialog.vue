@@ -49,8 +49,8 @@ const toast = useToast();
 const setStatus = useSetCommitmentStatus(props.projectId);
 const del = useDeleteCommitment(props.projectId);
 const { participants, isPending: partPending } = useParticipants(computed(() => props.commitment.id));
-const addParticipant = useAddParticipant(props.commitment.id);
-const removeParticipant = useRemoveParticipant(props.commitment.id);
+const addParticipant = useAddParticipant(props.projectId, props.commitment.id);
+const removeParticipant = useRemoveParticipant(props.projectId, props.commitment.id);
 const commitmentId = computed(() => props.commitment.id);
 const occurrenceStart = computed(() => DateTime.now().setZone(props.timezone).minus({ days: 30 }).toISODate() ?? "");
 const occurrenceEnd = computed(() => DateTime.now().setZone(props.timezone).plus({ months: 6 }).toISODate() ?? "");
@@ -83,6 +83,7 @@ async function transition(to: CommitmentStatus) {
 
 const confirmDelete = ref(false);
 async function doDelete() {
+  if (del.isPending.value) return;
   try {
     await del.mutateAsync(props.commitment.id);
     toast.success("Activity deleted.");
@@ -90,7 +91,6 @@ async function doDelete() {
     emit("close");
   } catch (e) {
     toast.error(toAppError(e).message);
-    confirmDelete.value = false;
   }
 }
 
@@ -177,7 +177,7 @@ async function stopSeries() {
 </script>
 
 <template>
-  <AppModal :open="props.open" :title="props.commitment.title" size="lg" @close="emit('close')">
+  <AppModal :busy="del.isPending.value" :open="props.open" :title="props.commitment.title" size="lg" @close="emit('close')">
     <div class="space-y-6">
       <div class="flex items-center justify-between flex-wrap gap-2">
         <div class="flex items-center gap-2">
@@ -301,7 +301,7 @@ async function stopSeries() {
           >
             <AppAvatar :name="memberName(p.member_id)" :size="20" />
             {{ memberName(p.member_id) }}
-            <button v-if="props.canEdit" class="text-muted hover:text-danger" @click="doRemoveParticipant(p.id)">×</button>
+            <button v-if="props.canEdit" class="text-muted hover:text-danger" :disabled="removeParticipant.isPending.value" @click="doRemoveParticipant(p.id)">×</button>
           </span>
         </div>
         <div v-if="props.canEdit && addableMembers.length > 0" class="flex gap-2">
@@ -309,7 +309,7 @@ async function stopSeries() {
             <option value="">Add a participant…</option>
             <option v-for="m in addableMembers" :key="m.member_id" :value="m.member_id">{{ m.display_name }}</option>
           </select>
-          <AppButton size="sm" variant="secondary" :disabled="!selectedNewParticipant" @click="submitAddParticipant">Add</AppButton>
+          <AppButton size="sm" variant="secondary" :disabled="!selectedNewParticipant" :loading="addParticipant.isPending.value" @click="submitAddParticipant">Add</AppButton>
         </div>
       </div>
 
@@ -324,6 +324,19 @@ async function stopSeries() {
       />
     </div>
 
+    <!-- Keep confirmation inside the Dialog tree so Headless UI treats it as
+         the active nested dialog (focus, inert handling and outside clicks). -->
+    <AppConfirmDialog
+      :open="confirmDelete"
+      title="Delete activity"
+      :message="`Delete '${props.commitment.title}'? This can't be undone from here.`"
+      confirm-label="Delete"
+      danger
+      :loading="del.isPending.value"
+      @close="confirmDelete = false"
+      @confirm="doDelete"
+    />
+
     <template #footer>
       <AppButton v-if="props.canDelete" variant="ghost" size="sm" class="!text-danger mr-auto" @click="confirmDelete = true">Delete</AppButton>
       <AppButton variant="secondary" size="sm" @click="emit('close')">Close</AppButton>
@@ -331,14 +344,4 @@ async function stopSeries() {
     </template>
   </AppModal>
 
-  <AppConfirmDialog
-    :open="confirmDelete"
-    title="Delete activity"
-    :message="`Delete '${props.commitment.title}'? This can't be undone from here.`"
-    confirm-label="Delete"
-    danger
-    :loading="del.isPending.value"
-    @close="confirmDelete = false"
-    @confirm="doDelete"
-  />
 </template>

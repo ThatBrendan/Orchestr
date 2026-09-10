@@ -1,5 +1,6 @@
 /** Query-key factory (docs/TECHNICAL_ARCHITECTURE.md §4.2). */
 export const qk = {
+  invitation: (token: string) => ["invitation", token] as const,
   me: {
     profile: (userId: string) => ["me", "profile", userId] as const,
     platformAdmin: (userId: string) => ["me", "platform-admin", userId] as const,

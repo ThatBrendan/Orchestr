@@ -142,6 +142,7 @@ function onActivityTypeChange() {
 }
 
 async function submit() {
+  if (isPending.value) return;
   fieldError.value = null;
   if (!form.title.trim()) {
     fieldError.value = "Give the activity a title.";
@@ -205,7 +206,7 @@ const isPending = computed(() => create.isPending.value || update.isPending.valu
 </script>
 
 <template>
-  <AppModal :open="props.open" :title="props.commitment ? 'Edit activity' : 'New activity'" size="lg" @close="emit('close')">
+  <AppModal :busy="isPending" :open="props.open" :title="props.commitment ? 'Edit activity' : 'New activity'" size="lg" @close="emit('close')">
     <form class="space-y-4" @submit.prevent="submit">
       <label class="block">
         <span class="text-13 font-medium block mb-1.5 text-ink-soft">Title *</span>
@@ -381,7 +382,7 @@ const isPending = computed(() => create.isPending.value || update.isPending.valu
     </form>
 
     <template #footer>
-      <AppButton variant="secondary" size="sm" @click="emit('close')">Cancel</AppButton>
+      <AppButton variant="secondary" size="sm" :disabled="isPending" @click="emit('close')">Cancel</AppButton>
       <AppButton size="sm" :loading="isPending" @click="submit">{{ props.commitment ? "Save" : "Create activity" }}</AppButton>
     </template>
   </AppModal>

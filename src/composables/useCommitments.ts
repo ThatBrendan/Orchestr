@@ -1,19 +1,16 @@
 import { computed, type MaybeRefOrGetter, toValue } from "vue";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/vue-query";
 import { qk } from "./keys";
+import { invalidatePlanning } from "./invalidation";
 import * as commitmentsService from "@/services/commitments";
 import * as derived from "@/services/derived";
 import type { TablesInsert, TablesUpdate, CommitmentStatus } from "@/types/database";
 
 function invalidateCommitmentEffects(client: ReturnType<typeof useQueryClient>, projectId: string) {
-  void client.invalidateQueries({ queryKey: qk.project.commitments(projectId) });
-  void client.invalidateQueries({ queryKey: qk.project.financials(projectId) });
-  void client.invalidateQueries({ queryKey: qk.project.health(projectId) });
-  void client.invalidateQueries({ queryKey: qk.project.timeline(projectId) });
-  void client.invalidateQueries({ queryKey: qk.project.upcoming(projectId) });
-  void client.invalidateQueries({ queryKey: qk.project.overview(projectId) });
-  void client.invalidateQueries({ queryKey: qk.me.calendarRoot() });
-  void client.invalidateQueries({ queryKey: qk.me.attention() });
+  return invalidatePlanning(client, projectId, [
+    qk.project.commitments(projectId), qk.project.tasks(projectId),
+    qk.project.budgetCategories(projectId), qk.project.milestones(projectId),
+  ]);
 }
 
 export function useCommitments(projectId: MaybeRefOrGetter<string>) {
@@ -35,7 +32,7 @@ export function useCreateCommitment(projectId: string) {
   return useMutation({
     mutationFn: (input: TablesInsert<"commitments">) => commitmentsService.createCommitment(input),
     onSuccess: () => {
-      invalidateCommitmentEffects(client, projectId);
+      return invalidateCommitmentEffects(client, projectId);
     },
   });
 }
@@ -45,8 +42,10 @@ export function useUpdateCommitment(projectId: string) {
   return useMutation({
     mutationFn: (input: { id: string; patch: Omit<TablesUpdate<"commitments">, "status" | "deleted_at"> }) =>
       commitmentsService.updateCommitment(input.id, input.patch),
-    onSuccess: () => {
-      invalidateCommitmentEffects(client, projectId);
+    onSuccess: (_data, input) => {
+      void client.invalidateQueries({ queryKey: qk.commitment.financials(input.id) });
+      void client.invalidateQueries({ queryKey: qk.commitment.occurrencesRoot(input.id) });
+      return invalidateCommitmentEffects(client, projectId);
     },
   });
 }
@@ -57,8 +56,10 @@ export function useSetCommitmentStatus(projectId: string) {
     mutationFn: (input: { id: string; status: CommitmentStatus }) =>
       commitmentsService.setCommitmentStatus(input.id, input.status),
     onSuccess: (_data, input) => {
-      invalidateCommitmentEffects(client, projectId);
       void client.invalidateQueries({ queryKey: qk.commitment.payments(input.id) });
+      void client.invalidateQueries({ queryKey: qk.commitment.financials(input.id) });
+      void client.invalidateQueries({ queryKey: qk.commitment.occurrencesRoot(input.id) });
+      return invalidateCommitmentEffects(client, projectId);
     },
   });
 }
@@ -104,6 +105,8 @@ export function useCompleteCommitmentOccurrence(
       void client.invalidateQueries({ queryKey: qk.project.health(pid) });
       void client.invalidateQueries({ queryKey: qk.project.overview(pid) });
       void client.invalidateQueries({ queryKey: qk.commitment.occurrencesRoot(cid) });
+      void client.invalidateQueries({ queryKey: qk.me.projects() });
+      void client.invalidateQueries({ queryKey: qk.project.financials(pid) });
       void client.invalidateQueries({ queryKey: qk.me.attention() });
       void client.invalidateQueries({ queryKey: qk.me.calendarRoot() });
     },
@@ -126,6 +129,8 @@ export function useSkipCommitmentOccurrence(
       void client.invalidateQueries({ queryKey: qk.project.health(pid) });
       void client.invalidateQueries({ queryKey: qk.project.overview(pid) });
       void client.invalidateQueries({ queryKey: qk.commitment.occurrencesRoot(cid) });
+      void client.invalidateQueries({ queryKey: qk.me.projects() });
+      void client.invalidateQueries({ queryKey: qk.project.financials(pid) });
       void client.invalidateQueries({ queryKey: qk.me.attention() });
       void client.invalidateQueries({ queryKey: qk.me.calendarRoot() });
     },
@@ -149,6 +154,8 @@ export function useStopCommitmentRecurrence(
       void client.invalidateQueries({ queryKey: qk.project.health(pid) });
       void client.invalidateQueries({ queryKey: qk.project.overview(pid) });
       void client.invalidateQueries({ queryKey: qk.commitment.occurrencesRoot(cid) });
+      void client.invalidateQueries({ queryKey: qk.me.projects() });
+      void client.invalidateQueries({ queryKey: qk.project.financials(pid) });
       void client.invalidateQueries({ queryKey: qk.me.attention() });
       void client.invalidateQueries({ queryKey: qk.me.calendarRoot() });
     },
@@ -160,7 +167,7 @@ export function useDeleteCommitment(projectId: string) {
   return useMutation({
     mutationFn: (id: string) => commitmentsService.softDeleteCommitment(id),
     onSuccess: () => {
-      invalidateCommitmentEffects(client, projectId);
+      return invalidateCommitmentEffects(client, projectId);
     },
   });
 }
@@ -188,22 +195,22 @@ export function useParticipants(commitmentId: MaybeRefOrGetter<string>) {
   };
 }
 
-export function useAddParticipant(commitmentId: string) {
+export function useAddParticipant(projectId: string, commitmentId: string) {
   const client = useQueryClient();
   return useMutation({
     mutationFn: (input: TablesInsert<"commitment_participants">) => commitmentsService.addParticipant(input),
     onSuccess: () => {
-      void client.invalidateQueries({ queryKey: qk.commitment.participants(commitmentId) });
+      return invalidatePlanning(client, projectId, [qk.commitment.participants(commitmentId)]);
     },
   });
 }
 
-export function useRemoveParticipant(commitmentId: string) {
+export function useRemoveParticipant(projectId: string, commitmentId: string) {
   const client = useQueryClient();
   return useMutation({
     mutationFn: (participantId: string) => commitmentsService.removeParticipant(participantId),
     onSuccess: () => {
-      void client.invalidateQueries({ queryKey: qk.commitment.participants(commitmentId) });
+      return invalidatePlanning(client, projectId, [qk.commitment.participants(commitmentId)]);
     },
   });
 }

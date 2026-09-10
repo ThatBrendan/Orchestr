@@ -62,10 +62,7 @@ export async function setProjectStatus(projectId: string, status: ProjectStatus)
 
 /** Soft delete — organizer only. There is no hard-delete client path (docs/SECURITY_RLS.md §5.2). */
 export async function softDeleteProject(projectId: string): Promise<void> {
-  const { error, count } = await supabase
-    .from("projects")
-    .update({ deleted_at: new Date().toISOString() }, { count: "exact" })
-    .eq("id", projectId);
+  const { data, error } = await supabase.rpc("soft_delete_project", { p_project: projectId });
   if (error) throw toAppError(error);
-  if (count !== 1) throw new AppError("permission", "You don't have permission to delete this project.");
+  if (data !== projectId) throw new AppError("not_found", "Not found or cannot be deleted.");
 }

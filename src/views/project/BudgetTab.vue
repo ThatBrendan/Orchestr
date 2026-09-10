@@ -68,7 +68,7 @@ const categoriesWithData = computed(() => categories.value.filter((c) => c.targe
           <div class="text-13 text-muted mt-0.5">Target vs. money actually paid so far</div>
         </div>
       </div>
-      <p v-else class="mt-4 text-13 text-muted">Set a total budget in Project settings to see remaining budget and variance.</p>
+      <p v-else class="mt-4 text-13 text-muted">No total budget has been set. Budget target editing is not available in this build.</p>
 
       <div class="mt-8">
         <SectionHeading label="By category" />

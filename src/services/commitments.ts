@@ -81,12 +81,9 @@ export async function stopCommitmentRecurrence(commitmentId: string, stopAfter: 
 
 /** Soft delete — organizer, creator, or owner only (docs/SECURITY_RLS.md §5.5). */
 export async function softDeleteCommitment(id: string): Promise<void> {
-  const { error, count } = await supabase
-    .from("commitments")
-    .update({ deleted_at: new Date().toISOString() }, { count: "exact" })
-    .eq("id", id);
+  const { data, error } = await supabase.rpc("soft_delete_commitment", { p_commitment: id });
   if (error) throw toAppError(error);
-  if (count !== 1) throw new AppError("not_found", "Activity not found or cannot be deleted.");
+  if (data !== id) throw new AppError("not_found", "Not found or cannot be deleted.");
 }
 
 export async function listParticipants(commitmentId: string): Promise<CommitmentParticipant[]> {
@@ -108,6 +105,7 @@ export async function addParticipant(
 
 /** Hard delete — correct for participants (docs/SECURITY_RLS.md §5.6). */
 export async function removeParticipant(participantId: string): Promise<void> {
-  const { error } = await supabase.from("commitment_participants").delete().eq("id", participantId);
+  const { error, count } = await supabase.from("commitment_participants").delete({ count: "exact" }).eq("id", participantId);
   if (error) throw toAppError(error);
+  if (count !== 1) throw new AppError("not_found", "Not found or cannot be removed.");
 }

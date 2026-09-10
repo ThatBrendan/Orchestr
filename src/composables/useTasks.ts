@@ -1,6 +1,7 @@
 import { computed, type MaybeRefOrGetter, toValue } from "vue";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/vue-query";
 import { qk } from "./keys";
+import { invalidatePlanning } from "./invalidation";
 import * as tasksService from "@/services/tasks";
 import type { TablesInsert, TablesUpdate } from "@/types/database";
 import type { TaskStatus } from "@/services/tasks";
@@ -23,15 +24,7 @@ export function useCreateTask(projectId: string) {
   const client = useQueryClient();
   return useMutation({
     mutationFn: (input: TablesInsert<"tasks">) => tasksService.createTask(input),
-    onSuccess: () => {
-      void client.invalidateQueries({ queryKey: qk.project.tasks(projectId) });
-      void client.invalidateQueries({ queryKey: qk.project.health(projectId) });
-      void client.invalidateQueries({ queryKey: qk.project.timeline(projectId) });
-      void client.invalidateQueries({ queryKey: qk.project.upcoming(projectId) });
-      void client.invalidateQueries({ queryKey: qk.project.overview(projectId) });
-      void client.invalidateQueries({ queryKey: qk.me.calendarRoot() });
-      void client.invalidateQueries({ queryKey: qk.me.attention() });
-    },
+    onSuccess: () => invalidatePlanning(client, projectId, [qk.project.tasks(projectId)]),
   });
 }
 
@@ -40,15 +33,7 @@ export function useUpdateTask(projectId: string) {
   return useMutation({
     mutationFn: (input: { id: string; patch: Omit<TablesUpdate<"tasks">, "status" | "deleted_at"> }) =>
       tasksService.updateTask(input.id, input.patch),
-    onSuccess: () => {
-      void client.invalidateQueries({ queryKey: qk.project.tasks(projectId) });
-      void client.invalidateQueries({ queryKey: qk.project.health(projectId) });
-      void client.invalidateQueries({ queryKey: qk.project.timeline(projectId) });
-      void client.invalidateQueries({ queryKey: qk.project.upcoming(projectId) });
-      void client.invalidateQueries({ queryKey: qk.project.overview(projectId) });
-      void client.invalidateQueries({ queryKey: qk.me.calendarRoot() });
-      void client.invalidateQueries({ queryKey: qk.me.attention() });
-    },
+    onSuccess: (_data, input) => invalidatePlanning(client, projectId, [qk.project.tasks(projectId), qk.task.occurrencesRoot(typeof input === "string" ? input : input.id)]),
   });
 }
 
@@ -56,15 +41,7 @@ export function useSetTaskStatus(projectId: string) {
   const client = useQueryClient();
   return useMutation({
     mutationFn: (input: { id: string; status: TaskStatus }) => tasksService.setTaskStatus(input.id, input.status),
-    onSuccess: () => {
-      void client.invalidateQueries({ queryKey: qk.project.tasks(projectId) });
-      void client.invalidateQueries({ queryKey: qk.project.health(projectId) });
-      void client.invalidateQueries({ queryKey: qk.project.timeline(projectId) });
-      void client.invalidateQueries({ queryKey: qk.project.upcoming(projectId) });
-      void client.invalidateQueries({ queryKey: qk.project.overview(projectId) });
-      void client.invalidateQueries({ queryKey: qk.me.calendarRoot() });
-      void client.invalidateQueries({ queryKey: qk.me.attention() });
-    },
+    onSuccess: (_data, input) => invalidatePlanning(client, projectId, [qk.project.tasks(projectId), qk.task.occurrencesRoot(typeof input === "string" ? input : input.id)]),
   });
 }
 
@@ -72,15 +49,7 @@ export function useDeleteTask(projectId: string) {
   const client = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => tasksService.softDeleteTask(id),
-    onSuccess: () => {
-      void client.invalidateQueries({ queryKey: qk.project.tasks(projectId) });
-      void client.invalidateQueries({ queryKey: qk.project.health(projectId) });
-      void client.invalidateQueries({ queryKey: qk.project.timeline(projectId) });
-      void client.invalidateQueries({ queryKey: qk.project.upcoming(projectId) });
-      void client.invalidateQueries({ queryKey: qk.project.overview(projectId) });
-      void client.invalidateQueries({ queryKey: qk.me.calendarRoot() });
-      void client.invalidateQueries({ queryKey: qk.me.attention() });
-    },
+    onSuccess: (_data, input) => invalidatePlanning(client, projectId, [qk.project.tasks(projectId), qk.task.occurrencesRoot(input)]),
   });
 }
 
@@ -116,6 +85,8 @@ export function useCompleteTaskOccurrence(projectId: MaybeRefOrGetter<string>, t
       void client.invalidateQueries({ queryKey: qk.project.health(pid) });
       void client.invalidateQueries({ queryKey: qk.project.overview(pid) });
       void client.invalidateQueries({ queryKey: qk.task.occurrencesRoot(tid) });
+      void client.invalidateQueries({ queryKey: qk.me.projects() });
+      void client.invalidateQueries({ queryKey: qk.project.financials(pid) });
       void client.invalidateQueries({ queryKey: qk.me.attention() });
       void client.invalidateQueries({ queryKey: qk.me.calendarRoot() });
     },
@@ -134,6 +105,8 @@ export function useSkipTaskOccurrence(projectId: MaybeRefOrGetter<string>, taskI
       void client.invalidateQueries({ queryKey: qk.project.health(pid) });
       void client.invalidateQueries({ queryKey: qk.project.overview(pid) });
       void client.invalidateQueries({ queryKey: qk.task.occurrencesRoot(tid) });
+      void client.invalidateQueries({ queryKey: qk.me.projects() });
+      void client.invalidateQueries({ queryKey: qk.project.financials(pid) });
       void client.invalidateQueries({ queryKey: qk.me.attention() });
       void client.invalidateQueries({ queryKey: qk.me.calendarRoot() });
     },

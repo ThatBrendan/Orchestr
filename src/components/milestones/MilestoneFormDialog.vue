@@ -38,6 +38,7 @@ watch(
 );
 
 async function submit() {
+  if (create.isPending.value || update.isPending.value) return;
   fieldError.value = null;
   if (!form.title.trim()) {
     fieldError.value = "Give the milestone a title.";
@@ -69,7 +70,7 @@ async function submit() {
 </script>
 
 <template>
-  <AppModal :open="props.open" :title="props.milestone ? 'Edit milestone' : 'New milestone'" @close="emit('close')">
+  <AppModal :busy="create.isPending.value || update.isPending.value" :open="props.open" :title="props.milestone ? 'Edit milestone' : 'New milestone'" @close="emit('close')">
     <form class="space-y-4" @submit.prevent="submit">
       <label class="block">
         <span class="text-13 font-medium block mb-1.5 text-ink-soft">Title</span>
@@ -93,7 +94,7 @@ async function submit() {
       <p v-if="fieldError" class="text-13 text-danger">{{ fieldError }}</p>
     </form>
     <template #footer>
-      <AppButton variant="secondary" size="sm" @click="emit('close')">Cancel</AppButton>
+      <AppButton variant="secondary" size="sm" :disabled="create.isPending.value || update.isPending.value" @click="emit('close')">Cancel</AppButton>
       <AppButton size="sm" :loading="create.isPending.value || update.isPending.value" @click="submit">
         {{ props.milestone ? "Save" : "Create milestone" }}
       </AppButton>

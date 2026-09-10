@@ -7,6 +7,7 @@ import { useProjectContext } from "@/composables/useProjectContext";
 import { useProjectTime } from "@/composables/useProjectTime";
 import { useToast } from "@/composables/useToast";
 import { toAppError } from "@/lib/errors";
+import { invalidatePlanning } from "@/composables/invalidation";
 import { qk } from "@/composables/keys";
 import { REPEAT_OPTIONS, recurrenceLabel, repeatOption, type RepeatOptionValue } from "@/lib/recurrence";
 import * as tasksService from "@/services/tasks";
@@ -58,6 +59,7 @@ const addForm = reactive({
 const addError = ref<string | null>(null);
 
 async function submitAdd() {
+  if (create.isPending.value || !props.canEdit) return;
   addError.value = null;
   if (!addForm.title.trim()) {
     addError.value = "Give the task a title.";
@@ -92,13 +94,7 @@ async function submitAdd() {
 }
 
 function invalidateTaskDerived(taskId: string) {
-  void client.invalidateQueries({ queryKey: qk.project.tasks(props.projectId) });
-  void client.invalidateQueries({ queryKey: qk.project.timeline(props.projectId) });
-  void client.invalidateQueries({ queryKey: qk.project.upcoming(props.projectId) });
-  void client.invalidateQueries({ queryKey: qk.project.health(props.projectId) });
-  void client.invalidateQueries({ queryKey: qk.project.overview(props.projectId) });
-  void client.invalidateQueries({ queryKey: qk.task.occurrencesRoot(taskId) });
-  void client.invalidateQueries({ queryKey: qk.me.attention() });
+  return invalidatePlanning(client, props.projectId, [qk.project.tasks(props.projectId), qk.task.occurrencesRoot(taskId)]);
 }
 
 async function completeNextTaskOccurrence(id: string) {
@@ -114,7 +110,8 @@ async function completeNextTaskOccurrence(id: string) {
     return;
   }
   await tasksService.completeTaskOccurrence(id, next.occurrence_date);
-  invalidateTaskDerived(id);
+  await invalidateTaskDerived(id);
+  return true;
 }
 
 async function skipNextTaskOccurrence(id: string) {
@@ -130,57 +127,74 @@ async function skipNextTaskOccurrence(id: string) {
     return;
   }
   await tasksService.skipTaskOccurrence(id, next.occurrence_date);
-  invalidateTaskDerived(id);
+  await invalidateTaskDerived(id);
+  return true;
 }
 
 async function toggleDone(id: string, current: TaskStatus, recurring: boolean) {
+  if (busy.value) return;
+  occurrencePending.value = true;
   try {
     if (recurring && current !== "done") {
-      await completeNextTaskOccurrence(id);
-      toast.success("Task occurrence completed.");
+      if (await completeNextTaskOccurrence(id)) toast.success("Task occurrence completed.");
       return;
     }
     await setStatus.mutateAsync({ id, status: current === "done" ? "open" : "done" });
   } catch (e) {
     toast.error(toAppError(e).message);
+  } finally {
+    occurrencePending.value = false;
   }
 }
 
 async function skipRecurringTask(id: string) {
+  if (busy.value) return;
+  occurrencePending.value = true;
   try {
-    await skipNextTaskOccurrence(id);
-    toast.success("Task occurrence skipped.");
+    if (await skipNextTaskOccurrence(id)) toast.success("Task occurrence skipped.");
   } catch (e) {
     toast.error(toAppError(e).message);
+  } finally {
+    occurrencePending.value = false;
   }
 }
 
-async function changeStatus(id: string, status: TaskStatus) {
+async function changeStatus(id: string, event: Event) {
+  const control = event.target as HTMLSelectElement;
+  const status = control.value as TaskStatus;
   try {
     await setStatus.mutateAsync({ id, status });
   } catch (e) {
     toast.error(toAppError(e).message);
+  } finally {
+    control.value = tasks.value.find((t) => t.id === id)?.status ?? "open";
   }
 }
 
-async function changeAssignee(id: string, assignee_member_id: string) {
+async function changeAssignee(id: string, event: Event) {
+  const control = event.target as HTMLSelectElement;
+  const assignee_member_id = control.value;
   try {
     await update.mutateAsync({ id, patch: { assignee_member_id: assignee_member_id || null } });
   } catch (e) {
     toast.error(toAppError(e).message);
+  } finally {
+    control.value = tasks.value.find((t) => t.id === id)?.assignee_member_id ?? "";
   }
 }
 
+const occurrencePending = ref(false);
+const busy = computed(() => occurrencePending.value || setStatus.isPending.value || update.isPending.value || del.isPending.value);
+
 const confirmDeleteId = ref<string | null>(null);
 async function doDelete() {
-  if (!confirmDeleteId.value) return;
+  if (!confirmDeleteId.value || del.isPending.value) return;
   try {
     await del.mutateAsync(confirmDeleteId.value);
     toast.success("Task deleted.");
+    confirmDeleteId.value = null;
   } catch (e) {
     toast.error(toAppError(e).message);
-  } finally {
-    confirmDeleteId.value = null;
   }
 }
 
@@ -236,7 +250,7 @@ function canDeleteTask(task: Task): boolean {
           type="checkbox"
           class="rounded border-line"
           :checked="t.status === 'done'"
-          :disabled="!props.canEdit"
+          :disabled="!props.canEdit || busy"
           @change="toggleDone(t.id, t.status, !!t.recurrence_frequency)"
         />
         <div class="min-w-0 flex-1">
@@ -252,22 +266,22 @@ function canDeleteTask(task: Task): boolean {
             v-if="t.recurrence_frequency"
             variant="secondary"
             size="sm"
-            @click="skipRecurringTask(t.id)"
+            :disabled="busy" @click="skipRecurringTask(t.id)"
           >
             Skip next
           </AppButton>
           <select
             class="border rounded-lg px-2 py-1.5 text-13 focus-ring border-line bg-surface"
-            :value="t.status"
-            @change="changeStatus(t.id, ($event.target as HTMLSelectElement).value as TaskStatus)"
+            :disabled="busy" :value="t.status"
+            @change="changeStatus(t.id, $event)"
           >
             <option :value="t.status">{{ t.status }}</option>
             <option v-for="s in NEXT[t.status]" :key="s" :value="s">{{ s }}</option>
           </select>
           <select
             class="border rounded-lg px-2 py-1.5 text-13 focus-ring border-line bg-surface"
-            :value="t.assignee_member_id ?? ''"
-            @change="changeAssignee(t.id, ($event.target as HTMLSelectElement).value)"
+            :disabled="busy" :value="t.assignee_member_id ?? ''"
+            @change="changeAssignee(t.id, $event)"
           >
             <option value="">Unassigned</option>
             <option v-for="m in assigneeCandidates" :key="m.member_id" :value="m.member_id">{{ m.display_name }}</option>
@@ -277,7 +291,7 @@ function canDeleteTask(task: Task): boolean {
             variant="ghost"
             size="sm"
             class="!text-danger"
-            @click="confirmDeleteId = t.id"
+            :disabled="busy" @click="confirmDeleteId = t.id"
           >
             Delete
           </AppButton>

@@ -71,10 +71,7 @@ export async function skipTaskOccurrence(taskId: string, occurrenceDate: string)
 
 /** Soft delete — organizer, creator, or assignee only (docs/SECURITY_RLS.md §5.9). */
 export async function softDeleteTask(id: string): Promise<void> {
-  const { error, count } = await supabase
-    .from("tasks")
-    .update({ deleted_at: new Date().toISOString() }, { count: "exact" })
-    .eq("id", id);
+  const { data, error } = await supabase.rpc("soft_delete_task", { p_task: id });
   if (error) throw toAppError(error);
-  if (count !== 1) throw new AppError("permission", "You don't have permission to delete this task.");
+  if (data !== id) throw new AppError("not_found", "Not found or cannot be deleted.");
 }

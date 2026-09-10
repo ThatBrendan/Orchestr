@@ -60,6 +60,7 @@ function continueToDetails() {
 }
 
 async function submit() {
+  if (create.isPending.value) return;
   fieldError.value = null;
   if (!form.name.trim()) {
     fieldError.value = "Give the project a name.";
@@ -88,7 +89,7 @@ async function submit() {
 </script>
 
 <template>
-  <AppModal :open="props.open" :title="step === 'profile' ? 'What are you planning?' : 'New project'" size="lg" @close="emit('close')">
+  <AppModal :busy="create.isPending.value" :open="props.open" :title="step === 'profile' ? 'What are you planning?' : 'New project'" size="lg" @close="emit('close')">
     <div v-if="step === 'profile'" class="grid gap-3 sm:grid-cols-2">
       <button
         v-for="profileOption in PROJECT_PROFILES"
@@ -144,7 +145,7 @@ async function submit() {
 
     <template #footer>
       <AppButton v-if="step === 'details'" variant="secondary" size="sm" @click="step = 'profile'">Back</AppButton>
-      <AppButton v-else variant="secondary" size="sm" @click="emit('close')">Cancel</AppButton>
+      <AppButton v-else variant="secondary" size="sm" :disabled="create.isPending.value" @click="emit('close')">Cancel</AppButton>
       <AppButton v-if="step === 'profile'" size="sm" @click="continueToDetails">Continue</AppButton>
       <AppButton v-else size="sm" :loading="create.isPending.value" @click="submit">Create project</AppButton>
     </template>

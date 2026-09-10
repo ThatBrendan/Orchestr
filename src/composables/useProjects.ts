@@ -24,9 +24,10 @@ export function useCreateProject() {
   return useMutation({
     mutationFn: (input: ProjectInsert) => projectsService.createProject(input),
     onSuccess: () => {
+      void client.invalidateQueries({ queryKey: qk.me.attention() });
+      void client.invalidateQueries({ queryKey: qk.me.people() });
       void client.invalidateQueries({ queryKey: qk.me.projects() });
       void client.invalidateQueries({ queryKey: qk.me.calendarRoot() });
-      void client.invalidateQueries({ queryKey: qk.me.attention() });
     },
   });
 }
@@ -37,7 +38,9 @@ export function useUpdateProject(projectId: string) {
     mutationFn: (patch: Omit<TablesUpdate<"projects">, "status" | "deleted_at">) =>
       projectsService.updateProject(projectId, patch),
     onSuccess: () => {
-      void client.invalidateQueries({ queryKey: qk.project.detail(projectId) });
+      void client.invalidateQueries({ queryKey: qk.project.root(projectId) });
+      void client.invalidateQueries({ queryKey: qk.me.attention() });
+      void client.invalidateQueries({ queryKey: qk.me.people() });
       void client.invalidateQueries({ queryKey: qk.me.projects() });
       void client.invalidateQueries({ queryKey: qk.me.calendarRoot() });
     },
@@ -49,11 +52,11 @@ export function useSetProjectStatus(projectId: string) {
   return useMutation({
     mutationFn: (status: ProjectStatus) => projectsService.setProjectStatus(projectId, status),
     onSuccess: () => {
-      void client.invalidateQueries({ queryKey: qk.project.detail(projectId) });
-      void client.invalidateQueries({ queryKey: qk.me.projects() });
-      void client.invalidateQueries({ queryKey: qk.me.calendarRoot() });
+      void client.invalidateQueries({ queryKey: qk.project.root(projectId) });
       void client.invalidateQueries({ queryKey: qk.me.attention() });
       void client.invalidateQueries({ queryKey: qk.me.people() });
+      void client.invalidateQueries({ queryKey: qk.me.projects() });
+      void client.invalidateQueries({ queryKey: qk.me.calendarRoot() });
     },
   });
 }
@@ -63,10 +66,11 @@ export function useDeleteProject(projectId: string) {
   return useMutation({
     mutationFn: () => projectsService.softDeleteProject(projectId),
     onSuccess: () => {
-      void client.invalidateQueries({ queryKey: qk.me.projects() });
-      void client.invalidateQueries({ queryKey: qk.me.calendarRoot() });
+      void client.invalidateQueries({ queryKey: qk.project.root(projectId) });
       void client.invalidateQueries({ queryKey: qk.me.attention() });
       void client.invalidateQueries({ queryKey: qk.me.people() });
+      void client.invalidateQueries({ queryKey: qk.me.projects() });
+      void client.invalidateQueries({ queryKey: qk.me.calendarRoot() });
     },
   });
 }

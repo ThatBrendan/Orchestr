@@ -35,7 +35,7 @@ const canEditTasks = computed(() => allowed("task.edit") && !archived.value);
 const canEditPayments = computed(() => allowed("payment.edit") && !archived.value);
 
 function canDelete(c: Commitment): boolean {
-  if (archived.value) return false;
+  if (!canEdit.value) return false;
   if (context.value?.role === "organizer") return true;
   const memberId = context.value?.memberId;
   return !!memberId && (c.created_by === memberId || c.owner_member_id === memberId);
@@ -55,6 +55,10 @@ watch(
   },
   { immediate: true },
 );
+
+watch([commitments, isPending, isError], () => {
+  if (!isPending.value && !isError.value && detailCommitmentId.value && !detailCommitment.value) closeDetail();
+});
 
 function openCreate() {
   editingCommitment.value = null;
@@ -77,6 +81,7 @@ function openDetail(id: string) {
 function closeDetail() {
   const query = { ...route.query };
   delete query.commitment;
+  delete query.occurrence;
   void router.replace({ query });
   detailCommitmentId.value = null;
 }
@@ -149,6 +154,7 @@ const time = computed(() => useProjectTime(timezone.value));
     />
     <CommitmentDetailDialog
       v-if="detailCommitment"
+      :key="detailCommitment.id"
       :open="!!detailCommitment"
       :project-id="projectId"
       :currency="currency"
