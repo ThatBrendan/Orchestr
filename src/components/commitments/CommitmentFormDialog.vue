@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import CostSplitEditor from "./CostSplitEditor.vue";
+import type { MoneyInput } from "@/lib/money";
 import { computed, reactive, ref, watch } from "vue";
 import { DateTime } from "luxon";
 import { useCreateCommitment, useUpdateCommitment } from "@/composables/useCommitments";
@@ -53,9 +55,14 @@ const form = reactive({
   supplier_contact: "",
   booking_reference: "",
   booking_confirmed: false,
-  estimated_cost_major: "",
+  estimated_cost_major: "" as MoneyInput,
   repeat: "none" as RepeatOptionValue,
   notes: "",
+});
+const splitEditor = ref<InstanceType<typeof CostSplitEditor>>();
+const splitCost = computed(() => {
+  try { return props.commitment?.actual_cost_minor ?? props.commitment?.confirmed_cost_minor ?? toMinor(form.estimated_cost_major, props.currency); }
+  catch { return null; }
 });
 const fieldError = ref<string | null>(null);
 const showEndDate = ref(false);
@@ -101,7 +108,7 @@ function resetFromCommitment() {
       supplier_contact: "",
       booking_reference: "",
       booking_confirmed: false,
-      estimated_cost_major: "",
+      estimated_cost_major: "" as MoneyInput,
       repeat: "none",
       notes: "",
     });
@@ -159,11 +166,9 @@ async function submit() {
     fieldError.value = "Choose a date before making this activity repeat.";
     return;
   }
-  const estimatedCost = form.estimated_cost_major.trim() ? toMinor(form.estimated_cost_major, props.currency) : null;
-  if (form.estimated_cost_major.trim() && (estimatedCost == null || estimatedCost < 0)) {
-    fieldError.value = "Estimated cost must be a valid, non-negative amount.";
-    return;
-  }
+  let estimatedCost: number | null;
+  try { estimatedCost = toMinor(form.estimated_cost_major, props.currency); }
+  catch (error) { fieldError.value = toAppError(error).message; return; }
 
   const payload = {
     title: form.title.trim(),
@@ -190,10 +195,10 @@ async function submit() {
 
   try {
     if (props.commitment) {
-      await update.mutateAsync({ id: props.commitment.id, patch: payload });
+      await update.mutateAsync({ id: props.commitment.id, patch: payload, costSplit: splitEditor.value?.getSplit() });
       toast.success("Activity updated.");
     } else {
-      await create.mutateAsync({ ...payload, project_id: props.projectId, status: selectedWorkflow.value.defaultStatus });
+      await create.mutateAsync({ ...payload, project_id: props.projectId, status: selectedWorkflow.value.defaultStatus, costSplit: splitEditor.value?.getSplit() });
       toast.success("Activity created.");
     }
     emit("close");
@@ -436,9 +441,8 @@ const isPending = computed(() => create.isPending.value || update.isPending.valu
               <span class="text-13 font-medium block mb-1.5 text-ink-soft">Estimated cost ({{ props.currency }})</span>
               <input
                 v-model="form.estimated_cost_major"
-                type="number"
-                step="0.01"
-                min="0"
+                type="text"
+                inputmode="decimal"
                 class="w-full border rounded-lg px-3.5 py-2.5 text-14 focus-ring border-line"
               >
             </label>
@@ -454,6 +458,15 @@ const isPending = computed(() => create.isPending.value || update.isPending.valu
       </p>
     </form>
 
+    <CostSplitEditor
+      v-if="open && (splitCost != null || commitment)"
+      ref="splitEditor"
+      :key="commitment?.id ?? 'new'"
+      :commitment="commitment"
+      :cost="splitCost"
+      :currency="currency"
+      :members="memberOptions"
+    />
     <template #footer>
       <AppButton
         variant="secondary"

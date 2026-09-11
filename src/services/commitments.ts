@@ -1,6 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import { AppError, toAppError } from "@/lib/errors";
-import type { Tables, TablesInsert, TablesUpdate, CommitmentStatus } from "@/types/database";
+import type { Tables, TablesInsert, TablesUpdate, CommitmentStatus, Json } from "@/types/database";
 import type { CommitmentOccurrence } from "@/types/derived";
 
 export type Commitment = Tables<"commitments">;
@@ -18,8 +18,9 @@ export async function listCommitments(projectId: string): Promise<Commitment[]> 
   return data ?? [];
 }
 
-export async function createCommitment(input: TablesInsert<"commitments">): Promise<Commitment> {
-  const { data, error } = await supabase.from("commitments").insert(input).select("*").single();
+export async function createCommitment(input: TablesInsert<"commitments"> & { costSplit?: Json }): Promise<Commitment> {
+  const { costSplit, project_id, ...fields } = input;
+  const { data, error } = await supabase.rpc("save_activity_with_split", { p_project: project_id, p_commitment: null, p_fields: fields, p_split: costSplit ?? null });
   if (error) throw toAppError(error);
   return data;
 }
@@ -28,8 +29,11 @@ export async function createCommitment(input: TablesInsert<"commitments">): Prom
 export async function updateCommitment(
   id: string,
   patch: Omit<TablesUpdate<"commitments">, "status" | "deleted_at">,
+  costSplit?: Json,
 ): Promise<Commitment> {
-  const { data, error } = await supabase.from("commitments").update(patch).eq("id", id).select("*").single();
+  const { data: current, error: readError } = await supabase.from("commitments").select("project_id").eq("id", id).single();
+  if (readError) throw toAppError(readError);
+  const { data, error } = await supabase.rpc("save_activity_with_split", { p_project: current.project_id, p_commitment: id, p_fields: patch, p_split: costSplit ?? null });
   if (error) throw toAppError(error);
   return data;
 }

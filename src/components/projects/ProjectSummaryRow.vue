@@ -35,8 +35,8 @@ const attention = computed(() => props.project.attention_count ?? 0);
     :to="{ name: 'project.overview', params: { projectId: project.project_id } }"
     class="row-hover block border rounded-xl p-5 border-line bg-surface hover:bg-[#FBFBFA] transition-colors"
   >
-    <div class="flex items-start justify-between gap-6">
-      <div class="min-w-0">
+    <div class="flex flex-col sm:flex-row items-start justify-between gap-3 sm:gap-6">
+      <div class="min-w-0 [overflow-wrap:anywhere]">
         <div class="font-medium text-[15.5px]">
           {{ project.name }}
         </div>
@@ -59,7 +59,7 @@ const attention = computed(() => props.project.attention_count ?? 0);
           {{ profile.label }}
         </div>
       </div>
-      <div class="text-right shrink-0">
+      <div class="text-left sm:text-right sm:max-w-[45%]">
         <div
           v-if="attention > 0"
           class="text-13 font-medium text-amber"

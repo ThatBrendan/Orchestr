@@ -6,6 +6,7 @@ import EmptyState from "@/components/ui/EmptyState.vue";
 import ErrorState from "@/components/ui/ErrorState.vue";
 import SkeletonBlock from "@/components/ui/SkeletonBlock.vue";
 import StatusBadge from "@/components/ui/StatusBadge.vue";
+import { presentLabel } from "@/lib/presentation";
 
 const search = ref("");
 const { projects, isPending, isError, error, refetch } = useAdminProjects(search);
@@ -94,7 +95,7 @@ function date(value: string | null | undefined) {
               </div>
             </td>
             <td class="px-4 py-3">
-              <StatusBadge :label="project.deleted_at ? 'deleted' : project.status" />
+              <StatusBadge :label="presentLabel(project.deleted_at ? 'deleted' : project.status)" />
             </td>
             <td class="px-4 py-3 text-ink-soft">
               {{ project.active_member_count }} active / {{ project.member_count }} total

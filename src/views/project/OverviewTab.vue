@@ -13,6 +13,7 @@ import ErrorState from "@/components/ui/ErrorState.vue";
 import AttentionRow from "@/components/health/AttentionRow.vue";
 import UpcomingList from "@/components/timeline/UpcomingList.vue";
 import StatusBadge from "@/components/ui/StatusBadge.vue";
+import { formatDuration } from "@/lib/presentation";
 
 const route = useRoute();
 const projectId = computed(() => String(route.params.projectId));
@@ -45,12 +46,12 @@ function countdownValue(): string {
   if (overview.value.days_until_end != null) {
     if (overview.value.days_until_end < 0) return "Ended";
     if (overview.value.days_until_end === 0) return "Today";
-    return `${overview.value.days_until_end}d`;
+    return formatDuration(overview.value.days_until_end, "day");
   }
   if (overview.value.days_until_start != null) {
     if (overview.value.days_until_start < 0) return "Started";
     if (overview.value.days_until_start === 0) return "Today";
-    return `${overview.value.days_until_start}d`;
+    return formatDuration(overview.value.days_until_start, "day");
   }
   return "No date";
 }
@@ -85,8 +86,8 @@ function cardModel(card: OverviewCardKey) {
     },
     budget: {
       label: "Budget",
-      value: format(o.total_target_minor, currency.value),
-      detail: o.remaining_budget_minor == null ? "No budget target set" : `${format(o.remaining_budget_minor, currency.value)} remaining`,
+      value: o.total_target_minor == null ? "Not set" : format(o.total_target_minor, currency.value),
+      detail: `Planned ${format(o.total_cost_minor, currency.value)} · Paid ${format(o.net_actual_spend_minor, currency.value)} · ${o.remaining_budget_minor == null ? "No budget target set" : o.remaining_budget_minor === 0 ? "On budget" : `${format(Math.abs(o.remaining_budget_minor), currency.value)} ${o.remaining_budget_minor < 0 ? "over budget" : "remaining"}`}`,
       tone: o.remaining_budget_minor != null && o.remaining_budget_minor < 0 ? "amber" : "default",
     },
     payments: {

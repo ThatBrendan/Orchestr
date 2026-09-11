@@ -55,7 +55,7 @@ async function doReactivate() {
 <template>
   <div class="flex items-start gap-3 px-4 py-3.5">
     <SeverityIcon :severity="props.finding.severity" />
-    <div class="min-w-0 flex-1">
+    <div class="min-w-0 flex-1 [overflow-wrap:anywhere]">
       <div class="flex items-center gap-2 flex-wrap">
         <span class="text-14 font-medium">{{ healthCodeTitle(props.finding.code) }}</span>
         <StatusBadge

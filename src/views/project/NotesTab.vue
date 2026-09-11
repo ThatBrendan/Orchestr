@@ -124,7 +124,7 @@ const date = (value: string) => new Date(value).toLocaleDateString(undefined, { 
               <h3 class="font-semibold text-14 [overflow-wrap:anywhere]">
                 {{ note.title }}
               </h3>
-              <p class="mt-1 text-13 text-muted">
+              <p class="mt-1 text-13 text-muted [overflow-wrap:anywhere]">
                 {{ note.creator_name ?? 'Unknown author' }} · <time :datetime="note.created_at">{{ date(note.created_at) }}</time>
                 <span v-if="note.updated_at !== note.created_at"> · Edited <time :datetime="note.updated_at">{{ date(note.updated_at) }}</time></span>
               </p>

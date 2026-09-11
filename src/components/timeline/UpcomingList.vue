@@ -3,6 +3,7 @@ import { computed } from "vue";
 import type { TimelineEvent } from "@/types/derived";
 import { useProjectTime } from "@/composables/useProjectTime";
 import StatusBadge from "@/components/ui/StatusBadge.vue";
+import { presentLabel } from "@/lib/presentation";
 
 const props = defineProps<{ events: TimelineEvent[]; timezone: string }>();
 const t = computed(() => useProjectTime(props.timezone));
@@ -64,7 +65,7 @@ const groups = computed<Group[]>(() => {
         <div
           v-for="(i, idx) in g.items"
           :key="idx"
-          class="flex items-center gap-3 text-14"
+          class="flex flex-wrap items-start gap-3 text-14"
           :class="i.done ? 'text-muted' : ''"
         >
           <span
@@ -76,17 +77,18 @@ const groups = computed<Group[]>(() => {
           <RouterLink
             v-if="i.link"
             :to="i.link"
-            class="focus-ring hover:underline"
+            class="min-w-0 flex-1 [overflow-wrap:anywhere] focus-ring hover:underline"
           >
             {{ i.label }}
           </RouterLink>
           <span
             v-else
+            class="min-w-0 flex-1 [overflow-wrap:anywhere]"
             :class="i.done ? 'line-through' : ''"
           >{{ i.label }}</span>
           <StatusBadge
             v-if="i.status && !i.overdue"
-            :label="i.status"
+            :label="presentLabel(i.status)"
             tone="neutral"
             class="capitalize"
           />

@@ -8,6 +8,7 @@ import ErrorState from "@/components/ui/ErrorState.vue";
 import SkeletonBlock from "@/components/ui/SkeletonBlock.vue";
 import StatTile from "@/components/ui/StatTile.vue";
 import StatusBadge from "@/components/ui/StatusBadge.vue";
+import { presentAuditAction, presentLabel } from "@/lib/presentation";
 
 const route = useRoute();
 const projectId = computed(() => String(route.params.projectId ?? ""));
@@ -53,7 +54,7 @@ function date(value: string | null | undefined) {
             {{ project.data.value.id }}
           </p>
         </div>
-        <StatusBadge :label="project.data.value.deleted_at ? 'deleted' : project.data.value.status" />
+        <StatusBadge :label="presentLabel(project.data.value.deleted_at ? 'deleted' : project.data.value.status)" />
       </div>
       <dl class="mt-5 grid gap-4 text-14 sm:grid-cols-4">
         <div>
@@ -140,7 +141,7 @@ function date(value: string | null | undefined) {
             <dt class="text-muted">
               Status
             </dt><dd class="mt-1">
-              <StatusBadge :label="health.data.value.status" />
+              <StatusBadge :label="presentLabel(health.data.value.status)" />
             </dd>
           </div>
           <div>
@@ -228,10 +229,10 @@ function date(value: string | null | undefined) {
                   {{ member.email ?? "-" }}
                 </td>
                 <td class="px-4 py-3 text-ink-soft">
-                  {{ member.role }}
+                  {{ presentLabel(member.role) }}
                 </td>
                 <td class="px-4 py-3">
-                  <StatusBadge :label="member.status" />
+                  <StatusBadge :label="presentLabel(member.status)" />
                 </td>
               </tr>
             </tbody>
@@ -265,7 +266,7 @@ function date(value: string | null | undefined) {
             class="border-b border-line px-4 py-3 last:border-b-0"
           >
             <div class="text-14 font-medium text-ink">
-              {{ event.action }} {{ event.entity_type }}
+              {{ presentAuditAction(event.action, event.entity_type) }}
             </div>
             <div class="mt-0.5 text-13 text-muted">
               {{ event.actor_email ?? "System" }} · {{ date(event.at) }}

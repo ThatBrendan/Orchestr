@@ -43,16 +43,17 @@ const widthClass = computed(() => (props.size === "lg" ? "max-w-2xl" : "max-w-md
           enter-to="opacity-100 translate-y-0"
         >
           <DialogPanel
-            class="w-full rounded-2xl overflow-hidden bg-surface max-h-[85vh] flex flex-col"
+            class="w-full min-w-0 rounded-2xl overflow-hidden bg-surface max-h-[calc(100dvh-2rem)] flex flex-col"
             :class="widthClass"
           >
-            <div class="px-6 pt-5 pb-4 border-b border-line flex items-center justify-between shrink-0">
-              <DialogTitle class="font-display text-[17px] font-semibold">
+            <div class="px-4 sm:px-6 pt-5 pb-4 border-b border-line flex items-start justify-between gap-4 shrink-0">
+              <DialogTitle class="min-w-0 font-display text-[17px] font-semibold [overflow-wrap:anywhere]">
                 {{ props.title }}
               </DialogTitle>
               <button
                 :disabled="props.busy"
-                class="text-ink-soft hover:text-ink"
+                aria-label="Close dialog"
+                class="flex h-11 w-11 items-center justify-center -mr-2 -mt-2 rounded-lg shrink-0 text-ink-soft hover:text-ink focus-ring"
                 @click="!props.busy && emit('close')"
               >
                 <AppIcon
@@ -61,12 +62,12 @@ const widthClass = computed(() => (props.size === "lg" ? "max-w-2xl" : "max-w-md
                 />
               </button>
             </div>
-            <div class="px-6 py-5 overflow-y-auto">
+            <div class="min-h-0 min-w-0 px-4 sm:px-6 py-5 overflow-y-auto [overflow-wrap:anywhere] [&_input]:max-w-full [&_select]:max-w-full [&_textarea]:max-w-full">
               <slot />
             </div>
             <div
               v-if="$slots.footer"
-              class="px-6 py-4 border-t border-line flex justify-end gap-2 shrink-0"
+              class="px-4 sm:px-6 py-4 border-t border-line flex flex-wrap justify-end gap-2 shrink-0"
             >
               <slot name="footer" />
             </div>

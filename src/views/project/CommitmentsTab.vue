@@ -6,7 +6,7 @@ import { useMemberDirectory } from "@/composables/useProject";
 import { useProjectContext } from "@/composables/useProjectContext";
 import { useMoney } from "@/composables/useMoney";
 import { useProjectTime } from "@/composables/useProjectTime";
-import { activityTypeLabel, commitmentStatusLabel } from "@/lib/activityWorkflows";
+import { bookingStatusLabel, activityTypeLabel, commitmentStatusLabel } from "@/lib/activityWorkflows";
 import { categoryLabel } from "@/lib/commitmentCategories";
 import { recurrenceLabel } from "@/lib/recurrence";
 import type { Commitment } from "@/services/commitments";
@@ -87,7 +87,7 @@ function closeDetail() {
 }
 
 const statusTone = (s: string) =>
-  s === "cancelled" ? "neutral" : s === "completed" || s === "booked" ? "accent" : "amber";
+  s === "cancelled" ? "neutral" : s === "completed" ? "accent" : "amber";
 
 function ownerName(id: string | null): string | null {
   if (!id) return null;
@@ -151,28 +151,43 @@ const time = computed(() => useProjectTime(timezone.value));
       <button
         v-for="c in commitments"
         :key="c.id"
-        class="w-full text-left flex items-center gap-3.5 px-4 py-3.5 hover:bg-[#FBFBFA] focus-ring"
+        class="w-full text-left flex flex-col items-stretch gap-2 px-4 py-3.5 hover:bg-[#FBFBFA] focus-ring sm:flex-row sm:items-center sm:gap-3.5"
         @click="openDetail(c.id)"
       >
         <div class="min-w-0 flex-1">
-          <div class="text-14 font-medium truncate">
+          <div class="text-14 font-medium [overflow-wrap:anywhere]">
             {{ c.title }}
           </div>
-          <div class="text-13 text-muted capitalize">
+          <div
+            v-if="c.notes"
+            class="mt-1 text-13 text-muted whitespace-pre-wrap [overflow-wrap:anywhere]"
+          >
+            {{ c.notes }}
+          </div>
+        </div>
+        <div class="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-13 sm:max-w-[50%]">
+          <span
+            v-if="c.estimated_cost_minor != null"
+            class="max-w-full text-13.5 text-ink-soft [overflow-wrap:anywhere]"
+          >{{ format(c.estimated_cost_minor, currency) }}</span>
+          <StatusBadge
+            :label="commitmentStatusLabel(c.activity_type, c.status)"
+            :tone="statusTone(c.status)"
+          />
+          <StatusBadge
+            v-if="c.activity_type === 'booking'"
+            :label="'Booking: ' + bookingStatusLabel(c.status, c.booking_confirmed)"
+            tone="neutral"
+          />
+          <span class="min-w-0 max-w-full [overflow-wrap:anywhere] text-muted">
+            {{ ownerName(c.owner_member_id) || 'Unassigned' }}
+          </span>
+          <span class="basis-full text-muted [overflow-wrap:anywhere]">
             {{ activityTypeLabel(c.activity_type) }} · {{ categoryLabel(c.kind) }}
             <span v-if="c.starts_at"> · {{ time.dateOnly(c.starts_at) }}</span>
             <span v-if="c.recurrence_frequency"> · {{ recurrenceLabel(c.recurrence_frequency, c.recurrence_interval) }}</span>
-            <span v-if="ownerName(c.owner_member_id)"> · {{ ownerName(c.owner_member_id) }}</span>
-          </div>
+          </span>
         </div>
-        <span
-          v-if="c.estimated_cost_minor != null"
-          class="text-13.5 text-ink-soft"
-        >{{ format(c.estimated_cost_minor, currency) }}</span>
-        <StatusBadge
-          :label="commitmentStatusLabel(c.activity_type, c.status)"
-          :tone="statusTone(c.status)"
-        />
       </button>
     </div>
 

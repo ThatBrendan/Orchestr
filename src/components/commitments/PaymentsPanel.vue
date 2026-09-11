@@ -14,6 +14,7 @@ import ErrorState from "@/components/ui/ErrorState.vue";
 import EmptyState from "@/components/ui/EmptyState.vue";
 import StatusBadge from "@/components/ui/StatusBadge.vue";
 import AppButton from "@/components/ui/AppButton.vue";
+import { presentLabel } from "@/lib/presentation";
 
 const props = defineProps<{
   projectId: string;
@@ -48,7 +49,9 @@ const addError = ref<string | null>(null);
 async function submitAdd() {
   if (createPayment.isPending.value || !props.canEdit) return;
   addError.value = null;
-  const amountMinor = toMinor(addForm.amount_major, props.currency);
+  let amountMinor: number | null;
+  try { amountMinor = toMinor(addForm.amount_major, props.currency); }
+  catch (error) { addError.value = toAppError(error).message; return; }
   if (amountMinor == null || amountMinor <= 0) {
     addError.value = "Enter an amount greater than zero.";
     return;
@@ -174,9 +177,8 @@ const outstanding = computed(() => financials.value?.outstanding_minor ?? null);
       </div>
       <input
         v-model="addForm.amount_major"
-        type="number"
-        step="0.01"
-        min="0.01"
+        type="text"
+        inputmode="decimal"
         :placeholder="`Amount (${props.currency})`"
         class="w-full border rounded-lg px-3 py-2 text-13.5 focus-ring border-line"
       >
@@ -224,13 +226,13 @@ const outstanding = computed(() => financials.value?.outstanding_minor ?? null);
         :key="p.id"
         class="px-3 py-2.5"
       >
-        <div class="flex items-center gap-2.5">
+        <div class="flex flex-wrap items-center gap-2.5">
           <StatusBadge
-            :label="p.status"
+            :label="presentLabel(p.status)"
             :tone="statusTone(p.status)"
           />
-          <span class="text-13.5 capitalize">{{ p.type }}</span>
-          <span class="text-13.5 font-medium ml-auto">{{ format(p.amount_minor, props.currency) }}</span>
+          <span class="text-13.5">{{ presentLabel(p.type) }}</span>
+          <span class="max-w-full [overflow-wrap:anywhere] text-13.5 font-medium sm:ml-auto">{{ format(p.amount_minor, props.currency) }}</span>
         </div>
         <div class="text-13 text-muted mt-1">
           <span v-if="p.due_on">Due {{ time.dateOnly(p.due_on) }}</span>
@@ -239,7 +241,7 @@ const outstanding = computed(() => financials.value?.outstanding_minor ?? null);
 
         <div
           v-if="props.canEdit && p.status === 'scheduled'"
-          class="mt-2 flex gap-2"
+          class="mt-2 flex flex-wrap gap-2"
         >
           <AppButton
             variant="secondary"

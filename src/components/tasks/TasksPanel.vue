@@ -18,6 +18,7 @@ import SkeletonBlock from "@/components/ui/SkeletonBlock.vue";
 import ErrorState from "@/components/ui/ErrorState.vue";
 import EmptyState from "@/components/ui/EmptyState.vue";
 import AppButton from "@/components/ui/AppButton.vue";
+import { presentLabel } from "@/lib/presentation";
 import AppConfirmDialog from "@/components/ui/AppConfirmDialog.vue";
 
 const props = defineProps<{
@@ -327,29 +328,33 @@ function canDeleteTask(task: Task): boolean {
       <div
         v-for="t in tasks"
         :key="t.id"
-        class="flex items-center gap-3 px-4 py-3"
+        class="flex flex-wrap items-start gap-3 px-4 py-3 sm:flex-nowrap sm:items-center"
       >
         <input
           type="checkbox"
-          class="rounded border-line"
+          class="mt-1 shrink-0 rounded border-line sm:mt-0"
           :checked="t.status === 'done'"
           :disabled="!props.canEdit || busy"
           @change="toggleDone(t.id, t.status, !!t.recurrence_frequency)"
         >
-        <div class="min-w-0 flex-1">
+        <div class="min-w-0 flex-1 basis-[calc(100%-2rem)] sm:basis-auto">
           <div
-            class="text-14"
+            class="text-14 [overflow-wrap:anywhere]"
             :class="{ 'line-through text-muted': t.status === 'done' }"
           >
             {{ t.title }}
           </div>
-          <div class="text-13 text-muted">
-            {{ memberName(t.assignee_member_id) }}
-            <span v-if="t.due_on"> · Due {{ time.dateOnly(t.due_on) }}</span>
-            <span v-if="t.recurrence_frequency"> · {{ recurrenceLabel(t.recurrence_frequency, t.recurrence_interval) }}</span>
+          <div class="mt-1 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-13 text-muted">
+            <span>{{ presentLabel(t.status) }}</span>
+            <span class="min-w-0 max-w-full [overflow-wrap:anywhere]">{{ memberName(t.assignee_member_id) }}</span>
+            <span v-if="t.due_on">Due {{ time.dateOnly(t.due_on) }}</span>
+            <span v-if="t.recurrence_frequency">{{ recurrenceLabel(t.recurrence_frequency, t.recurrence_interval) }}</span>
           </div>
         </div>
-        <template v-if="props.canEdit">
+        <div
+          v-if="props.canEdit"
+          class="basis-full pl-7 flex min-w-0 max-w-full flex-wrap items-center gap-2 sm:pl-0 sm:basis-auto"
+        >
           <AppButton
             v-if="t.recurrence_frequency"
             variant="secondary"
@@ -360,24 +365,24 @@ function canDeleteTask(task: Task): boolean {
             Skip next
           </AppButton>
           <select
-            class="border rounded-lg px-2 py-1.5 text-13 focus-ring border-line bg-surface"
+            class="min-w-0 max-w-full border rounded-lg px-2 py-1.5 text-13 focus-ring border-line bg-surface"
             :disabled="busy"
             :value="t.status"
             @change="changeStatus(t.id, $event)"
           >
             <option :value="t.status">
-              {{ t.status }}
+              {{ presentLabel(t.status) }}
             </option>
             <option
               v-for="s in NEXT[t.status]"
               :key="s"
               :value="s"
             >
-              {{ s }}
+              {{ presentLabel(s) }}
             </option>
           </select>
           <select
-            class="border rounded-lg px-2 py-1.5 text-13 focus-ring border-line bg-surface"
+            class="min-w-0 max-w-full border rounded-lg px-2 py-1.5 text-13 focus-ring border-line bg-surface"
             :disabled="busy"
             :value="t.assignee_member_id ?? ''"
             @change="changeAssignee(t.id, $event)"
@@ -403,7 +408,7 @@ function canDeleteTask(task: Task): boolean {
           >
             Delete
           </AppButton>
-        </template>
+        </div>
       </div>
     </div>
 

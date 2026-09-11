@@ -5,6 +5,7 @@ import { useCommitmentOccurrences, useCompleteCommitmentOccurrence, useSkipCommi
 import { useToast } from "@/composables/useToast";
 import { toAppError } from "@/lib/errors";
 import AppButton from "@/components/ui/AppButton.vue";
+import { presentLabel } from "@/lib/presentation";
 import AppModal from "@/components/ui/AppModal.vue";
 import ErrorState from "@/components/ui/ErrorState.vue";
 
@@ -97,8 +98,8 @@ async function stopSeries() {
       No occurrence on this date. Choose a date in this series.
     </p>
     <template v-else>
-      <p class="text-14 capitalize">
-        Status: {{ selected.status }}
+      <p class="text-14">
+        Status: {{ presentLabel(selected.status) }}
       </p>
       <div
         v-if="selected.status === 'skipped'"

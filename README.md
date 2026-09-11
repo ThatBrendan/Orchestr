@@ -112,6 +112,8 @@ Supabase Row Level Security is the application's authorization boundary.
 
 Never commit `.env` files or expose the Supabase `service_role` key in frontend code.
 
+Development branch initialized for staging.
+
 ---
 
 **Orchestrio** — from scattered planning to coordinated execution.

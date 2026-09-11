@@ -27,7 +27,7 @@ function invalidatePaymentEffects(
 ) {
   return invalidatePlanning(client, projectId, [
     qk.commitment.payments(commitmentId), qk.commitment.financials(commitmentId),
-    qk.project.budgetCategories(projectId),
+    qk.project.budgetCategories(projectId), ["settlement"],
   ]);
 }
 

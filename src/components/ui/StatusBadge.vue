@@ -17,7 +17,7 @@ const cls = computed(
 
 <template>
   <span
-    class="inline-flex items-center px-2 py-0.5 rounded text-[12.5px] font-medium"
+    class="inline-flex max-w-full items-center [overflow-wrap:anywhere] px-2 py-0.5 rounded text-[12.5px] font-medium"
     :class="cls"
   >
     {{ props.label }}

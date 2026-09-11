@@ -8,6 +8,7 @@ import StatTile from "@/components/ui/StatTile.vue";
 import ProgressBar from "@/components/ui/ProgressBar.vue";
 import SeverityIcon from "@/components/ui/SeverityIcon.vue";
 import StatusBadge from "@/components/ui/StatusBadge.vue";
+import { presentLabel } from "@/lib/presentation";
 
 const SAMPLE = {
   name: "Team offsite — Lisbon",
@@ -92,7 +93,7 @@ const SAMPLE = {
               </div>
             </div>
             <StatusBadge
-              :label="c.status"
+              :label="presentLabel(c.status)"
               :tone="c.tone"
             />
           </div>

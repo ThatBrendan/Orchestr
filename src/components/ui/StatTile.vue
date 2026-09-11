@@ -5,7 +5,7 @@ defineProps<{ value: string; label: string; tone?: "default" | "amber" }>();
 <template>
   <div>
     <div
-      class="font-display text-[21px] font-semibold tnum"
+      class="min-w-0 [overflow-wrap:anywhere] font-display text-[21px] font-semibold tnum"
       :class="tone === 'amber' ? 'text-amber' : 'text-ink'"
     >
       {{ value }}

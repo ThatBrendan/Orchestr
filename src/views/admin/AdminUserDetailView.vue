@@ -6,6 +6,7 @@ import EmptyState from "@/components/ui/EmptyState.vue";
 import ErrorState from "@/components/ui/ErrorState.vue";
 import SkeletonBlock from "@/components/ui/SkeletonBlock.vue";
 import StatusBadge from "@/components/ui/StatusBadge.vue";
+import { presentAuditAction, presentLabel } from "@/lib/presentation";
 
 const route = useRoute();
 const userId = computed(() => String(route.params.userId ?? ""));
@@ -134,10 +135,10 @@ function date(value: string | null | undefined) {
                   </RouterLink>
                 </td>
                 <td class="px-4 py-3 text-ink-soft">
-                  {{ m.role }}
+                  {{ presentLabel(m.role) }}
                 </td>
                 <td class="px-4 py-3">
-                  <StatusBadge :label="m.status" />
+                  <StatusBadge :label="presentLabel(m.status)" />
                 </td>
                 <td class="px-4 py-3 text-muted">
                   {{ date(m.joined_at) }}
@@ -174,7 +175,7 @@ function date(value: string | null | undefined) {
             class="border-b border-line px-4 py-3 last:border-b-0"
           >
             <div class="text-14 font-medium text-ink">
-              {{ event.action }} {{ event.entity_type }}
+              {{ presentAuditAction(event.action, event.entity_type) }}
             </div>
             <div class="mt-0.5 text-13 text-muted">
               {{ event.project_name ?? "No project" }} · {{ date(event.at) }}
