@@ -6,7 +6,7 @@ import { useMemberDirectory } from "@/composables/useProject";
 import { useProjectContext } from "@/composables/useProjectContext";
 import { useMoney } from "@/composables/useMoney";
 import { useProjectTime } from "@/composables/useProjectTime";
-import { activityTypeLabel, commitmentStatusLabel } from "@/lib/activityWorkflows";
+import { bookingStatusLabel, activityTypeLabel, commitmentStatusLabel } from "@/lib/activityWorkflows";
 import { categoryLabel } from "@/lib/commitmentCategories";
 import { recurrenceLabel } from "@/lib/recurrence";
 import type { Commitment } from "@/services/commitments";
@@ -87,7 +87,7 @@ function closeDetail() {
 }
 
 const statusTone = (s: string) =>
-  s === "cancelled" ? "neutral" : s === "completed" || s === "booked" ? "accent" : "amber";
+  s === "cancelled" ? "neutral" : s === "completed" ? "accent" : "amber";
 
 function ownerName(id: string | null): string | null {
   if (!id) return null;
@@ -169,10 +169,17 @@ const time = computed(() => useProjectTime(timezone.value));
           v-if="c.estimated_cost_minor != null"
           class="text-13.5 text-ink-soft"
         >{{ format(c.estimated_cost_minor, currency) }}</span>
-        <StatusBadge
-          :label="commitmentStatusLabel(c.activity_type, c.status)"
-          :tone="statusTone(c.status)"
-        />
+        <span class="flex flex-wrap gap-2">
+          <StatusBadge
+            :label="commitmentStatusLabel(c.activity_type, c.status)"
+            :tone="statusTone(c.status)"
+          />
+          <StatusBadge
+            v-if="c.activity_type === 'booking'"
+            :label="'Booking: ' + bookingStatusLabel(c.status, c.booking_confirmed)"
+            tone="neutral"
+          />
+        </span>
       </button>
     </div>
 

@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { useProjectSettlement } from "@/composables/useSettlement";
+import { useMoney } from "@/composables/useMoney";
+import { isProjectModuleVisible } from "@/lib/projectProfiles";
 import { computed, ref } from "vue";
 import { useProjectInvitations } from "@/composables/useNotifications";
 import { useRoute } from "vue-router";
@@ -22,6 +25,14 @@ const projectId = computed(() => String(route.params.projectId));
 const { members, isPending, isError, error, refetch } = useMemberDirectory(projectId);
 const { allowed, project } = useProjectContext();
 const toast = useToast();
+const { format } = useMoney();
+const budgetVisible = computed(() => isProjectModuleVisible(project.value?.profile,project.value?.module_visibility,"budget"));
+const settlement = useProjectSettlement(projectId,budgetVisible);
+function balanceLabel(id: string) {
+ const row=settlement.data.value?.members.find(m=>m.member_id===id);
+ if(!row) return "";
+ return row.remaining_minor===0 ? "Settled" : `${format(Math.abs(row.remaining_minor),row.currency)} ${row.remaining_minor<0 ? 'credit' : 'remaining'}`;
+}
 
 const roster = computed(() => members.value.filter((m) => m.status !== "removed"));
 const removedCount = computed(() => members.value.length - roster.value.length);
@@ -136,6 +147,10 @@ const statusTone = (s: string) => (s === "invited" ? "amber" : s === "removed" ?
             <div class="min-w-0 flex-1">
               <div class="text-14 font-medium">
                 {{ m.display_name }}
+                <span
+                  v-if="budgetVisible && balanceLabel(m.member_id)"
+                  class="block text-13 font-normal text-muted"
+                >{{ balanceLabel(m.member_id) }}</span>
               </div>
               <div class="text-13 text-muted capitalize">
                 {{ m.role }}

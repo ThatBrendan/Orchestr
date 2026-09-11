@@ -23,122 +23,46 @@ export interface ActivityWorkflow {
   };
 }
 
-const NON_BOOKING_ACTIONS: Record<CommitmentStatus, ActivityWorkflowAction[]> = {
-  idea: [
-    { to: "researching", label: "Start" },
-    { to: "completed", label: "Complete" },
-    { to: "cancelled", label: "Cancel" },
-  ],
-  researching: [
-    { to: "idea", label: "Mark not started" },
-    { to: "completed", label: "Complete" },
-    { to: "cancelled", label: "Cancel" },
-  ],
-  confirmed: [
-    { to: "researching", label: "Reopen" },
-    { to: "completed", label: "Complete" },
-    { to: "cancelled", label: "Cancel" },
-  ],
-  booked: [
-    { to: "confirmed", label: "Back to confirmed" },
-    { to: "completed", label: "Complete" },
-    { to: "cancelled", label: "Cancel" },
-  ],
-  completed: [{ to: "researching", label: "Reopen" }],
-  cancelled: [{ to: "researching", label: "Reinstate" }],
+// Execution presentation does not change the persisted status or its financial/Health meaning.
+// Confirmed/booked records represent progressed work, not completed work. Booking is shown separately.
+const EXECUTION_LABELS: Record<CommitmentStatus, string> = {
+  idea: "Not started", researching: "In progress", confirmed: "In progress",
+  booked: "In progress", completed: "Completed", cancelled: "Cancelled",
+};
+const EXECUTION_ACTIONS: Record<CommitmentStatus, ActivityWorkflowAction[]> = {
+  idea: [{ to: "researching", label: "Start" }, { to: "completed", label: "Complete" }],
+  researching: [{ to: "completed", label: "Complete" }],
+  confirmed: [{ to: "completed", label: "Complete" }],
+  booked: [{ to: "completed", label: "Complete" }],
+  completed: [], cancelled: [],
+};
+// Existing booking transition rules require booked before completed; never invent booking history.
+const BOOKING_EXECUTION_ACTIONS: Record<CommitmentStatus, ActivityWorkflowAction[]> = {
+  ...EXECUTION_ACTIONS,
+  idea: [{ to: "researching", label: "Start" }],
+  researching: [], confirmed: [],
 };
 
-const PURCHASE_ACTIONS: Record<CommitmentStatus, ActivityWorkflowAction[]> = {
-  idea: [
-    { to: "researching", label: "Start pricing" },
-    { to: "completed", label: "Complete" },
-    { to: "cancelled", label: "Cancel" },
-  ],
-  researching: [
-    { to: "idea", label: "Back to idea" },
-    { to: "confirmed", label: "Mark purchased" },
-    { to: "cancelled", label: "Cancel" },
-  ],
-  confirmed: [
-    { to: "researching", label: "Reopen" },
-    { to: "completed", label: "Complete" },
-    { to: "cancelled", label: "Cancel" },
-  ],
-  booked: [
-    { to: "confirmed", label: "Back to purchased" },
-    { to: "completed", label: "Complete" },
-    { to: "cancelled", label: "Cancel" },
-  ],
-  completed: [{ to: "researching", label: "Reopen" }],
-  cancelled: [{ to: "researching", label: "Reinstate" }],
-};
+export function bookingStatusLabel(status: CommitmentStatus, confirmed: boolean): string {
+  if (status === "booked" || status === "completed" || confirmed) return "Booked";
+  return status === "confirmed" ? "Ready to book" : "Not booked";
+}
 
-const EVENT_ACTIONS: Record<CommitmentStatus, ActivityWorkflowAction[]> = {
-  idea: [
-    { to: "researching", label: "Start planning" },
-    { to: "completed", label: "Complete" },
-    { to: "cancelled", label: "Cancel" },
-  ],
-  researching: [
-    { to: "idea", label: "Back to idea" },
-    { to: "confirmed", label: "Confirm" },
-    { to: "cancelled", label: "Cancel" },
-  ],
-  confirmed: [
-    { to: "researching", label: "Reopen planning" },
-    { to: "completed", label: "Complete" },
-    { to: "cancelled", label: "Cancel" },
-  ],
-  booked: [
-    { to: "confirmed", label: "Back to confirmed" },
-    { to: "completed", label: "Complete" },
-    { to: "cancelled", label: "Cancel" },
-  ],
-  completed: [{ to: "researching", label: "Reopen" }],
-  cancelled: [{ to: "researching", label: "Reinstate" }],
-};
+export function bookingStatusActions(status: CommitmentStatus): ActivityWorkflowAction[] {
+  if (status === "researching") return [{ to: "confirmed", label: "Confirm booking" }];
+  if (status === "confirmed") return [{ to: "booked", label: "Mark booked" }];
+  return [];
+}
 
-const BOOKING_ACTIONS: Record<CommitmentStatus, ActivityWorkflowAction[]> = {
-  idea: [
-    { to: "researching", label: "Move to researching" },
-    { to: "cancelled", label: "Cancel" },
-  ],
-  researching: [
-    { to: "idea", label: "Back to idea" },
-    { to: "confirmed", label: "Confirm" },
-    { to: "cancelled", label: "Cancel" },
-  ],
-  confirmed: [
-    { to: "researching", label: "Back to researching" },
-    { to: "booked", label: "Mark booked" },
-    { to: "cancelled", label: "Cancel" },
-  ],
-  booked: [
-    { to: "confirmed", label: "Back to confirmed" },
-    { to: "completed", label: "Mark completed" },
-    { to: "cancelled", label: "Cancel" },
-  ],
-  completed: [{ to: "booked", label: "Reopen" }],
-  cancelled: [{ to: "researching", label: "Reinstate" }],
-};
+export function secondaryActivityActions(type: ActivityType, status: CommitmentStatus): ActivityWorkflowAction[] {
+  if (status === "completed") return [{ to: type === "booking" ? "booked" : "researching", label: "Reopen activity" }];
+  if (status === "cancelled") return [{ to: "researching", label: "Restore activity" }];
+  return [{ to: "cancelled", label: "Cancel activity" }];
+}
 
-const BASE_STATUS_LABELS: Record<CommitmentStatus, string> = {
-  idea: "Idea",
-  researching: "Researching",
-  confirmed: "Confirmed",
-  booked: "Booked",
-  completed: "Completed",
-  cancelled: "Cancelled",
-};
-
-const TASK_STATUS_LABELS: Record<CommitmentStatus, string> = {
-  idea: "Not started",
-  researching: "In progress",
-  confirmed: "Ready",
-  booked: "In progress",
-  completed: "Completed",
-  cancelled: "Cancelled",
-};
+export function executionStatusLabel(status: string): string {
+  return EXECUTION_LABELS[status as CommitmentStatus] ?? status;
+}
 
 export const ACTIVITY_WORKFLOWS: ActivityWorkflow[] = [
   {
@@ -146,44 +70,44 @@ export const ACTIVITY_WORKFLOWS: ActivityWorkflow[] = [
     label: "Task / Action",
     description: "A piece of work with an owner, due date and outcome.",
     defaultStatus: "idea",
-    statusLabels: TASK_STATUS_LABELS,
-    actions: NON_BOOKING_ACTIONS,
+    statusLabels: EXECUTION_LABELS,
+    actions: EXECUTION_ACTIONS,
     preferredFields: { owner: true, endDate: false, location: false, supplier: false, booking: false, cost: false, payments: false },
   },
   {
     value: "booking",
     label: "Booking",
     description: "A reservation or supplier booking to confirm and track.",
-    defaultStatus: "researching",
-    statusLabels: BASE_STATUS_LABELS,
-    actions: BOOKING_ACTIONS,
+    defaultStatus: "idea",
+    statusLabels: EXECUTION_LABELS,
+    actions: BOOKING_EXECUTION_ACTIONS,
     preferredFields: { owner: true, endDate: true, location: true, supplier: true, booking: true, cost: true, payments: true },
   },
   {
     value: "purchase",
     label: "Purchase",
     description: "Something to buy, price up, pay for or reimburse.",
-    defaultStatus: "researching",
-    statusLabels: { ...BASE_STATUS_LABELS, confirmed: "Purchased", booked: "Purchased" },
-    actions: PURCHASE_ACTIONS,
+    defaultStatus: "idea",
+    statusLabels: EXECUTION_LABELS,
+    actions: EXECUTION_ACTIONS,
     preferredFields: { owner: true, endDate: false, location: false, supplier: true, booking: false, cost: true, payments: true },
   },
   {
     value: "event",
     label: "Meeting / Event",
     description: "A scheduled moment with time, place and participants.",
-    defaultStatus: "researching",
-    statusLabels: { ...BASE_STATUS_LABELS, researching: "Planning", booked: "Scheduled" },
-    actions: EVENT_ACTIONS,
+    defaultStatus: "idea",
+    statusLabels: EXECUTION_LABELS,
+    actions: EXECUTION_ACTIONS,
     preferredFields: { owner: true, endDate: true, location: true, supplier: false, booking: false, cost: false, payments: false },
   },
   {
     value: "other",
     label: "Other",
     description: "A flexible activity without booking-specific behaviour.",
-    defaultStatus: "researching",
-    statusLabels: { ...BASE_STATUS_LABELS, researching: "In progress" },
-    actions: NON_BOOKING_ACTIONS,
+    defaultStatus: "idea",
+    statusLabels: EXECUTION_LABELS,
+    actions: EXECUTION_ACTIONS,
     preferredFields: { owner: true, endDate: false, location: false, supplier: false, booking: false, cost: false, payments: false },
   },
 ];

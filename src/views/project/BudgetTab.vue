@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import MemberBalances from "@/components/budget/MemberBalances.vue";
 import BudgetVisual from "@/components/budget/BudgetVisual.vue";
 import BudgetTargetDialog from "@/components/budget/BudgetTargetDialog.vue";
 import AppButton from "@/components/ui/AppButton.vue";
@@ -226,6 +227,10 @@ const categoriesWithData = computed(() => categories.value.filter((c) => c.targe
           </table>
         </div>
       </section>
+      <MemberBalances
+        :project-id="projectId"
+        :currency="currency"
+      />
       <BudgetTargetDialog
         :open="budgetOpen"
         :project-id="projectId"

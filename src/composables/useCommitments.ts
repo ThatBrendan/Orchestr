@@ -9,7 +9,7 @@ import type { TablesInsert, TablesUpdate, CommitmentStatus, Json } from "@/types
 function invalidateCommitmentEffects(client: ReturnType<typeof useQueryClient>, projectId: string) {
   return invalidatePlanning(client, projectId, [
     qk.project.commitments(projectId), qk.project.tasks(projectId),
-    qk.project.budgetCategories(projectId), qk.project.milestones(projectId), ["activity-cost-shares"], ["project", projectId, "balances"],
+    qk.project.budgetCategories(projectId), qk.project.milestones(projectId), ["activity-cost-shares"], ["settlement"], ["project", projectId, "balances"],
   ]);
 }
 

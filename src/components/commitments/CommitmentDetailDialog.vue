@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import MemberSettlementPanel from "./MemberSettlementPanel.vue";
 import CostSplitEditor from "./CostSplitEditor.vue";
 import ActualCostDialog from "./ActualCostDialog.vue";
 import { useProjectContext } from "@/composables/useProjectContext";
@@ -15,7 +16,7 @@ import { useMoney } from "@/composables/useMoney";
 import { useProjectTime } from "@/composables/useProjectTime";
 import { useToast } from "@/composables/useToast";
 import { toAppError } from "@/lib/errors";
-import { activityTypeLabel, activityWorkflow, commitmentStatusActions, commitmentStatusLabel } from "@/lib/activityWorkflows";
+import { bookingStatusLabel, bookingStatusActions, secondaryActivityActions, activityTypeLabel, activityWorkflow, commitmentStatusActions, commitmentStatusLabel } from "@/lib/activityWorkflows";
 import { categoryLabel } from "@/lib/commitmentCategories";
 import { recurrenceLabel } from "@/lib/recurrence";
 import type { Commitment } from "@/services/commitments";
@@ -54,7 +55,9 @@ const addParticipant = useAddParticipant(props.projectId, props.commitment.id);
 const removeParticipant = useRemoveParticipant(props.projectId, props.commitment.id);
 const workflow = computed(() => activityWorkflow(props.commitment.activity_type));
 const nextTransitions = computed(() => commitmentStatusActions(props.commitment.activity_type, props.commitment.status));
-const statusTone = (s: string) => (s === "cancelled" ? "neutral" : s === "completed" || s === "booked" ? "accent" : "amber");
+const bookingActions = computed(() => bookingStatusActions(props.commitment.status));
+const secondaryActions = computed(() => secondaryActivityActions(props.commitment.activity_type, props.commitment.status));
+const statusTone = (s: string) => (s === "cancelled" ? "neutral" : s === "completed" ? "accent" : "amber");
 
 const { context, isOrganizer } = useProjectContext();
 const costOpen = ref(false);
@@ -63,6 +66,7 @@ const costBearing = computed(() => props.commitment.estimated_cost_minor != null
 const canSetActual = computed(() => props.canEdit && (isOrganizer.value || (context.value?.memberId === props.commitment.owner_member_id && !['completed', 'cancelled'].includes(props.commitment.status))));
 const costVariance = computed(() => props.commitment.actual_cost_minor != null && props.commitment.estimated_cost_minor != null ? props.commitment.actual_cost_minor - props.commitment.estimated_cost_minor : null);
 async function transition(to: CommitmentStatus) {
+  if (setStatus.isPending.value || !props.canEdit || isRecurring.value) return;
   if (to === "completed" && costBearing.value && canSetActual.value) {
     completingWithCost.value = true; costOpen.value = true; return;
   }
@@ -152,20 +156,75 @@ const repeatLabel = computed(() =>
           <span class="text-13 text-muted">{{ activityTypeLabel(props.commitment.activity_type) }}</span>
           <span class="text-13 text-muted">Category: {{ categoryLabel(props.commitment.kind) }}</span>
         </div>
-        <div class="flex flex-wrap gap-2">
+        <div
+          v-if="props.canEdit && !isRecurring"
+          class="flex flex-wrap items-center gap-2"
+        >
           <AppButton
             v-for="t in nextTransitions"
-            v-show="props.canEdit && !isRecurring"
             :key="t.to"
-            variant="secondary"
             size="sm"
             :loading="setStatus.isPending.value"
             @click="transition(t.to)"
           >
             {{ t.label }}
           </AppButton>
+          <details class="text-13">
+            <summary class="cursor-pointer focus-ring rounded px-2 py-1 text-muted">
+              More actions
+            </summary>
+            <div class="flex flex-wrap gap-2 mt-2">
+              <AppButton
+                v-for="t in secondaryActions"
+                :key="t.to"
+                variant="ghost"
+                size="sm"
+                :loading="setStatus.isPending.value"
+                @click="transition(t.to)"
+              >
+                {{ t.label }}
+              </AppButton>
+            </div>
+          </details>
         </div>
       </div>
+      <section
+        v-if="props.commitment.activity_type === 'booking'"
+        class="rounded-xl border border-line p-4"
+        aria-label="Booking status"
+      >
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p class="text-13 text-muted mb-1">
+              Booking
+            </p><StatusBadge
+              :label="bookingStatusLabel(props.commitment.status, props.commitment.booking_confirmed)"
+              tone="neutral"
+            />
+          </div>
+          <div
+            v-if="props.canEdit && !isRecurring"
+            class="flex flex-wrap gap-2"
+          >
+            <AppButton
+              v-for="t in bookingActions"
+              :key="t.to"
+              variant="secondary"
+              size="sm"
+              :loading="setStatus.isPending.value"
+              @click="transition(t.to)"
+            >
+              {{ t.label }}
+            </AppButton>
+          </div>
+        </div>
+        <p
+          v-if="!isRecurring && ['idea', 'researching', 'confirmed'].includes(props.commitment.status)"
+          class="text-13 text-muted mt-3"
+        >
+          {{ props.commitment.status === 'idea' ? 'Start the activity, then record its booking here.' : 'Finish the booking steps here before completing the activity.' }} Booking and execution are tracked separately.
+        </p>
+      </section>
 
       <div class="grid sm:grid-cols-2 gap-x-6 gap-y-3 text-14">
         <div v-if="props.commitment.starts_at">
@@ -219,11 +278,6 @@ const repeatLabel = computed(() =>
           >
             {{ props.commitment.booking_reference }}
           </div>
-          <StatusBadge
-            v-if="workflow.preferredFields.booking && props.commitment.booking_confirmed"
-            label="Confirmed"
-            tone="accent"
-          />
         </div>
         <div v-if="props.commitment.estimated_cost_minor != null">
           <div class="text-13 text-muted">
@@ -369,6 +423,14 @@ const repeatLabel = computed(() =>
       :currency="props.currency"
       :members="props.members"
       readonly
+    />
+    <MemberSettlementPanel
+      :id="props.commitment.id"
+      :key="props.commitment.id"
+      :project-id="props.projectId"
+      :currency="props.currency"
+      :timezone="props.timezone"
+      :can-edit="props.canEditPayments"
     />
     <ActualCostDialog
       :open="costOpen"

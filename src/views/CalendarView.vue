@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { executionStatusLabel } from "@/lib/activityWorkflows";
 import { computed, ref } from "vue";
 import { DateTime } from "luxon";
 import { RouterLink } from "vue-router";
@@ -352,7 +353,7 @@ function isPast(event: GlobalTimelineEvent): boolean {
             />
             <StatusBadge
               v-else-if="event.status"
-              :label="event.status"
+              :label="event.subject_type === 'commitment' && !event.is_recurring_occurrence ? executionStatusLabel(event.status) : event.status"
               :tone="statusTone(event.status)"
             />
           </div>

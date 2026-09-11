@@ -7,7 +7,7 @@ import * as financials from "@/services/financialPlanning";
 export function useFinancialPlanning() {
   const client = useQueryClient();
   const refresh = (projectId: string, id?: string) => invalidatePlanning(client, projectId, [
-    ["activity-cost-shares"], ["project", projectId, "balances"], qk.project.commitments(projectId), qk.project.budgetCategories(projectId),
+    ["activity-cost-shares"], ["settlement"], ["project", projectId, "balances"], qk.project.commitments(projectId), qk.project.budgetCategories(projectId),
     qk.project.healthSummary(projectId), qk.project.health(projectId),
     qk.admin.project(projectId), qk.admin.projectHealth(projectId), qk.admin.overview(), ["admin", "projects"],
     ...(id ? [qk.commitment.financials(id)] : []),
