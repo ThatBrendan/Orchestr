@@ -4,7 +4,7 @@ import { computed } from "vue";
 import { useRoute } from "vue-router";
 import { useProjectContext } from "@/composables/useProjectContext";
 import { APP_NAME, config } from "@/config";
-import orchestrioIcon from "@/assets/orchestrio-icon.svg";
+import orchestrioIcon from "@/assets/orchestrio-favicon.svg";
 
 const route = useRoute();
 const { project } = useProjectContext();
