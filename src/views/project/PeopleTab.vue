@@ -19,6 +19,7 @@ import StatusBadge from "@/components/ui/StatusBadge.vue";
 import AppButton from "@/components/ui/AppButton.vue";
 import AppConfirmDialog from "@/components/ui/AppConfirmDialog.vue";
 import InviteMemberDialog from "@/components/members/InviteMemberDialog.vue";
+import { presentLabel } from "@/lib/presentation";
 
 const route = useRoute();
 const projectId = computed(() => String(route.params.projectId));
@@ -153,7 +154,7 @@ const statusTone = (s: string) => (s === "invited" ? "amber" : s === "removed" ?
                 >{{ balanceLabel(m.member_id) }}</span>
               </div>
               <div class="text-13 text-muted capitalize">
-                {{ m.role }}
+                {{ presentLabel(m.role) }}
               </div>
             </div>
             <StatusBadge
@@ -233,7 +234,7 @@ const statusTone = (s: string) => (s === "invited" ? "amber" : s === "removed" ?
         >
           <span>{{ inv.email }}</span>
           <p class="text-13 text-muted capitalize">
-            {{ inv.status === 'pending' ? 'Pending invitation' : inv.status }} · {{ inv.role }}
+                {{ inv.status === 'pending' ? 'Pending invitation' : presentLabel(inv.status) }} · {{ presentLabel(inv.role) }}
           </p>
         </div>
       </section>

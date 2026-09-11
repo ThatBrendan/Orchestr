@@ -11,6 +11,7 @@ import ErrorState from "@/components/ui/ErrorState.vue";
 import EmptyState from "@/components/ui/EmptyState.vue";
 import StatusBadge from "@/components/ui/StatusBadge.vue";
 import AppButton from "@/components/ui/AppButton.vue";
+import { presentLabel } from "@/lib/presentation";
 
 const { people, isPending, isError, error, refetch } = useGlobalPeople();
 const { projects } = useMyProjects();
@@ -32,7 +33,7 @@ function projectLabel(count: number): string {
 }
 
 function roleLabel(role: string): string {
-  return role.replace(/_/g, " ");
+  return presentLabel(role);
 }
 
 function roleTone(role: string) {
@@ -212,7 +213,7 @@ function roleTone(role: string) {
                 v-if="project.status !== 'active'"
                 class="mt-1 text-13 capitalize text-muted"
               >
-                {{ project.status }}
+                {{ presentLabel(project.status) }}
               </div>
             </RouterLink>
           </div>

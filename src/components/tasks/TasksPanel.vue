@@ -18,6 +18,7 @@ import SkeletonBlock from "@/components/ui/SkeletonBlock.vue";
 import ErrorState from "@/components/ui/ErrorState.vue";
 import EmptyState from "@/components/ui/EmptyState.vue";
 import AppButton from "@/components/ui/AppButton.vue";
+import { presentLabel } from "@/lib/presentation";
 import AppConfirmDialog from "@/components/ui/AppConfirmDialog.vue";
 
 const props = defineProps<{
@@ -366,14 +367,14 @@ function canDeleteTask(task: Task): boolean {
             @change="changeStatus(t.id, $event)"
           >
             <option :value="t.status">
-              {{ t.status }}
+              {{ presentLabel(t.status) }}
             </option>
             <option
               v-for="s in NEXT[t.status]"
               :key="s"
               :value="s"
             >
-              {{ s }}
+              {{ presentLabel(s) }}
             </option>
           </select>
           <select

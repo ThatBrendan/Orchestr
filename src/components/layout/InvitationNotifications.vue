@@ -5,6 +5,7 @@ import { useNotifications } from "@/composables/useNotifications";
 import { toAppError } from "@/lib/errors";
 import AppModal from "@/components/ui/AppModal.vue";
 import AppButton from "@/components/ui/AppButton.vue";
+import { presentLabel } from "@/lib/presentation";
 
 const open = ref(false);
 const message = ref("");
@@ -81,7 +82,7 @@ async function answer(token: string, action: "accept" | "decline") {
           {{ invitation.inviter_name ?? 'Someone' }} invited you to <strong>{{ invitation.project_name }}</strong>.
         </p>
         <p class="text-13 capitalize">
-          Role: {{ invitation.role }}
+          Role: {{ presentLabel(invitation.role) }}
         </p>
         <time
           class="block text-13 text-muted"

@@ -5,6 +5,7 @@ import EmptyState from "@/components/ui/EmptyState.vue";
 import ErrorState from "@/components/ui/ErrorState.vue";
 import SkeletonBlock from "@/components/ui/SkeletonBlock.vue";
 import StatTile from "@/components/ui/StatTile.vue";
+import { presentAuditAction, presentLabel } from "@/lib/presentation";
 
 const emptySearch = computed(() => "");
 const { overview, isPending, isError, error, refetch } = useAdminOverview();
@@ -170,7 +171,7 @@ function date(value: string | null | undefined) {
               {{ project.name }}
             </div>
             <div class="truncate text-13 text-muted">
-              {{ project.status }} · {{ project.member_count }} members
+              {{ presentLabel(project.status) }} · {{ project.member_count }} members
             </div>
           </RouterLink>
         </div>
@@ -202,7 +203,7 @@ function date(value: string | null | undefined) {
             class="border-b border-line px-4 py-3 last:border-b-0"
           >
             <div class="truncate text-14 font-medium text-ink">
-              {{ event.action }} {{ event.entity_type }}
+              {{ presentAuditAction(event.action, event.entity_type) }}
             </div>
             <div class="truncate text-13 text-muted">
               {{ event.project_name ?? "No project" }} · {{ date(event.at) }}

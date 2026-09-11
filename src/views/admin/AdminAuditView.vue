@@ -5,6 +5,7 @@ import EmptyState from "@/components/ui/EmptyState.vue";
 import ErrorState from "@/components/ui/ErrorState.vue";
 import SkeletonBlock from "@/components/ui/SkeletonBlock.vue";
 import StatusBadge from "@/components/ui/StatusBadge.vue";
+import { presentAuditAction } from "@/lib/presentation";
 
 const search = ref("");
 const { events, isPending, isError, error, refetch } = useAdminAudit(search);
@@ -13,9 +14,6 @@ function dateTime(value: string) {
   return new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
 }
 
-function actionLabel(action: string) {
-  return action === "soft-delete" ? "Delete" : action;
-}
 </script>
 
 <template>
@@ -87,13 +85,10 @@ function actionLabel(action: string) {
               {{ event.actor_display_name ?? event.actor_email ?? "System" }}
             </td>
             <td class="px-4 py-3">
-              <StatusBadge :label="actionLabel(event.action)" />
+              <StatusBadge :label="presentAuditAction(event.action)" />
             </td>
             <td class="px-4 py-3 text-ink-soft">
               {{ event.project_name ?? "-" }}
-            </td>
-            <td class="px-4 py-3 text-muted">
-              {{ event.request_id ?? "-" }}
             </td>
           </tr>
         </tbody>

@@ -107,52 +107,11 @@ const categoriesWithData = computed(() => categories.value.filter((c) => c.targe
         :paid="financials.net_actual_spend_minor"
         :currency="currency"
       />
-      <div class="grid md:grid-cols-2 gap-5 mt-5">
-        <section class="rounded-xl border border-line p-5 bg-surface">
-          <h2 class="font-medium mb-4">
-            Planning
-          </h2>
-          <dl class="space-y-3 text-14">
-            <div class="flex flex-wrap justify-between gap-2">
-              <dt>Budget target</dt><dd>{{ hasTarget ? format(financials.total_target_minor, currency) : 'Not set' }}</dd>
-            </div>
-            <div class="flex flex-wrap justify-between gap-2">
-              <dt>Planned spend</dt><dd>{{ format(financials.total_cost_minor, currency) }}</dd>
-            </div>
-            <div class="flex flex-wrap justify-between gap-2">
-              <dt>{{ (financials.remaining_budget_minor ?? 0) < 0 ? 'Over budget' : 'Remaining budget' }}</dt><dd>{{ hasTarget ? format(Math.abs(financials.remaining_budget_minor ?? 0), currency) : '—' }}</dd>
-            </div>
-            <div class="flex flex-wrap justify-between gap-2">
-              <dt>Budget used</dt><dd>{{ financials.budget_used_pct == null ? '—' : financials.budget_used_pct + '%' }}</dd>
-            </div>
-            <div class="flex flex-wrap justify-between gap-2">
-              <dt>Projected variance</dt><dd>{{ varianceLabel(financials.projected_variance_minor) }}</dd>
-            </div>
-          </dl>
-          <p class="mt-4 text-13 text-muted">
-            Planned spend includes all noncancelled Activities, using final cost when known, otherwise agreed price or estimate.
-          </p>
-        </section>
-        <section class="rounded-xl border border-line p-5 bg-surface">
-          <h2 class="font-medium mb-4">
-            Payments
-          </h2>
-          <dl class="space-y-3 text-14">
-            <div class="flex flex-wrap justify-between gap-2">
-              <dt>Paid so far</dt><dd>{{ format(financials.net_actual_spend_minor, currency) }}</dd>
-            </div>
-            <div class="flex flex-wrap justify-between gap-2">
-              <dt>Outstanding payments</dt><dd>{{ format(financials.outstanding_minor, currency) }}</dd>
-            </div>
-            <div class="flex flex-wrap justify-between gap-2">
-              <dt>Paid variance</dt><dd>{{ varianceLabel(financials.settled_variance_minor) }}</dd>
-            </div>
-          </dl>
-          <p class="mt-4 text-13 text-muted">
-            Paid so far is net of refunds. Outstanding covers unpaid costs of confirmed, booked and completed Activities. Paid variance compares payments with the budget target.
-          </p>
-        </section>
-      </div>
+      <MemberBalances
+        :project-id="projectId"
+        :currency="currency"
+      />
+    
       <section class="mt-8">
         <SectionHeading label="By category" />
         <SkeletonBlock
@@ -227,10 +186,7 @@ const categoriesWithData = computed(() => categories.value.filter((c) => c.targe
           </table>
         </div>
       </section>
-      <MemberBalances
-        :project-id="projectId"
-        :currency="currency"
-      />
+      
       <BudgetTargetDialog
         :open="budgetOpen"
         :project-id="projectId"

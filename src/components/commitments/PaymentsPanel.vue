@@ -14,6 +14,7 @@ import ErrorState from "@/components/ui/ErrorState.vue";
 import EmptyState from "@/components/ui/EmptyState.vue";
 import StatusBadge from "@/components/ui/StatusBadge.vue";
 import AppButton from "@/components/ui/AppButton.vue";
+import { presentLabel } from "@/lib/presentation";
 
 const props = defineProps<{
   projectId: string;
@@ -227,10 +228,10 @@ const outstanding = computed(() => financials.value?.outstanding_minor ?? null);
       >
         <div class="flex items-center gap-2.5">
           <StatusBadge
-            :label="p.status"
+            :label="presentLabel(p.status)"
             :tone="statusTone(p.status)"
           />
-          <span class="text-13.5 capitalize">{{ p.type }}</span>
+          <span class="text-13.5">{{ presentLabel(p.type) }}</span>
           <span class="text-13.5 font-medium ml-auto">{{ format(p.amount_minor, props.currency) }}</span>
         </div>
         <div class="text-13 text-muted mt-1">

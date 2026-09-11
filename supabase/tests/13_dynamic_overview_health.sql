@@ -49,10 +49,11 @@ select is(
   'task activity does not receive booking/cost health warnings'
 );
 
-select set_has(
-  $$select code from public.get_project_health((select id from pg_temp.profile_projects where profile = 'group_trip')) where subject_label = 'Book hotel'$$,
-  'missing_booking_reference',
-  'booking activity receives booking-reference warning'
+select is(
+  (select count(*)::int from public.get_project_health((select id from pg_temp.profile_projects where profile = 'group_trip'))
+   where subject_label = 'Book hotel' and code = 'missing_booking_reference'),
+  0,
+  'booking reference is optional metadata and creates no Health warning'
 );
 
 select is(

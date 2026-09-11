@@ -3,6 +3,7 @@ import { computed } from "vue";
 import type { TimelineEvent } from "@/types/derived";
 import { useProjectTime } from "@/composables/useProjectTime";
 import StatusBadge from "@/components/ui/StatusBadge.vue";
+import { presentLabel } from "@/lib/presentation";
 
 const props = defineProps<{ events: TimelineEvent[]; timezone: string }>();
 const t = computed(() => useProjectTime(props.timezone));
@@ -86,7 +87,7 @@ const groups = computed<Group[]>(() => {
           >{{ i.label }}</span>
           <StatusBadge
             v-if="i.status && !i.overdue"
-            :label="i.status"
+            :label="presentLabel(i.status)"
             tone="neutral"
             class="capitalize"
           />

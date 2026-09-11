@@ -5,6 +5,7 @@ import EmptyState from "@/components/ui/EmptyState.vue";
 import ErrorState from "@/components/ui/ErrorState.vue";
 import SkeletonBlock from "@/components/ui/SkeletonBlock.vue";
 import StatusBadge from "@/components/ui/StatusBadge.vue";
+import { presentLabel } from "@/lib/presentation";
 
 const search = ref("");
 const { invitations, isPending, isError, error, refetch } = useAdminInvitations(search);
@@ -94,10 +95,10 @@ function date(value: string | null | undefined) {
               </RouterLink>
             </td>
             <td class="px-4 py-3 text-ink-soft">
-              {{ invite.role }}
+              {{ presentLabel(invite.role) }}
             </td>
             <td class="px-4 py-3">
-              <StatusBadge :label="invite.status" />
+              <StatusBadge :label="presentLabel(invite.status)" />
             </td>
             <td class="px-4 py-3 text-ink-soft">
               {{ invite.inviter_display_name ?? invite.inviter_email ?? "-" }}

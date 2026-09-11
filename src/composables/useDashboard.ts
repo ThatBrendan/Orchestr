@@ -24,6 +24,11 @@ export function useUpdateMyDisplayName() {
     onSuccess: (profile) => {
       client.setQueryData(qk.me.profile(profile.id), profile);
       void client.invalidateQueries({ queryKey: qk.me.profile(profile.id) });
+      void client.invalidateQueries({ queryKey: ["project"] });
+      void client.invalidateQueries({ queryKey: qk.me.people() });
+      void client.invalidateQueries({ queryKey: qk.me.projects() });
+      void client.invalidateQueries({ queryKey: qk.me.attention() });
+      void client.invalidateQueries({ queryKey: qk.me.calendarRoot() });
     },
   });
 }
