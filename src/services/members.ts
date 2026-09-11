@@ -29,22 +29,11 @@ export async function listMemberDirectory(projectId: string): Promise<MemberDire
   return data ?? [];
 }
 
-/**
- * Invite a person by email — routed through the `invitations-send` Edge Function.
- * `invitations` has no client INSERT policy (docs/SECURITY_RLS.md §5.4); this is the only path.
- */
-export async function inviteMember(
-  projectId: string,
-  email: string,
-  role: Extract<MemberRole, "member" | "viewer">,
-): Promise<{ invitationId: string; emailed: boolean }> {
-  const { data, error } = await supabase.functions.invoke<{ invitationId: string; emailed: boolean }>(
-    "invitations-send",
-    { body: { projectId, email, role } },
-  );
+/** Persist securely; email delivery is deferred independently. */
+export async function inviteMember(projectId: string, email: string, role: Extract<MemberRole, "member" | "viewer">) {
+  const { data, error } = await supabase.rpc("create_invitation", { p_project_id: projectId, p_email: email, p_role: role });
   if (error) throw toAppError(error);
-  if (!data) throw toAppError(new Error("The invitation service did not return a result."));
-  return data;
+  return { invitationId: data, emailed: false };
 }
 
 /** Organizer-only role change on an existing member row (docs/SECURITY_RLS.md §5.3). */

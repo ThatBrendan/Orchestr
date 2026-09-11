@@ -103,8 +103,8 @@ select throws_ok($$select public.accept_invitation('tok-wrongmail')$$,
   'P0001', null, 'INVITE: cannot accept an invitation addressed to a different email');
 select is( public.accept_invitation('tok-good'), 'a2000000-0000-0000-0000-0000000000a2',
   'INVITE: accepting a valid invitation returns the project_id');
-select is( public.accept_invitation('tok-good'), 'a2000000-0000-0000-0000-0000000000a2',
-  'INVITE: acceptance is idempotent for the same user');
+select throws_ok($$select public.accept_invitation('tok-good')$$, 'P0001', null,
+  'INVITE: accepted invitation cannot be accepted twice');
 select pg_temp.logout();
 select is((select role::text from public.project_members
            where project_id='a2000000-0000-0000-0000-0000000000a2' and user_id='1b000000-0000-0000-0000-00000000001b'),

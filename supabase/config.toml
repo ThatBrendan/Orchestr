@@ -56,3 +56,8 @@ enabled = true
 
 [analytics]
 enabled = false
+
+# OPTIONS reaches the handler without gateway JWT rejection. POST validates
+# the bearer token with auth.getUser and uses caller-scoped RLS.
+[functions.invitations-send]
+verify_jwt = false

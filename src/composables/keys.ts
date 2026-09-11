@@ -2,6 +2,7 @@
 export const qk = {
   invitation: (token: string) => ["invitation", token] as const,
   me: {
+    notifications: () => ["me", "notifications"] as const,
     profile: (userId: string) => ["me", "profile", userId] as const,
     platformAdmin: (userId: string) => ["me", "platform-admin", userId] as const,
     projects: () => ["me", "projects"] as const,
@@ -11,6 +12,7 @@ export const qk = {
     people: () => ["me", "people"] as const,
   },
   project: {
+    invitations: (id: string) => ["project", id, "invitations"] as const,
     root: (id: string) => ["project", id] as const,
     detail: (id: string) => ["project", id, "detail"] as const,
     membership: (id: string, userId: string) => ["project", id, "membership", userId] as const,

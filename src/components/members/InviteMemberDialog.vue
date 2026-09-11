@@ -26,7 +26,7 @@ async function submit() {
   }
   try {
     const result = await invite.mutateAsync({ email, role: form.role });
-    toast.success(result.emailed ? "Invitation sent." : "Invitation created (email delivery could not be confirmed).");
+    toast.success(result.emailed ? "Invitation sent." : "Invitation created. Email invite delivery deferred.");
     form.email = "";
     emit("close");
   } catch (e) {
@@ -36,8 +36,16 @@ async function submit() {
 </script>
 
 <template>
-  <AppModal :busy="invite.isPending.value" :open="props.open" title="Invite someone" @close="emit('close')">
-    <form class="space-y-4" @submit.prevent="submit">
+  <AppModal
+    :busy="invite.isPending.value"
+    :open="props.open"
+    title="Invite someone"
+    @close="emit('close')"
+  >
+    <form
+      class="space-y-4"
+      @submit.prevent="submit"
+    >
       <label class="block">
         <span class="text-13 font-medium block mb-1.5 text-ink-soft">Email address</span>
         <input
@@ -46,20 +54,44 @@ async function submit() {
           required
           placeholder="name@example.com"
           class="w-full border rounded-lg px-3.5 py-2.5 text-14 focus-ring border-line"
-        />
+        >
       </label>
       <label class="block">
         <span class="text-13 font-medium block mb-1.5 text-ink-soft">Role</span>
-        <select v-model="form.role" class="w-full border rounded-lg px-3 py-2.5 text-14 focus-ring border-line bg-surface">
-          <option value="member">Member — can edit activities, tasks, payments</option>
-          <option value="viewer">Viewer — read-only</option>
+        <select
+          v-model="form.role"
+          class="w-full border rounded-lg px-3 py-2.5 text-14 focus-ring border-line bg-surface"
+        >
+          <option value="member">Member</option>
+          <option value="viewer">Viewer</option>
         </select>
       </label>
-      <p v-if="fieldError" class="text-13 text-danger">{{ fieldError }}</p>
+      <p class="text-13 text-muted">
+        {{ form.role === 'member' ? 'Can edit activities, tasks and supported payments, subject to project permissions.' : 'Can view the project but cannot make changes.' }}
+      </p>
+      <p
+        v-if="fieldError"
+        class="text-13 text-danger"
+      >
+        {{ fieldError }}
+      </p>
     </form>
     <template #footer>
-      <AppButton variant="secondary" size="sm" :disabled="invite.isPending.value" @click="emit('close')">Cancel</AppButton>
-      <AppButton size="sm" :loading="invite.isPending.value" @click="submit">Send invitation</AppButton>
+      <AppButton
+        variant="secondary"
+        size="sm"
+        :disabled="invite.isPending.value"
+        @click="emit('close')"
+      >
+        Cancel
+      </AppButton>
+      <AppButton
+        size="sm"
+        :loading="invite.isPending.value"
+        @click="submit"
+      >
+        Send invitation
+      </AppButton>
     </template>
   </AppModal>
 </template>

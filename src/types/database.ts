@@ -814,6 +814,10 @@ export interface Database {
       };
     };
     Functions: {
+      create_invitation: { Args: { p_project_id: string; p_email: string; p_role: MemberRole }; Returns: string };
+      decline_invitation: { Args: { p_token: string }; Returns: string };
+      list_my_invitations: { Args: Record<string, never>; Returns: { id: string; project_id: string; token: string; project_name: string; inviter_name: string | null; role: MemberRole; created_at: string }[] };
+
       soft_delete_commitment: { Args: { p_commitment: string }; Returns: string };
       soft_delete_task: { Args: { p_task: string }; Returns: string };
       soft_delete_project: { Args: { p_project: string }; Returns: string };
@@ -1012,7 +1016,7 @@ export interface Database {
       project_status: "draft" | "active" | "completed" | "archived";
       member_role: "organizer" | "member" | "viewer";
       member_status: "invited" | "active" | "removed";
-      invitation_status: "pending" | "accepted" | "expired" | "revoked";
+      invitation_status: "pending" | "accepted" | "expired" | "revoked" | "declined";
       commitment_kind: "accommodation" | "transport" | "food" | "experience" | "services" | "other";
       commitment_status: "idea" | "researching" | "confirmed" | "booked" | "completed" | "cancelled";
       payment_type: "deposit" | "balance" | "installment" | "full" | "refund";

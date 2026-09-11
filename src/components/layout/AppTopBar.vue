@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import InvitationNotifications from "./InvitationNotifications.vue";
 import { computed } from "vue";
 import { useRoute } from "vue-router";
 import { useProjectContext } from "@/composables/useProjectContext";
@@ -23,7 +24,8 @@ const title = computed(() => {
 </script>
 
 <template>
-  <div class="md:hidden sticky top-0 z-10 h-14 flex items-center px-4 border-b border-line bg-surface">
+  <div class="sticky top-0 z-10 h-14 flex items-center px-4 border-b border-line bg-surface">
     <span class="font-display font-semibold text-[16px] truncate">{{ title }}</span>
+    <InvitationNotifications />
   </div>
 </template>

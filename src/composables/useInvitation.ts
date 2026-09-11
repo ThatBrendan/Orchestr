@@ -16,10 +16,16 @@ export function useInvitation(token: MaybeRefOrGetter<string>, opts: { enabled: 
   const accept = useMutation({
     mutationFn: () => invitesService.acceptInvitation(toValue(token)),
     onSuccess: (projectId) => Promise.all([
-      qk.invitation(toValue(token)), qk.project.root(projectId), qk.me.projects(),
+      qk.me.notifications(), qk.invitation(toValue(token)), qk.project.root(projectId), qk.me.projects(),
       qk.me.people(), qk.me.attention(), qk.me.calendarRoot(),
     ].map((queryKey) => client.invalidateQueries({ queryKey }))),
   });
 
-  return { preview, accept };
+  const decline = useMutation({
+    mutationFn: () => invitesService.declineInvitation(toValue(token)),
+    onSuccess: (projectId) => Promise.all([
+      qk.me.notifications(), qk.invitation(toValue(token)), qk.project.root(projectId),
+    ].map((queryKey) => client.invalidateQueries({ queryKey }))),
+  });
+  return { preview, accept, decline };
 }
