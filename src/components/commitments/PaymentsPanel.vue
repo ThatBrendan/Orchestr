@@ -48,7 +48,9 @@ const addError = ref<string | null>(null);
 async function submitAdd() {
   if (createPayment.isPending.value || !props.canEdit) return;
   addError.value = null;
-  const amountMinor = toMinor(addForm.amount_major, props.currency);
+  let amountMinor: number | null;
+  try { amountMinor = toMinor(addForm.amount_major, props.currency); }
+  catch (error) { addError.value = toAppError(error).message; return; }
   if (amountMinor == null || amountMinor <= 0) {
     addError.value = "Enter an amount greater than zero.";
     return;
@@ -174,9 +176,8 @@ const outstanding = computed(() => financials.value?.outstanding_minor ?? null);
       </div>
       <input
         v-model="addForm.amount_major"
-        type="number"
-        step="0.01"
-        min="0.01"
+        type="text"
+        inputmode="decimal"
         :placeholder="`Amount (${props.currency})`"
         class="w-full border rounded-lg px-3 py-2 text-13.5 focus-ring border-line"
       >

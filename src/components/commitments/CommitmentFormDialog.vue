@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { MoneyInput } from "@/lib/money";
 import { computed, reactive, ref, watch } from "vue";
 import { DateTime } from "luxon";
 import { useCreateCommitment, useUpdateCommitment } from "@/composables/useCommitments";
@@ -53,7 +54,7 @@ const form = reactive({
   supplier_contact: "",
   booking_reference: "",
   booking_confirmed: false,
-  estimated_cost_major: "",
+  estimated_cost_major: "" as MoneyInput,
   repeat: "none" as RepeatOptionValue,
   notes: "",
 });
@@ -101,7 +102,7 @@ function resetFromCommitment() {
       supplier_contact: "",
       booking_reference: "",
       booking_confirmed: false,
-      estimated_cost_major: "",
+      estimated_cost_major: "" as MoneyInput,
       repeat: "none",
       notes: "",
     });
@@ -159,11 +160,9 @@ async function submit() {
     fieldError.value = "Choose a date before making this activity repeat.";
     return;
   }
-  const estimatedCost = form.estimated_cost_major.trim() ? toMinor(form.estimated_cost_major, props.currency) : null;
-  if (form.estimated_cost_major.trim() && (estimatedCost == null || estimatedCost < 0)) {
-    fieldError.value = "Estimated cost must be a valid, non-negative amount.";
-    return;
-  }
+  let estimatedCost: number | null;
+  try { estimatedCost = toMinor(form.estimated_cost_major, props.currency); }
+  catch (error) { fieldError.value = toAppError(error).message; return; }
 
   const payload = {
     title: form.title.trim(),
@@ -436,9 +435,8 @@ const isPending = computed(() => create.isPending.value || update.isPending.valu
               <span class="text-13 font-medium block mb-1.5 text-ink-soft">Estimated cost ({{ props.currency }})</span>
               <input
                 v-model="form.estimated_cost_major"
-                type="number"
-                step="0.01"
-                min="0"
+                type="text"
+                inputmode="decimal"
                 class="w-full border rounded-lg px-3.5 py-2.5 text-14 focus-ring border-line"
               >
             </label>

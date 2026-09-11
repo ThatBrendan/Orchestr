@@ -189,6 +189,7 @@ export interface Database {
           owner_member_id: string | null;
           estimated_cost_minor: number | null;
           confirmed_cost_minor: number | null;
+          actual_cost_minor: number | null;
           starts_at: string | null;
           ends_at: string | null;
           is_all_day: boolean;
@@ -222,6 +223,7 @@ export interface Database {
           owner_member_id?: string | null;
           estimated_cost_minor?: number | null;
           confirmed_cost_minor?: number | null;
+          actual_cost_minor?: number | null;
           starts_at?: string | null;
           ends_at?: string | null;
           is_all_day?: boolean;
@@ -565,6 +567,7 @@ export interface Database {
       v_project_financials: {
         Row: {
           project_id: string;
+          budget_used_pct: number | null;
           total_cost_minor: number;
           committed_spend_minor: number;
           gross_paid_minor: number;
@@ -639,6 +642,7 @@ export interface Database {
           kind: Database["public"]["Enums"]["commitment_kind"];
           target_minor: number | null;
           actual_minor: number;
+          net_paid_minor: number;
           variance_minor: number | null;
         };
         Relationships: [];
@@ -832,6 +836,9 @@ export interface Database {
       };
     };
     Functions: {
+      set_project_budget: { Args: { p_project: string; p_amount: number | null }; Returns: undefined };
+      set_commitment_actual_cost: { Args: { p_commitment: string; p_amount: number | null; p_complete?: boolean }; Returns: undefined };
+
       save_commitment_occurrence_note: { Args: { p_commitment: string; p_occurrence_date: string; p_note: string | null }; Returns: undefined };
 
       create_project_note: { Args: { p_project: string; p_title: string; p_body: string }; Returns: string };
@@ -1043,7 +1050,7 @@ export interface Database {
       member_role: "organizer" | "member" | "viewer";
       member_status: "invited" | "active" | "removed";
       invitation_status: "pending" | "accepted" | "expired" | "revoked" | "declined";
-      commitment_kind: "accommodation" | "transport" | "food" | "experience" | "services" | "other";
+      commitment_kind: "accommodation" | "transport" | "food" | "experience" | "services" | "equipment_assets" | "technology" | "marketing" | "supplies_materials" | "fees_admin" | "other";
       commitment_status: "idea" | "researching" | "confirmed" | "booked" | "completed" | "cancelled";
       payment_type: "deposit" | "balance" | "installment" | "full" | "refund";
       payment_direction: "outgoing" | "incoming";

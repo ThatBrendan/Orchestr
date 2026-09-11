@@ -85,8 +85,8 @@ function cardModel(card: OverviewCardKey) {
     },
     budget: {
       label: "Budget",
-      value: format(o.total_target_minor, currency.value),
-      detail: o.remaining_budget_minor == null ? "No budget target set" : `${format(o.remaining_budget_minor, currency.value)} remaining`,
+      value: o.total_target_minor == null ? "Not set" : format(o.total_target_minor, currency.value),
+      detail: `Planned ${format(o.total_cost_minor, currency.value)} · Paid ${format(o.net_actual_spend_minor, currency.value)} · ${o.remaining_budget_minor == null ? "No budget target set" : o.remaining_budget_minor === 0 ? "On budget" : `${format(Math.abs(o.remaining_budget_minor), currency.value)} ${o.remaining_budget_minor < 0 ? "over budget" : "remaining"}`}`,
       tone: o.remaining_budget_minor != null && o.remaining_budget_minor < 0 ? "amber" : "default",
     },
     payments: {

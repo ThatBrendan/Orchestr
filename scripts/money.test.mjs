@@ -1,0 +1,11 @@
+import assert from 'node:assert/strict';
+import { build } from 'vite';
+const output = await build({ configFile: false, logLevel: 'silent', build: { write: false, minify: false, lib: { entry: 'src/lib/money.ts', formats: ['es'] } } });
+const result = Array.isArray(output) ? output[0] : output;
+const { parseMoney } = await import(`data:text/javascript;base64,${Buffer.from(result.output.find((item) => item.type === 'chunk').code).toString('base64')}`);
+for (const [value, expected] of [['500', 50000], [500, 50000], ['500.25', 50025], [500.25, 50025], ['', null], [' ', null], [null, null], [undefined, null], ['0', 0], [0, 0], ['0.29', 29]]) assert.equal(parseMoney(value, 'GBP'), expected);
+for (const value of [NaN, Infinity, -1, '-1', '12abc', '1e3', '1,000', '1.005', '9007199254740992', '0x10']) assert.throws(() => parseMoney(value, 'GBP'));
+assert.equal(parseMoney('123', 'JPY'), 123);
+assert.throws(() => parseMoney('1.1', 'JPY'));
+assert.equal(parseMoney('1.005', 'KWD'), 1005);
+process.stdout.write('Money input tests passed: string/number/null/empty/zero/decimal/invalid and currency precision.\n');

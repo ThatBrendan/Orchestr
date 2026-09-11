@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import ActualCostDialog from "./ActualCostDialog.vue";
+import { useProjectContext } from "@/composables/useProjectContext";
 import { computed, ref } from "vue";
 import { DateTime } from "luxon";
 import {
@@ -53,7 +55,16 @@ const workflow = computed(() => activityWorkflow(props.commitment.activity_type)
 const nextTransitions = computed(() => commitmentStatusActions(props.commitment.activity_type, props.commitment.status));
 const statusTone = (s: string) => (s === "cancelled" ? "neutral" : s === "completed" || s === "booked" ? "accent" : "amber");
 
+const { context, isOrganizer } = useProjectContext();
+const costOpen = ref(false);
+const completingWithCost = ref(false);
+const costBearing = computed(() => props.commitment.estimated_cost_minor != null || props.commitment.confirmed_cost_minor != null || props.commitment.actual_cost_minor != null);
+const canSetActual = computed(() => props.canEdit && (isOrganizer.value || (context.value?.memberId === props.commitment.owner_member_id && !['completed', 'cancelled'].includes(props.commitment.status))));
+const costVariance = computed(() => props.commitment.actual_cost_minor != null && props.commitment.estimated_cost_minor != null ? props.commitment.actual_cost_minor - props.commitment.estimated_cost_minor : null);
 async function transition(to: CommitmentStatus) {
+  if (to === "completed" && costBearing.value && canSetActual.value) {
+    completingWithCost.value = true; costOpen.value = true; return;
+  }
   try {
     await setStatus.mutateAsync({ id: props.commitment.id, status: to });
     toast.success("Status updated.");
@@ -232,6 +243,27 @@ const repeatLabel = computed(() =>
           </div>
         </div>
       </div>
+      <section
+        v-if="costBearing || canSetActual"
+        class="rounded-xl border border-line p-4 space-y-2 text-14"
+      >
+        <p>Estimated: {{ format(props.commitment.estimated_cost_minor, props.currency) }}</p>
+        <p v-if="props.commitment.confirmed_cost_minor != null">
+          Agreed price: {{ format(props.commitment.confirmed_cost_minor, props.currency) }}
+        </p>
+        <p>Actual / final: {{ format(props.commitment.actual_cost_minor, props.currency) }}</p>
+        <p v-if="costVariance != null">
+          Variance: {{ format(Math.abs(costVariance), props.currency) }} {{ costVariance < 0 ? 'under estimate' : costVariance > 0 ? 'over estimate' : 'difference' }}
+        </p>
+        <AppButton
+          v-if="canSetActual"
+          size="sm"
+          variant="secondary"
+          @click="completingWithCost = false; costOpen = true"
+        >
+          {{ props.commitment.actual_cost_minor == null ? 'Set final cost' : 'Edit final cost' }}
+        </AppButton>
+      </section>
       <div v-if="props.commitment.notes">
         <h3 class="text-13 font-medium mb-2">
           {{ isRecurring ? 'Instructions' : 'Notes' }}
@@ -328,6 +360,14 @@ const repeatLabel = computed(() =>
       />
     </div>
 
+    <ActualCostDialog
+      :open="costOpen"
+      :project-id="props.projectId"
+      :currency="props.currency"
+      :commitment="props.commitment"
+      :complete="completingWithCost"
+      @close="costOpen = false"
+    />
     <!-- Keep confirmation inside the Dialog tree so Headless UI treats it as
          the active nested dialog (focus, inert handling and outside clicks). -->
     <AppConfirmDialog
