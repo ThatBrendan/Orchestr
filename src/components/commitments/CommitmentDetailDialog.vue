@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import CostSplitEditor from "./CostSplitEditor.vue";
 import ActualCostDialog from "./ActualCostDialog.vue";
 import { useProjectContext } from "@/composables/useProjectContext";
 import { computed, ref } from "vue";
@@ -360,12 +361,22 @@ const repeatLabel = computed(() =>
       />
     </div>
 
+    <CostSplitEditor
+      v-if="open && costBearing"
+      :key="props.commitment.id + String(props.commitment.cost_split_mode)"
+      :commitment="props.commitment"
+      :cost="props.commitment.actual_cost_minor ?? props.commitment.confirmed_cost_minor ?? props.commitment.estimated_cost_minor"
+      :currency="props.currency"
+      :members="props.members"
+      readonly
+    />
     <ActualCostDialog
       :open="costOpen"
       :project-id="props.projectId"
       :currency="props.currency"
       :commitment="props.commitment"
       :complete="completingWithCost"
+      :members="props.members"
       @close="costOpen = false"
     />
     <!-- Keep confirmation inside the Dialog tree so Headless UI treats it as

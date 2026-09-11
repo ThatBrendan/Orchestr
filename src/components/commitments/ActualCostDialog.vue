@@ -1,17 +1,21 @@
 <script setup lang="ts">
-import { ref, watch } from "vue";
+import CostSplitEditor from "./CostSplitEditor.vue";
+import type { MemberDirectoryEntry } from "@/types/derived";
+import { computed, ref, watch } from "vue";
 import { useMoney } from "@/composables/useMoney";
 import { useFinancialPlanning } from "@/composables/useFinancialPlanning";
 import { toAppError } from "@/lib/errors";
 import type { Commitment } from "@/services/commitments";
 import AppModal from "@/components/ui/AppModal.vue";
 import AppButton from "@/components/ui/AppButton.vue";
-const props = defineProps<{ open: boolean; projectId: string; currency: string; commitment: Commitment; complete: boolean }>();
+const props = defineProps<{ open: boolean; projectId: string; currency: string; commitment: Commitment; complete: boolean; members: MemberDirectoryEntry[] }>();
 const emit = defineEmits<{ close: [] }>();
 const { format, toMajor, toMinor } = useMoney();
 const { actual } = useFinancialPlanning();
 const draft = ref("");
 const error = ref("");
+const splitEditor = ref<InstanceType<typeof CostSplitEditor>>();
+const splitCost = computed(() => { try { return toMinor(draft.value, props.currency) ?? props.commitment.confirmed_cost_minor ?? props.commitment.estimated_cost_minor; } catch { return null; } });
 watch(() => props.open, (open) => {
   if (open) {
     const amount = props.commitment.actual_cost_minor ?? (props.complete ? props.commitment.confirmed_cost_minor ?? props.commitment.estimated_cost_minor : null);
@@ -24,7 +28,7 @@ async function save() {
   try {
     const amount = toMinor(draft.value, props.currency);
     if (props.complete && amount == null) throw new Error("Confirm the final cost, including zero if nothing was spent.");
-    await actual.mutateAsync({ projectId: props.projectId, id: props.commitment.id, amount, complete: props.complete });
+    await actual.mutateAsync({ projectId: props.projectId, id: props.commitment.id, amount, complete: props.complete, split: splitEditor.value?.getSplit() });
     emit("close");
   } catch (e) { error.value = toAppError(e).message; }
 }
@@ -68,6 +72,14 @@ async function save() {
         {{ error }}
       </p>
     </form>
+    <CostSplitEditor
+      v-if="open"
+      ref="splitEditor"
+      :commitment="commitment"
+      :cost="splitCost"
+      :currency="currency"
+      :members="members"
+    />
     <template #footer>
       <AppButton
         size="sm"

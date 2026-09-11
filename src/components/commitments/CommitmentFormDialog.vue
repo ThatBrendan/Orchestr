@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import CostSplitEditor from "./CostSplitEditor.vue";
 import type { MoneyInput } from "@/lib/money";
 import { computed, reactive, ref, watch } from "vue";
 import { DateTime } from "luxon";
@@ -57,6 +58,11 @@ const form = reactive({
   estimated_cost_major: "" as MoneyInput,
   repeat: "none" as RepeatOptionValue,
   notes: "",
+});
+const splitEditor = ref<InstanceType<typeof CostSplitEditor>>();
+const splitCost = computed(() => {
+  try { return props.commitment?.actual_cost_minor ?? props.commitment?.confirmed_cost_minor ?? toMinor(form.estimated_cost_major, props.currency); }
+  catch { return null; }
 });
 const fieldError = ref<string | null>(null);
 const showEndDate = ref(false);
@@ -189,10 +195,10 @@ async function submit() {
 
   try {
     if (props.commitment) {
-      await update.mutateAsync({ id: props.commitment.id, patch: payload });
+      await update.mutateAsync({ id: props.commitment.id, patch: payload, costSplit: splitEditor.value?.getSplit() });
       toast.success("Activity updated.");
     } else {
-      await create.mutateAsync({ ...payload, project_id: props.projectId, status: selectedWorkflow.value.defaultStatus });
+      await create.mutateAsync({ ...payload, project_id: props.projectId, status: selectedWorkflow.value.defaultStatus, costSplit: splitEditor.value?.getSplit() });
       toast.success("Activity created.");
     }
     emit("close");
@@ -452,6 +458,15 @@ const isPending = computed(() => create.isPending.value || update.isPending.valu
       </p>
     </form>
 
+    <CostSplitEditor
+      v-if="open && (splitCost != null || commitment)"
+      ref="splitEditor"
+      :key="commitment?.id ?? 'new'"
+      :commitment="commitment"
+      :cost="splitCost"
+      :currency="currency"
+      :members="memberOptions"
+    />
     <template #footer>
       <AppButton
         variant="secondary"

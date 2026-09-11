@@ -190,6 +190,7 @@ export interface Database {
           estimated_cost_minor: number | null;
           confirmed_cost_minor: number | null;
           actual_cost_minor: number | null;
+          cost_split_mode: "none" | "even" | "custom" | null;
           starts_at: string | null;
           ends_at: string | null;
           is_all_day: boolean;
@@ -224,6 +225,7 @@ export interface Database {
           estimated_cost_minor?: number | null;
           confirmed_cost_minor?: number | null;
           actual_cost_minor?: number | null;
+          cost_split_mode?: "none" | "even" | "custom" | null;
           starts_at?: string | null;
           ends_at?: string | null;
           is_all_day?: boolean;
@@ -534,6 +536,10 @@ export interface Database {
       };
     };
     Views: {
+      v_activity_cost_shares: {
+        Row: { project_id: string; commitment_id: string; member_id: string; amount_minor: number };
+        Relationships: [];
+      };
       v_project_notes: {
         Row: Database["public"]["Tables"]["project_notes"]["Row"] & { creator_name: string | null };
         Relationships: [];
@@ -836,6 +842,9 @@ export interface Database {
       };
     };
     Functions: {
+      set_activity_cost_split: { Args: { p_commitment: string; p_split: Json }; Returns: undefined };
+      save_activity_with_split: { Args: { p_project: string; p_commitment: string | null; p_fields: Json; p_split: Json | null }; Returns: Database["public"]["Tables"]["commitments"]["Row"] };
+      set_actual_cost_with_split: { Args: { p_commitment: string; p_amount: number | null; p_complete: boolean; p_split: Json | null }; Returns: undefined };
       set_project_budget: { Args: { p_project: string; p_amount: number | null }; Returns: undefined };
       set_commitment_actual_cost: { Args: { p_commitment: string; p_amount: number | null; p_complete?: boolean }; Returns: undefined };
 

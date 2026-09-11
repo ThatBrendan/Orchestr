@@ -4,12 +4,12 @@ import { qk } from "./keys";
 import { invalidatePlanning } from "./invalidation";
 import * as commitmentsService from "@/services/commitments";
 import * as derived from "@/services/derived";
-import type { TablesInsert, TablesUpdate, CommitmentStatus } from "@/types/database";
+import type { TablesInsert, TablesUpdate, CommitmentStatus, Json } from "@/types/database";
 
 function invalidateCommitmentEffects(client: ReturnType<typeof useQueryClient>, projectId: string) {
   return invalidatePlanning(client, projectId, [
     qk.project.commitments(projectId), qk.project.tasks(projectId),
-    qk.project.budgetCategories(projectId), qk.project.milestones(projectId),
+    qk.project.budgetCategories(projectId), qk.project.milestones(projectId), ["activity-cost-shares"], ["project", projectId, "balances"],
   ]);
 }
 
@@ -30,7 +30,7 @@ export function useCommitments(projectId: MaybeRefOrGetter<string>) {
 export function useCreateCommitment(projectId: string) {
   const client = useQueryClient();
   return useMutation({
-    mutationFn: (input: TablesInsert<"commitments">) => commitmentsService.createCommitment(input),
+    mutationFn: (input: TablesInsert<"commitments"> & { costSplit?: Json }) => commitmentsService.createCommitment(input),
     onSuccess: () => {
       return invalidateCommitmentEffects(client, projectId);
     },
@@ -40,8 +40,8 @@ export function useCreateCommitment(projectId: string) {
 export function useUpdateCommitment(projectId: string) {
   const client = useQueryClient();
   return useMutation({
-    mutationFn: (input: { id: string; patch: Omit<TablesUpdate<"commitments">, "status" | "deleted_at"> }) =>
-      commitmentsService.updateCommitment(input.id, input.patch),
+    mutationFn: (input: { id: string; patch: Omit<TablesUpdate<"commitments">, "status" | "deleted_at">; costSplit?: Json }) =>
+      commitmentsService.updateCommitment(input.id, input.patch, input.costSplit),
     onSuccess: (_data, input) => {
       void client.invalidateQueries({ queryKey: qk.commitment.financials(input.id) });
       void client.invalidateQueries({ queryKey: qk.commitment.occurrencesRoot(input.id) });
