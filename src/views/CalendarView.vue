@@ -116,11 +116,11 @@ function eventKey(event: GlobalTimelineEvent): string {
 function eventAccessibleLabel(event: GlobalTimelineEvent): string {
   const presentation = calendarPresentation(event.event_type);
   const amount = event.amount_minor != null ? `, ${format(event.amount_minor, event.currency)}` : "";
-  return `${presentation.label}: ${event.title}, ${event.project_name}, ${eventDate(event)}${amount}`;
+  return `${presentation.label}: ${event.title}, ${event.project_name}, ${eventDate(event)}${event.is_recurring_occurrence ? `, ${event.status}` : ""}${amount}`;
 }
 
 function eventStatusClass(event: GlobalTimelineEvent): string {
-  if (["completed", "paid", "booked", "cancelled", "waived"].includes(event.status ?? "")) {
+  if (["completed", "paid", "booked", "cancelled", "waived", "skipped"].includes(event.status ?? "")) {
     return "opacity-50 grayscale";
   }
   if (event.status === "overdue" || isPast(event)) return "ring-1 ring-amber-400";
@@ -141,6 +141,7 @@ function openDayAgenda(day: string) {
 }
 
 function isPast(event: GlobalTimelineEvent): boolean {
+  if (event.is_recurring_occurrence) return event.status === "overdue";
   return DateTime.fromISO(event.occurs_at) < DateTime.now() && !["completed", "paid", "booked"].includes(event.status ?? "");
 }
 </script>
@@ -149,50 +150,126 @@ function isPast(event: GlobalTimelineEvent): boolean {
   <PageContainer width="lg">
     <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
       <div>
-        <h1 class="font-display text-[26px] font-semibold tracking-tight">Calendar</h1>
-        <p class="mt-1.5 text-14.5 text-ink-soft">All deadlines, bookings and payments across your projects.</p>
+        <h1 class="font-display text-[26px] font-semibold tracking-tight">
+          Calendar
+        </h1>
+        <p class="mt-1.5 text-14.5 text-ink-soft">
+          All deadlines, bookings and payments across your projects.
+        </p>
       </div>
       <div class="flex flex-wrap items-center gap-2">
-        <AppButton variant="secondary" size="sm" @click="moveMonth(-1)">Previous month</AppButton>
-        <AppButton variant="secondary" size="sm" @click="goToday">Today</AppButton>
-        <AppButton variant="secondary" size="sm" @click="moveMonth(1)">Next month</AppButton>
+        <AppButton
+          variant="secondary"
+          size="sm"
+          @click="moveMonth(-1)"
+        >
+          Previous month
+        </AppButton>
+        <AppButton
+          variant="secondary"
+          size="sm"
+          @click="goToday"
+        >
+          Today
+        </AppButton>
+        <AppButton
+          variant="secondary"
+          size="sm"
+          @click="moveMonth(1)"
+        >
+          Next month
+        </AppButton>
       </div>
     </div>
 
     <div class="mt-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-      <h2 class="font-display text-[22px] font-semibold tracking-tight">{{ monthLabel }}</h2>
+      <h2 class="font-display text-[22px] font-semibold tracking-tight">
+        {{ monthLabel }}
+      </h2>
       <div class="grid gap-2 sm:grid-cols-2 md:w-[28rem]">
-        <select v-model="selectedProject" class="border rounded-lg px-3 py-2 text-14 focus-ring border-line bg-surface">
-          <option value="">All projects</option>
-          <option v-for="project in projects" :key="project.project_id" :value="project.project_id">{{ project.name }}</option>
+        <select
+          v-model="selectedProject"
+          class="border rounded-lg px-3 py-2 text-14 focus-ring border-line bg-surface"
+        >
+          <option value="">
+            All projects
+          </option>
+          <option
+            v-for="project in projects"
+            :key="project.project_id"
+            :value="project.project_id"
+          >
+            {{ project.name }}
+          </option>
         </select>
-        <select v-model="selectedType" class="border rounded-lg px-3 py-2 text-14 capitalize focus-ring border-line bg-surface">
-          <option value="">All event types</option>
-          <option v-for="type in eventTypes" :key="type" :value="type">{{ typeLabel(type) }}</option>
+        <select
+          v-model="selectedType"
+          class="border rounded-lg px-3 py-2 text-14 capitalize focus-ring border-line bg-surface"
+        >
+          <option value="">
+            All event types
+          </option>
+          <option
+            v-for="type in eventTypes"
+            :key="type"
+            :value="type"
+          >
+            {{ typeLabel(type) }}
+          </option>
         </select>
       </div>
     </div>
 
-    <div class="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-12 text-muted" aria-label="Calendar legend">
-      <span v-for="semantic in CALENDAR_SEMANTICS" :key="semantic.semantic" class="inline-flex items-center gap-1.5">
-        <span class="inline-flex h-5 w-5 items-center justify-center rounded border" :class="semantic.markerClass">
-          <AppIcon :name="semantic.icon" :size="12" />
+    <div
+      class="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-12 text-muted"
+      aria-label="Calendar legend"
+    >
+      <span
+        v-for="semantic in CALENDAR_SEMANTICS"
+        :key="semantic.semantic"
+        class="inline-flex items-center gap-1.5"
+      >
+        <span
+          class="inline-flex h-5 w-5 items-center justify-center rounded border"
+          :class="semantic.markerClass"
+        >
+          <AppIcon
+            :name="semantic.icon"
+            :size="12"
+          />
         </span>
         {{ semantic.label }}
       </span>
     </div>
 
-    <div v-if="calendar.isPending.value" class="mt-5 grid gap-2 md:grid-cols-7">
-      <SkeletonBlock v-for="i in 14" :key="i" height="96px" rounded="0.5rem" />
+    <div
+      v-if="calendar.isPending.value"
+      class="mt-5 grid gap-2 md:grid-cols-7"
+    >
+      <SkeletonBlock
+        v-for="i in 14"
+        :key="i"
+        height="96px"
+        rounded="0.5rem"
+      />
     </div>
-    <ErrorState v-else-if="calendar.isError.value" class="mt-5" :error="calendar.error.value" :retry="() => calendar.refetch()" />
+    <ErrorState
+      v-else-if="calendar.isError.value"
+      class="mt-5"
+      :error="calendar.error.value"
+      :retry="() => calendar.refetch()"
+    />
     <EmptyState
       v-else-if="calendar.events.value.length === 0"
       class="mt-5"
       message="Nothing scheduled yet. Dates, deadlines, bookings and payments from your projects will appear here."
     />
     <template v-else>
-      <EmptyState v-if="filteredEvents.length === 0" class="mt-5" message="Nothing scheduled this month." />
+      <EmptyState
+        v-if="filteredEvents.length === 0"
+        class="mt-5"
+        message="Nothing scheduled this month."
+      />
 
       <div class="mt-5 hidden rounded-xl border border-line bg-surface md:grid md:grid-cols-7">
         <div
@@ -208,7 +285,9 @@ function isPast(event: GlobalTimelineEvent): boolean {
           class="min-h-[8.5rem] border-b border-r border-line p-2 last:border-r-0"
           :class="cell.inMonth ? 'bg-surface' : 'bg-[#FBFBFA] text-muted'"
         >
-          <div class="text-12 font-medium">{{ cell.day.day }}</div>
+          <div class="text-12 font-medium">
+            {{ cell.day.day }}
+          </div>
           <div class="mt-2 flex min-h-12 flex-wrap content-start gap-1">
             <RouterLink
               v-for="event in eventsForDay(cell.key).slice(0, VISIBLE_MARKERS)"
@@ -219,11 +298,17 @@ function isPast(event: GlobalTimelineEvent): boolean {
               :aria-label="eventAccessibleLabel(event)"
               :title="eventAccessibleLabel(event)"
             >
-              <AppIcon :name="calendarPresentation(event.event_type).icon" :size="16" />
+              <AppIcon
+                :name="calendarPresentation(event.event_type).icon"
+                :size="16"
+              />
               <span class="pointer-events-none absolute left-0 top-9 z-30 hidden w-56 rounded-lg border border-line bg-surface p-2.5 text-left text-12 shadow-lg group-hover:block group-focus:block">
                 <span class="block font-medium text-ink">{{ event.title }}</span>
                 <span class="mt-0.5 block text-muted">{{ event.project_name }}</span>
-                <span class="mt-1 block" :class="calendarPresentation(event.event_type).softClass">
+                <span
+                  class="mt-1 block"
+                  :class="calendarPresentation(event.event_type).softClass"
+                >
                   {{ typeLabel(event.event_type) }} · {{ eventDate(event) }}
                 </span>
               </span>
@@ -253,25 +338,51 @@ function isPast(event: GlobalTimelineEvent): boolean {
               <div class="text-13 font-medium text-muted">
                 {{ DateTime.fromISO(event.occurs_at, { zone: event.project_timezone }).toFormat("d LLL") }}
               </div>
-              <div class="mt-1 text-14 font-medium">{{ event.title }}</div>
-              <div class="mt-0.5 text-13 text-muted">{{ event.project_name }}</div>
+              <div class="mt-1 text-14 font-medium">
+                {{ event.title }}
+              </div>
+              <div class="mt-0.5 text-13 text-muted">
+                {{ event.project_name }}
+              </div>
             </div>
-            <StatusBadge v-if="isPast(event)" label="Overdue" tone="amber" />
-            <StatusBadge v-else-if="event.status" :label="event.status" :tone="statusTone(event.status)" />
+            <StatusBadge
+              v-if="isPast(event)"
+              label="Overdue"
+              tone="amber"
+            />
+            <StatusBadge
+              v-else-if="event.status"
+              :label="event.status"
+              :tone="statusTone(event.status)"
+            />
           </div>
           <div class="mt-2 flex flex-wrap gap-2 text-13 text-muted">
-            <span class="inline-flex items-center gap-1" :class="calendarPresentation(event.event_type).softClass">
-              <AppIcon :name="calendarPresentation(event.event_type).icon" :size="14" />
+            <span
+              class="inline-flex items-center gap-1"
+              :class="calendarPresentation(event.event_type).softClass"
+            >
+              <AppIcon
+                :name="calendarPresentation(event.event_type).icon"
+                :size="14"
+              />
               {{ typeLabel(event.event_type) }}
             </span>
             <span v-if="eventTime(event)">{{ eventTime(event) }}</span>
-            <span v-if="event.amount_minor != null" class="font-medium text-ink-soft">{{ format(event.amount_minor, event.currency) }}</span>
+            <span
+              v-if="event.amount_minor != null"
+              class="font-medium text-ink-soft"
+            >{{ format(event.amount_minor, event.currency) }}</span>
           </div>
         </RouterLink>
       </div>
     </template>
 
-    <AppModal :open="!!selectedDay" :title="selectedDayLabel" size="lg" @close="selectedDay = null">
+    <AppModal
+      :open="!!selectedDay"
+      :title="selectedDayLabel"
+      size="lg"
+      @close="selectedDay = null"
+    >
       <div class="space-y-2">
         <RouterLink
           v-for="event in selectedDayEvents"
@@ -286,13 +397,19 @@ function isPast(event: GlobalTimelineEvent): boolean {
             class="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border"
             :class="calendarPresentation(event.event_type).markerClass"
           >
-            <AppIcon :name="calendarPresentation(event.event_type).icon" :size="16" />
+            <AppIcon
+              :name="calendarPresentation(event.event_type).icon"
+              :size="16"
+            />
           </span>
           <span class="min-w-0 flex-1">
             <span class="block truncate text-14 font-medium">{{ event.title }}</span>
             <span class="mt-0.5 block text-13 text-muted">{{ event.project_name }}</span>
-            <span class="mt-1 block text-13" :class="calendarPresentation(event.event_type).softClass">
-              {{ typeLabel(event.event_type) }}<span v-if="event.occurrence_date"> · Recurring</span>
+            <span
+              class="mt-1 block text-13"
+              :class="calendarPresentation(event.event_type).softClass"
+            >
+              {{ typeLabel(event.event_type) }}<span v-if="event.occurrence_date"> · Recurring · <span class="capitalize">{{ event.status }}</span></span>
               <span v-if="event.amount_minor != null"> · {{ format(event.amount_minor, event.currency) }}</span>
             </span>
           </span>

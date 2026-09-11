@@ -160,6 +160,7 @@ const time = computed(() => useProjectTime(timezone.value));
       :currency="currency"
       :timezone="timezone"
       :commitment="detailCommitment"
+      :occurrence-date="typeof route.query.occurrence === 'string' ? route.query.occurrence : undefined"
       :members="members"
       :can-edit="canEdit"
       :can-edit-payments="canEditPayments"

@@ -119,8 +119,8 @@ export function useSkipCommitmentOccurrence(
 ) {
   const client = useQueryClient();
   return useMutation({
-    mutationFn: (occurrenceDate: string) =>
-      commitmentsService.skipCommitmentOccurrence(toValue(commitmentId), occurrenceDate),
+    mutationFn: (input: { date: string; reason: string }) =>
+      commitmentsService.skipCommitmentOccurrence(toValue(commitmentId), input.date, input.reason),
     onSuccess: () => {
       const pid = toValue(projectId);
       const cid = toValue(commitmentId);
@@ -212,5 +212,14 @@ export function useRemoveParticipant(projectId: string, commitmentId: string) {
     onSuccess: () => {
       return invalidatePlanning(client, projectId, [qk.commitment.participants(commitmentId)]);
     },
+  });
+}
+
+export function useSaveCommitmentOccurrenceNote(projectId: MaybeRefOrGetter<string>, commitmentId: MaybeRefOrGetter<string>) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { date: string; note: string | null }) =>
+      commitmentsService.saveCommitmentOccurrenceNote(toValue(commitmentId), input.date, input.note),
+    onSuccess: () => invalidatePlanning(client, toValue(projectId), [qk.commitment.occurrencesRoot(toValue(commitmentId))]),
   });
 }

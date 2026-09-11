@@ -377,11 +377,13 @@ export interface Database {
       };
       commitment_occurrences: {
         Row: {
+          note: string | null;
+          skip_reason: string | null;
           id: string;
           project_id: string;
           commitment_id: string;
           occurrence_date: string;
-          status: Database["public"]["Enums"]["occurrence_status"];
+          status: Database["public"]["Enums"]["occurrence_status"] | null;
           completed_at: string | null;
           skipped_at: string | null;
           created_by: string | null;
@@ -389,16 +391,20 @@ export interface Database {
           updated_at: string;
         };
         Insert: {
+          note?: string | null;
+          skip_reason?: string | null;
           project_id: string;
           commitment_id: string;
           occurrence_date: string;
-          status: Database["public"]["Enums"]["occurrence_status"];
+          status: Database["public"]["Enums"]["occurrence_status"] | null;
           completed_at?: string | null;
           skipped_at?: string | null;
           created_by?: string | null;
         };
         Update: {
-          status?: Database["public"]["Enums"]["occurrence_status"];
+          note?: string | null;
+          skip_reason?: string | null;
+          status?: Database["public"]["Enums"]["occurrence_status"] | null;
           completed_at?: string | null;
           skipped_at?: string | null;
         };
@@ -826,6 +832,8 @@ export interface Database {
       };
     };
     Functions: {
+      save_commitment_occurrence_note: { Args: { p_commitment: string; p_occurrence_date: string; p_note: string | null }; Returns: undefined };
+
       create_project_note: { Args: { p_project: string; p_title: string; p_body: string }; Returns: string };
       update_project_note: { Args: { p_note: string; p_title: string; p_body: string }; Returns: string };
       soft_delete_project_note: { Args: { p_note: string }; Returns: string };
@@ -923,6 +931,8 @@ export interface Database {
           status: string;
           completed_at: string | null;
           skipped_at: string | null;
+          note: string | null;
+          skip_reason: string | null;
         }[];
       };
       get_task_occurrences: {
@@ -941,7 +951,7 @@ export interface Database {
         Returns: undefined;
       };
       skip_commitment_occurrence: {
-        Args: { p_commitment: string; p_occurrence_date: string };
+        Args: { p_commitment: string; p_occurrence_date: string; p_reason: string };
         Returns: undefined;
       };
       stop_commitment_recurrence: {

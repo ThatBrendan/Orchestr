@@ -63,10 +63,11 @@ export async function completeCommitmentOccurrence(commitmentId: string, occurre
   if (error) throw toAppError(error);
 }
 
-export async function skipCommitmentOccurrence(commitmentId: string, occurrenceDate: string): Promise<void> {
+export async function skipCommitmentOccurrence(commitmentId: string, occurrenceDate: string, reason: string): Promise<void> {
   const { error } = await supabase.rpc("skip_commitment_occurrence", {
     p_commitment: commitmentId,
     p_occurrence_date: occurrenceDate,
+    p_reason: reason,
   });
   if (error) throw toAppError(error);
 }
@@ -108,4 +109,11 @@ export async function removeParticipant(participantId: string): Promise<void> {
   const { error, count } = await supabase.from("commitment_participants").delete({ count: "exact" }).eq("id", participantId);
   if (error) throw toAppError(error);
   if (count !== 1) throw new AppError("not_found", "Not found or cannot be removed.");
+}
+
+export async function saveCommitmentOccurrenceNote(commitmentId: string, occurrenceDate: string, note: string | null) {
+  const { error } = await supabase.rpc("save_commitment_occurrence_note", {
+    p_commitment: commitmentId, p_occurrence_date: occurrenceDate, p_note: note,
+  });
+  if (error) throw toAppError(error);
 }

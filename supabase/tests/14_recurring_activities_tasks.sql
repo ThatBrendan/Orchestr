@@ -121,7 +121,7 @@ select throws_ok(
 
 select public.skip_commitment_occurrence(
   (select c.id from public.commitments c join pg_temp.tz_projects p on p.id = c.project_id where p.timezone = 'UTC'),
-  '2026-09-16'
+  '2026-09-16', 'Waiting for shortlist'
 );
 
 select is(
@@ -131,9 +131,9 @@ select is(
      '2026-09-16',
      '2026-09-16 23:59:59+00'
    )
-   where occurrence_date = '2026-09-16'),
-  0,
-  'skipped occurrence is not shown as due or overdue'
+   where occurrence_date = '2026-09-16' and status = 'skipped'),
+  1,
+  'skipped occurrence remains visible with skipped status'
 );
 
 select public.stop_commitment_recurrence(
