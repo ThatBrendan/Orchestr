@@ -10,6 +10,8 @@ defineProps<{ value: string; label: string; tone?: "default" | "amber" }>();
     >
       {{ value }}
     </div>
-    <div class="text-[12.5px] mt-0.5 text-muted">{{ label }}</div>
+    <div class="text-[12.5px] mt-0.5 text-muted">
+      {{ label }}
+    </div>
   </div>
 </template>

@@ -144,35 +144,71 @@ const status = computed(() => project.value?.status);
 
 <template>
   <div class="fade-in max-w-xl space-y-8">
-    <div v-if="!canEdit" class="border rounded-xl p-4 border-line bg-surface text-14 text-ink-soft">
+    <div
+      v-if="!canEdit"
+      class="border rounded-xl p-4 border-line bg-surface text-14 text-ink-soft"
+    >
       Only an organizer can change project settings.
     </div>
 
     <template v-else>
       <div>
         <SectionHeading label="Details" />
-        <form class="mt-3 space-y-4" @submit.prevent="saveDetails">
+        <form
+          class="mt-3 space-y-4"
+          @submit.prevent="saveDetails"
+        >
           <label class="block">
             <span class="text-13 font-medium block mb-1.5 text-ink-soft">Name</span>
-            <input v-model="form.name" required class="w-full border rounded-lg px-3.5 py-2.5 text-14 focus-ring border-line" />
+            <input
+              v-model="form.name"
+              required
+              class="w-full border rounded-lg px-3.5 py-2.5 text-14 focus-ring border-line"
+            >
           </label>
           <label class="block">
             <span class="text-13 font-medium block mb-1.5 text-ink-soft">Description</span>
-            <textarea v-model="form.description" rows="3" class="w-full border rounded-lg px-3.5 py-2.5 text-14 focus-ring border-line" />
+            <textarea
+              v-model="form.description"
+              rows="3"
+              class="w-full border rounded-lg px-3.5 py-2.5 text-14 focus-ring border-line"
+            />
           </label>
           <div class="grid grid-cols-2 gap-3">
             <label class="block">
               <span class="text-13 font-medium block mb-1.5 text-ink-soft">Start date</span>
-              <input v-model="form.starts_on" type="date" class="w-full border rounded-lg px-3 py-2.5 text-14 focus-ring border-line" />
+              <input
+                v-model="form.starts_on"
+                type="date"
+                class="w-full border rounded-lg px-3 py-2.5 text-14 focus-ring border-line"
+              >
             </label>
             <label class="block">
               <span class="text-13 font-medium block mb-1.5 text-ink-soft">End date</span>
-              <input v-model="form.ends_on" type="date" class="w-full border rounded-lg px-3 py-2.5 text-14 focus-ring border-line" />
+              <input
+                v-model="form.ends_on"
+                type="date"
+                class="w-full border rounded-lg px-3 py-2.5 text-14 focus-ring border-line"
+              >
             </label>
           </div>
-          <p class="text-13 text-muted">Currency is {{ project?.currency }} — locked once activities or payments exist.</p>
-          <p v-if="fieldError" class="text-13 text-danger">{{ fieldError }}</p>
-          <AppButton size="sm" :loading="update.isPending.value" :disabled="status === 'archived'" @click="saveDetails">Save changes</AppButton>
+          <p class="text-13 text-muted">
+            Currency is {{ project?.currency }} — locked once activities or payments exist.
+          </p>
+          <p
+            v-if="fieldError"
+            class="text-13 text-danger"
+          >
+            {{ fieldError }}
+          </p>
+          <AppButton
+            size="sm"
+            :loading="update.isPending.value"
+            :disabled="status === 'archived'"
+            @click="saveDetails"
+          >
+            Save changes
+          </AppButton>
         </form>
       </div>
 
@@ -186,46 +222,108 @@ const status = computed(() => project.value?.status);
               class="w-full border rounded-lg px-3 py-2.5 text-14 focus-ring border-line bg-surface"
               @change="onProfileChange"
             >
-              <option v-for="profileOption in PROJECT_PROFILES" :key="profileOption.value" :value="profileOption.value">
+              <option
+                v-for="profileOption in PROJECT_PROFILES"
+                :key="profileOption.value"
+                :value="profileOption.value"
+              >
                 {{ profileOption.label }}
               </option>
             </select>
             <span class="text-13 text-muted mt-1 block">{{ profileDefinition(form.profile).description }}</span>
           </label>
           <label class="flex items-center gap-2 text-13.5 text-ink-soft">
-            <input v-model="form.budget_visible" type="checkbox" class="rounded border-line" />
+            <input
+              v-model="form.budget_visible"
+              type="checkbox"
+              class="rounded border-line"
+            >
             Show Budget module in this project
           </label>
-          <p class="text-13 text-muted">Changing this only affects navigation and workspace emphasis. Existing data is preserved.</p>
-          <p v-if="workspaceError" class="text-13 text-danger">{{ workspaceError }}</p>
-          <AppButton size="sm" :loading="update.isPending.value" :disabled="status === 'archived'" @click="saveWorkspace">Save workspace</AppButton>
+          <p class="text-13 text-muted">
+            Changing this only affects navigation and workspace emphasis. Existing data is preserved.
+          </p>
+          <p
+            v-if="workspaceError"
+            class="text-13 text-danger"
+          >
+            {{ workspaceError }}
+          </p>
+          <AppButton
+            size="sm"
+            :loading="update.isPending.value"
+            :disabled="status === 'archived'"
+            @click="saveWorkspace"
+          >
+            Save workspace
+          </AppButton>
         </div>
       </div>
 
       <div>
         <SectionHeading label="Status" />
-        <p class="mt-2 text-14 text-ink-soft">Current status: <span class="font-medium capitalize">{{ status }}</span></p>
+        <p class="mt-2 text-14 text-ink-soft">
+          Current status: <span class="font-medium capitalize">{{ status }}</span>
+        </p>
         <div class="mt-3 flex flex-wrap gap-2">
-          <AppButton v-if="status === 'active' && canArchive" variant="secondary" size="sm" :loading="setStatus.isPending.value" @click="changeStatus('completed')">
+          <AppButton
+            v-if="status === 'active' && canArchive"
+            variant="secondary"
+            size="sm"
+            :loading="setStatus.isPending.value"
+            @click="changeStatus('completed')"
+          >
             Mark completed
           </AppButton>
-          <AppButton v-if="status !== 'archived' && canArchive" variant="secondary" size="sm" :loading="setStatus.isPending.value" @click="changeStatus('archived')">
+          <AppButton
+            v-if="status !== 'archived' && canArchive"
+            variant="secondary"
+            size="sm"
+            :loading="setStatus.isPending.value"
+            @click="changeStatus('archived')"
+          >
             Archive project
           </AppButton>
-          <AppButton v-if="status === 'archived' && canArchive" variant="secondary" size="sm" :loading="setStatus.isPending.value" @click="changeStatus('active')">
+          <AppButton
+            v-if="status === 'archived' && canArchive"
+            variant="secondary"
+            size="sm"
+            :loading="setStatus.isPending.value"
+            @click="changeStatus('active')"
+          >
             Unarchive
           </AppButton>
-          <AppButton v-if="status === 'completed' && canArchive" variant="secondary" size="sm" :loading="setStatus.isPending.value" @click="changeStatus('active')">
+          <AppButton
+            v-if="status === 'completed' && canArchive"
+            variant="secondary"
+            size="sm"
+            :loading="setStatus.isPending.value"
+            @click="changeStatus('active')"
+          >
             Reopen
           </AppButton>
         </div>
-        <p v-if="status === 'archived'" class="mt-2 text-13 text-amber">Archived projects are read-only until unarchived.</p>
+        <p
+          v-if="status === 'archived'"
+          class="mt-2 text-13 text-amber"
+        >
+          Archived projects are read-only until unarchived.
+        </p>
       </div>
 
       <div v-if="canDelete">
         <SectionHeading label="Danger zone" />
-        <p class="mt-2 text-13 text-muted">Deleting removes this project from everyone's list. It cannot be undone from the app.</p>
-        <AppButton class="mt-3 !text-danger" variant="secondary" size="sm" @click="confirmDelete = true">Delete project</AppButton>
+        <p class="mt-2 text-13 text-muted">
+          Deleting removes this project from everyone's list. It cannot be undone from the app.
+        </p>
+        <AppButton
+          class="mt-3 !text-danger"
+          variant="secondary"
+          size="sm"
+          @click="confirmDelete = true"
+        >
+          Delete project
+        </AppButton>
       </div>
     </template>
 

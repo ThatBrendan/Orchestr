@@ -10,8 +10,15 @@ const CASES = [
 </script>
 
 <template>
-  <section id="use-cases" class="max-w-6xl mx-auto px-5 md:px-8 py-16 md:py-24" aria-labelledby="cases-heading">
-    <h2 id="cases-heading" class="font-display text-[26px] md:text-[32px] font-semibold tracking-tight">
+  <section
+    id="use-cases"
+    class="max-w-6xl mx-auto px-5 md:px-8 py-16 md:py-24"
+    aria-labelledby="cases-heading"
+  >
+    <h2
+      id="cases-heading"
+      class="font-display text-[26px] md:text-[32px] font-semibold tracking-tight"
+    >
       Different plans, the same problem
     </h2>
     <p class="mt-3 text-[16px] text-ink-soft max-w-2xl">
@@ -20,9 +27,17 @@ const CASES = [
     </p>
 
     <div class="mt-10 grid sm:grid-cols-2 lg:grid-cols-3 gap-px bg-line rounded-xl overflow-hidden border border-line">
-      <div v-for="c in CASES" :key="c.title" class="bg-surface p-5">
-        <h3 class="text-[15px] font-semibold">{{ c.title }}</h3>
-        <p class="mt-1.5 text-13.5 leading-relaxed text-ink-soft">{{ c.body }}</p>
+      <div
+        v-for="c in CASES"
+        :key="c.title"
+        class="bg-surface p-5"
+      >
+        <h3 class="text-[15px] font-semibold">
+          {{ c.title }}
+        </h3>
+        <p class="mt-1.5 text-13.5 leading-relaxed text-ink-soft">
+          {{ c.body }}
+        </p>
       </div>
     </div>
   </section>

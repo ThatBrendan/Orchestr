@@ -23,8 +23,15 @@ function isActive(match: readonly string[]) {
 
 <template>
   <aside class="hidden md:flex w-60 shrink-0 border-r border-line bg-surface flex-col">
-    <RouterLink to="/" class="h-16 flex items-center px-5 border-b border-line focus-ring">
-      <img :src="orchestrioIcon" alt="Orchestrio" class="h-12 w-auto" />
+    <RouterLink
+      to="/"
+      class="h-16 flex items-center px-5 border-b border-line focus-ring"
+    >
+      <img
+        :src="orchestrioIcon"
+        alt="Orchestrio"
+        class="h-12 w-auto"
+      >
     </RouterLink>
 
     <nav class="flex-1 px-3 py-4 space-y-0.5">
@@ -35,7 +42,10 @@ function isActive(match: readonly string[]) {
         class="nav-item flex items-center gap-3 px-3 py-2 rounded-lg text-14 font-medium focus-ring transition-colors"
         :class="isActive(item.match) ? 'text-ink bg-[#F0F0EE]' : 'text-ink-soft hover:bg-[#F6F6F4]'"
       >
-        <AppIcon :name="item.icon" :size="18" />
+        <AppIcon
+          :name="item.icon"
+          :size="18"
+        />
         <span>{{ item.label }}</span>
       </RouterLink>
     </nav>

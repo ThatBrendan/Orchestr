@@ -60,19 +60,34 @@ async function submit() {
         class="block text-center focus-ring"
         :aria-label="APP_NAME"
       >
-        <img :src="orchestrioIcon" :alt="APP_NAME" class="mx-auto h-12 w-auto" />
+        <img
+          :src="orchestrioIcon"
+          :alt="APP_NAME"
+          class="mx-auto h-12 w-auto"
+        >
       </RouterLink>
-      <h1 class="mt-6 text-center font-display text-[19px] font-semibold tracking-tight">Create your account</h1>
+      <h1 class="mt-6 text-center font-display text-[19px] font-semibold tracking-tight">
+        Create your account
+      </h1>
 
-      <div v-if="outcome === 'confirm'" class="mt-6 border rounded-xl p-6 text-center border-line bg-surface">
+      <div
+        v-if="outcome === 'confirm'"
+        class="mt-6 border rounded-xl p-6 text-center border-line bg-surface"
+      >
         <p class="text-14 text-ink-soft">
           Almost there — check <span class="font-medium text-ink">{{ email }}</span> and confirm your email address to
           finish signing up.
         </p>
-        <p class="mt-3 text-13 text-muted">You're not signed in yet.</p>
+        <p class="mt-3 text-13 text-muted">
+          You're not signed in yet.
+        </p>
       </div>
 
-      <form v-else class="mt-6 space-y-4" @submit.prevent="submit">
+      <form
+        v-else
+        class="mt-6 space-y-4"
+        @submit.prevent="submit"
+      >
         <label class="block">
           <span class="text-13 font-medium block mb-1.5 text-ink-soft">Email</span>
           <input
@@ -81,7 +96,7 @@ async function submit() {
             required
             autocomplete="email"
             class="w-full border rounded-lg px-3.5 py-2.5 text-14 focus-ring border-line bg-surface"
-          />
+          >
         </label>
 
         <label class="block">
@@ -93,18 +108,27 @@ async function submit() {
             minlength="8"
             autocomplete="new-password"
             class="w-full border rounded-lg px-3.5 py-2.5 text-14 focus-ring border-line bg-surface"
-          />
+          >
           <span class="text-13 text-muted mt-1 block">At least 8 characters.</span>
         </label>
 
-        <AppButton type="submit" :loading="busy" block>
+        <AppButton
+          type="submit"
+          :loading="busy"
+          block
+        >
           Create account
         </AppButton>
       </form>
 
       <p class="mt-6 text-center text-13 text-muted">
         Already have an account?
-        <RouterLink :to="loginTo" class="text-accent font-medium focus-ring">Log in</RouterLink>
+        <RouterLink
+          :to="loginTo"
+          class="text-accent font-medium focus-ring"
+        >
+          Log in
+        </RouterLink>
       </p>
     </div>
   </div>

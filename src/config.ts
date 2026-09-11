@@ -15,7 +15,6 @@ const Schema = v.object({
 const parsed = v.safeParse(Schema, import.meta.env);
 
 if (!parsed.success) {
-  // eslint-disable-next-line no-console
   console.error(
     "Invalid environment configuration:",
     v.flatten(parsed.issues),

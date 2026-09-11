@@ -37,8 +37,15 @@ const PILLARS: { title: string; body: string; icon: IconName }[] = [
 </script>
 
 <template>
-  <section id="product" class="max-w-6xl mx-auto px-5 md:px-8 py-16 md:py-24" aria-labelledby="pillars-heading">
-    <h2 id="pillars-heading" class="font-display text-[26px] md:text-[32px] font-semibold tracking-tight">
+  <section
+    id="product"
+    class="max-w-6xl mx-auto px-5 md:px-8 py-16 md:py-24"
+    aria-labelledby="pillars-heading"
+  >
+    <h2
+      id="pillars-heading"
+      class="font-display text-[26px] md:text-[32px] font-semibold tracking-tight"
+    >
       One workspace for the whole plan
     </h2>
     <p class="mt-3 text-[16px] text-ink-soft max-w-2xl">
@@ -46,12 +53,23 @@ const PILLARS: { title: string; body: string; icon: IconName }[] = [
     </p>
 
     <div class="mt-10 grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-      <div v-for="p in PILLARS" :key="p.title" class="rounded-xl border border-line bg-surface p-5">
+      <div
+        v-for="p in PILLARS"
+        :key="p.title"
+        class="rounded-xl border border-line bg-surface p-5"
+      >
         <div class="w-9 h-9 rounded-lg bg-accent-soft text-accent flex items-center justify-center">
-          <AppIcon :name="p.icon" :size="18" />
+          <AppIcon
+            :name="p.icon"
+            :size="18"
+          />
         </div>
-        <h3 class="mt-3.5 text-[15px] font-semibold">{{ p.title }}</h3>
-        <p class="mt-1.5 text-13.5 leading-relaxed text-ink-soft">{{ p.body }}</p>
+        <h3 class="mt-3.5 text-[15px] font-semibold">
+          {{ p.title }}
+        </h3>
+        <p class="mt-1.5 text-13.5 leading-relaxed text-ink-soft">
+          {{ p.body }}
+        </p>
       </div>
     </div>
   </section>

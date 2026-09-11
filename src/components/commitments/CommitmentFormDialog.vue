@@ -206,8 +206,17 @@ const isPending = computed(() => create.isPending.value || update.isPending.valu
 </script>
 
 <template>
-  <AppModal :busy="isPending" :open="props.open" :title="props.commitment ? 'Edit activity' : 'New activity'" size="lg" @close="emit('close')">
-    <form class="space-y-4" @submit.prevent="submit">
+  <AppModal
+    :busy="isPending"
+    :open="props.open"
+    :title="props.commitment ? 'Edit activity' : 'New activity'"
+    size="lg"
+    @close="emit('close')"
+  >
+    <form
+      class="space-y-4"
+      @submit.prevent="submit"
+    >
       <label class="block">
         <span class="text-13 font-medium block mb-1.5 text-ink-soft">Title *</span>
         <input
@@ -215,7 +224,7 @@ const isPending = computed(() => create.isPending.value || update.isPending.valu
           required
           maxlength="120"
           class="w-full border rounded-lg px-3.5 py-2.5 text-14 focus-ring border-line"
-        />
+        >
       </label>
 
       <div class="grid gap-3 sm:grid-cols-2">
@@ -226,14 +235,25 @@ const isPending = computed(() => create.isPending.value || update.isPending.valu
             class="w-full border rounded-lg px-3 py-2.5 text-14 focus-ring border-line bg-surface"
             @change="onActivityTypeChange"
           >
-            <option v-for="type in ACTIVITY_WORKFLOWS" :key="type.value" :value="type.value">{{ type.label }}</option>
+            <option
+              v-for="type in ACTIVITY_WORKFLOWS"
+              :key="type.value"
+              :value="type.value"
+            >{{ type.label }}</option>
           </select>
           <span class="text-12 text-muted mt-1 block">Controls how this activity behaves.</span>
         </label>
         <label class="block">
           <span class="text-13 font-medium block mb-1.5 text-ink-soft">Category</span>
-          <select v-model="form.kind" class="w-full border rounded-lg px-3 py-2.5 text-14 focus-ring border-line bg-surface">
-            <option v-for="k in COMMITMENT_CATEGORY_OPTIONS" :key="k.value" :value="k.value">{{ k.label }}</option>
+          <select
+            v-model="form.kind"
+            class="w-full border rounded-lg px-3 py-2.5 text-14 focus-ring border-line bg-surface"
+          >
+            <option
+              v-for="k in COMMITMENT_CATEGORY_OPTIONS"
+              :key="k.value"
+              :value="k.value"
+            >{{ k.label }}</option>
           </select>
           <span class="text-12 text-muted mt-1 block">Groups this activity within the project.</span>
         </label>
@@ -247,7 +267,11 @@ const isPending = computed(() => create.isPending.value || update.isPending.valu
             class="w-full border rounded-lg px-3 py-2.5 text-14 focus-ring border-line bg-surface"
           >
             <option value="">Unassigned</option>
-            <option v-for="m in ownerCandidates" :key="m.member_id" :value="m.member_id">{{ m.display_name }}</option>
+            <option
+              v-for="m in ownerCandidates"
+              :key="m.member_id"
+              :value="m.member_id"
+            >{{ m.display_name }}</option>
           </select>
         </label>
       </div>
@@ -259,7 +283,7 @@ const isPending = computed(() => create.isPending.value || update.isPending.valu
             v-model="form.starts_at"
             type="date"
             class="w-full border rounded-lg px-3 py-2.5 text-14 focus-ring border-line"
-          />
+          >
         </label>
         <label class="block">
           <span class="text-13 font-medium block mb-1.5 text-ink-soft">Repeat</span>
@@ -267,7 +291,11 @@ const isPending = computed(() => create.isPending.value || update.isPending.valu
             v-model="form.repeat"
             class="w-full border rounded-lg px-3 py-2.5 text-14 focus-ring border-line bg-surface"
           >
-            <option v-for="option in REPEAT_OPTIONS" :key="option.value" :value="option.value">
+            <option
+              v-for="option in REPEAT_OPTIONS"
+              :key="option.value"
+              :value="option.value"
+            >
               {{ option.label }}
             </option>
           </select>
@@ -276,11 +304,17 @@ const isPending = computed(() => create.isPending.value || update.isPending.valu
 
       <label class="block">
         <span class="text-13 font-medium block mb-1.5 text-ink-soft">Notes</span>
-        <textarea v-model="form.notes" rows="2" class="w-full border rounded-lg px-3.5 py-2.5 text-14 focus-ring border-line" />
+        <textarea
+          v-model="form.notes"
+          rows="2"
+          class="w-full border rounded-lg px-3.5 py-2.5 text-14 focus-ring border-line"
+        />
       </label>
 
       <div class="border-t border-line pt-4">
-        <h3 class="text-13 font-semibold text-ink-soft uppercase tracking-wide">Additional details</h3>
+        <h3 class="text-13 font-semibold text-ink-soft uppercase tracking-wide">
+          Additional details
+        </h3>
         <div class="mt-3 space-y-3">
           <section>
             <button
@@ -291,13 +325,16 @@ const isPending = computed(() => create.isPending.value || update.isPending.valu
             >
               {{ showEndDate ? "− Hide end date" : "+ Add end date" }}
             </button>
-            <label v-if="showEndDate" class="block mt-2">
+            <label
+              v-if="showEndDate"
+              class="block mt-2"
+            >
               <span class="text-13 font-medium block mb-1.5 text-ink-soft">End date</span>
               <input
                 v-model="form.ends_at"
                 type="date"
                 class="w-full border rounded-lg px-3 py-2.5 text-14 focus-ring border-line"
-              />
+              >
             </label>
           </section>
 
@@ -310,14 +347,23 @@ const isPending = computed(() => create.isPending.value || update.isPending.valu
             >
               {{ showLocation ? "− Hide location" : "+ Add location" }}
             </button>
-            <div v-if="showLocation" class="mt-2 grid gap-3 sm:grid-cols-2">
+            <div
+              v-if="showLocation"
+              class="mt-2 grid gap-3 sm:grid-cols-2"
+            >
               <label class="block">
                 <span class="text-13 font-medium block mb-1.5 text-ink-soft">Location name</span>
-                <input v-model="form.location_label" class="w-full border rounded-lg px-3.5 py-2.5 text-14 focus-ring border-line" />
+                <input
+                  v-model="form.location_label"
+                  class="w-full border rounded-lg px-3.5 py-2.5 text-14 focus-ring border-line"
+                >
               </label>
               <label class="block">
                 <span class="text-13 font-medium block mb-1.5 text-ink-soft">Address</span>
-                <input v-model="form.location_address" class="w-full border rounded-lg px-3.5 py-2.5 text-14 focus-ring border-line" />
+                <input
+                  v-model="form.location_address"
+                  class="w-full border rounded-lg px-3.5 py-2.5 text-14 focus-ring border-line"
+                >
               </label>
             </div>
           </section>
@@ -331,25 +377,44 @@ const isPending = computed(() => create.isPending.value || update.isPending.valu
             >
               {{ showSupplier ? "− Hide supplier / booking" : "+ Add supplier / booking" }}
             </button>
-            <div v-if="showSupplier" class="mt-2 space-y-3">
+            <div
+              v-if="showSupplier"
+              class="mt-2 space-y-3"
+            >
               <div class="grid gap-3 sm:grid-cols-2">
                 <label class="block">
                   <span class="text-13 font-medium block mb-1.5 text-ink-soft">Supplier</span>
-                  <input v-model="form.supplier_name" class="w-full border rounded-lg px-3.5 py-2.5 text-14 focus-ring border-line" />
+                  <input
+                    v-model="form.supplier_name"
+                    class="w-full border rounded-lg px-3.5 py-2.5 text-14 focus-ring border-line"
+                  >
                 </label>
                 <label class="block">
                   <span class="text-13 font-medium block mb-1.5 text-ink-soft">Supplier contact</span>
-                  <input v-model="form.supplier_contact" class="w-full border rounded-lg px-3.5 py-2.5 text-14 focus-ring border-line" />
+                  <input
+                    v-model="form.supplier_contact"
+                    class="w-full border rounded-lg px-3.5 py-2.5 text-14 focus-ring border-line"
+                  >
                 </label>
               </div>
               <label class="block">
                 <span class="text-13 font-medium block mb-1.5 text-ink-soft">
                   {{ selectedWorkflow.preferredFields.booking ? "Booking reference" : "Reference" }}
                 </span>
-                <input v-model="form.booking_reference" class="w-full border rounded-lg px-3.5 py-2.5 text-14 focus-ring border-line" />
+                <input
+                  v-model="form.booking_reference"
+                  class="w-full border rounded-lg px-3.5 py-2.5 text-14 focus-ring border-line"
+                >
               </label>
-              <label v-if="selectedWorkflow.preferredFields.booking || form.booking_confirmed" class="flex items-center gap-2 text-13.5 text-ink-soft">
-                <input v-model="form.booking_confirmed" type="checkbox" class="rounded border-line" />
+              <label
+                v-if="selectedWorkflow.preferredFields.booking || form.booking_confirmed"
+                class="flex items-center gap-2 text-13.5 text-ink-soft"
+              >
+                <input
+                  v-model="form.booking_confirmed"
+                  type="checkbox"
+                  class="rounded border-line"
+                >
                 Booking confirmed
               </label>
             </div>
@@ -364,7 +429,10 @@ const isPending = computed(() => create.isPending.value || update.isPending.valu
             >
               {{ showCost ? "− Hide estimated cost" : "+ Add estimated cost" }}
             </button>
-            <label v-if="showCost" class="block mt-2">
+            <label
+              v-if="showCost"
+              class="block mt-2"
+            >
               <span class="text-13 font-medium block mb-1.5 text-ink-soft">Estimated cost ({{ props.currency }})</span>
               <input
                 v-model="form.estimated_cost_major"
@@ -372,18 +440,36 @@ const isPending = computed(() => create.isPending.value || update.isPending.valu
                 step="0.01"
                 min="0"
                 class="w-full border rounded-lg px-3.5 py-2.5 text-14 focus-ring border-line"
-              />
+              >
             </label>
           </section>
         </div>
       </div>
 
-      <p v-if="fieldError" class="text-13 text-danger">{{ fieldError }}</p>
+      <p
+        v-if="fieldError"
+        class="text-13 text-danger"
+      >
+        {{ fieldError }}
+      </p>
     </form>
 
     <template #footer>
-      <AppButton variant="secondary" size="sm" :disabled="isPending" @click="emit('close')">Cancel</AppButton>
-      <AppButton size="sm" :loading="isPending" @click="submit">{{ props.commitment ? "Save" : "Create activity" }}</AppButton>
+      <AppButton
+        variant="secondary"
+        size="sm"
+        :disabled="isPending"
+        @click="emit('close')"
+      >
+        Cancel
+      </AppButton>
+      <AppButton
+        size="sm"
+        :loading="isPending"
+        @click="submit"
+      >
+        {{ props.commitment ? "Save" : "Create activity" }}
+      </AppButton>
     </template>
   </AppModal>
 </template>

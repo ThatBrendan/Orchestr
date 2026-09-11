@@ -16,7 +16,10 @@ const cls = computed(
 </script>
 
 <template>
-  <span class="inline-flex items-center px-2 py-0.5 rounded text-[12.5px] font-medium" :class="cls">
+  <span
+    class="inline-flex items-center px-2 py-0.5 rounded text-[12.5px] font-medium"
+    :class="cls"
+  >
     {{ props.label }}
   </span>
 </template>

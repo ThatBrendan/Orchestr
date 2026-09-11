@@ -16,9 +16,17 @@ async function handleSignOut() {
 </script>
 
 <template>
-  <Menu as="div" class="relative px-3 py-3 border-t border-line">
+  <Menu
+    as="div"
+    class="relative px-3 py-3 border-t border-line"
+  >
     <MenuButton class="w-full flex items-center gap-2.5 px-2 py-1.5 rounded-lg hover:bg-[#F6F6F4] focus-ring">
-      <AppAvatar :name="profile?.display_name ?? email ?? '?'" :url="profile?.avatar_url" :size="28" tone="ink" />
+      <AppAvatar
+        :name="profile?.display_name ?? email ?? '?'"
+        :url="profile?.avatar_url"
+        :size="28"
+        tone="ink"
+      />
       <span class="text-[13.5px] font-medium truncate">{{ profile?.display_name ?? email }}</span>
     </MenuButton>
     <MenuItems

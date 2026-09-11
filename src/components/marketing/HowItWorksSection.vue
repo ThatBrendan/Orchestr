@@ -24,16 +24,37 @@ const STEPS = [
 </script>
 
 <template>
-  <section id="how-it-works" class="bg-surface border-y border-line" aria-labelledby="how-heading">
+  <section
+    id="how-it-works"
+    class="bg-surface border-y border-line"
+    aria-labelledby="how-heading"
+  >
     <div class="max-w-6xl mx-auto px-5 md:px-8 py-16 md:py-24">
-      <h2 id="how-heading" class="font-display text-[26px] md:text-[32px] font-semibold tracking-tight">How it works</h2>
-      <p class="mt-3 text-[16px] text-ink-soft max-w-2xl">Four steps from a rough idea to a plan that runs itself.</p>
+      <h2
+        id="how-heading"
+        class="font-display text-[26px] md:text-[32px] font-semibold tracking-tight"
+      >
+        How it works
+      </h2>
+      <p class="mt-3 text-[16px] text-ink-soft max-w-2xl">
+        Four steps from a rough idea to a plan that runs itself.
+      </p>
 
       <ol class="mt-10 grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <li v-for="s in STEPS" :key="s.n" class="rounded-xl border border-line bg-paper p-5">
-          <div class="font-display text-13 font-semibold text-accent tnum">{{ s.n }}</div>
-          <h3 class="mt-2 text-[15px] font-semibold">{{ s.title }}</h3>
-          <p class="mt-1.5 text-13.5 leading-relaxed text-ink-soft">{{ s.body }}</p>
+        <li
+          v-for="s in STEPS"
+          :key="s.n"
+          class="rounded-xl border border-line bg-paper p-5"
+        >
+          <div class="font-display text-13 font-semibold text-accent tnum">
+            {{ s.n }}
+          </div>
+          <h3 class="mt-2 text-[15px] font-semibold">
+            {{ s.title }}
+          </h3>
+          <p class="mt-1.5 text-13.5 leading-relaxed text-ink-soft">
+            {{ s.body }}
+          </p>
         </li>
       </ol>
     </div>

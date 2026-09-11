@@ -15,7 +15,7 @@ const props = withDefaults(
     /** Render as a plain anchor (external / same-page). */
     href?: string;
   }>(),
-  { variant: "primary", size: "md", type: "button" },
+  { variant: "primary", size: "md", type: "button", to: undefined, href: undefined },
 );
 
 const classes = computed(() => {
@@ -38,13 +38,26 @@ const spinner = computed(() => props.loading);
 </script>
 
 <template>
-  <RouterLink v-if="props.to" :to="props.to" :class="classes">
+  <RouterLink
+    v-if="props.to"
+    :to="props.to"
+    :class="classes"
+  >
     <slot />
   </RouterLink>
-  <a v-else-if="props.href" :href="props.href" :class="classes">
+  <a
+    v-else-if="props.href"
+    :href="props.href"
+    :class="classes"
+  >
     <slot />
   </a>
-  <button v-else :type="props.type" :disabled="props.disabled || props.loading" :class="classes">
+  <button
+    v-else
+    :type="props.type"
+    :disabled="props.disabled || props.loading"
+    :class="classes"
+  >
     <span
       v-if="spinner"
       class="inline-block w-3.5 h-3.5 rounded-full border-2 border-current border-r-transparent animate-spin"

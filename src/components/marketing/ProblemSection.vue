@@ -14,9 +14,15 @@ const MISSING =
 </script>
 
 <template>
-  <section class="bg-surface border-y border-line" aria-labelledby="problem-heading">
+  <section
+    class="bg-surface border-y border-line"
+    aria-labelledby="problem-heading"
+  >
     <div class="max-w-6xl mx-auto px-5 md:px-8 py-16 md:py-20">
-      <h2 id="problem-heading" class="font-display text-[26px] md:text-[32px] font-semibold tracking-tight max-w-2xl">
+      <h2
+        id="problem-heading"
+        class="font-display text-[26px] md:text-[32px] font-semibold tracking-tight max-w-2xl"
+      >
         A complex plan doesn't fail all at once. It fragments.
       </h2>
       <p class="mt-4 text-[16px] leading-relaxed text-ink-soft max-w-2xl">

@@ -46,11 +46,20 @@ async function submit() {
         class="block text-center focus-ring"
         :aria-label="APP_NAME"
       >
-        <img :src="orchestrioIcon" :alt="APP_NAME" class="mx-auto h-12 w-auto" />
+        <img
+          :src="orchestrioIcon"
+          :alt="APP_NAME"
+          class="mx-auto h-12 w-auto"
+        >
       </RouterLink>
-      <h1 class="mt-6 text-center font-display text-[19px] font-semibold tracking-tight">Log in</h1>
+      <h1 class="mt-6 text-center font-display text-[19px] font-semibold tracking-tight">
+        Log in
+      </h1>
 
-      <form class="mt-6 space-y-4" @submit.prevent="submit">
+      <form
+        class="mt-6 space-y-4"
+        @submit.prevent="submit"
+      >
         <label class="block">
           <span class="text-13 font-medium block mb-1.5 text-ink-soft">Email</span>
           <input
@@ -59,7 +68,7 @@ async function submit() {
             required
             autocomplete="email"
             class="w-full border rounded-lg px-3.5 py-2.5 text-14 focus-ring border-line bg-surface"
-          />
+          >
         </label>
 
         <label class="block">
@@ -70,17 +79,26 @@ async function submit() {
             autocomplete="current-password"
             required
             class="w-full border rounded-lg px-3.5 py-2.5 text-14 focus-ring border-line bg-surface"
-          />
+          >
         </label>
 
-        <AppButton type="submit" :loading="busy" block>
+        <AppButton
+          type="submit"
+          :loading="busy"
+          block
+        >
           Log in
         </AppButton>
       </form>
 
       <p class="mt-6 text-center text-13 text-muted">
         Don't have an account?
-        <RouterLink :to="signupTo" class="text-accent font-medium focus-ring">Sign up</RouterLink>
+        <RouterLink
+          :to="signupTo"
+          class="text-accent font-medium focus-ring"
+        >
+          Sign up
+        </RouterLink>
       </p>
     </div>
   </div>

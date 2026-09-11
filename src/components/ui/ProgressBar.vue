@@ -6,6 +6,9 @@ const pct = computed(() => Math.max(0, Math.min(100, props.value ?? 0)));
 
 <template>
   <div class="h-1.5 rounded-full overflow-hidden bg-[#EFEFEC]">
-    <div class="h-full rounded-full bar-fill bg-accent" :style="{ width: pct + '%' }" />
+    <div
+      class="h-full rounded-full bar-fill bg-accent"
+      :style="{ width: pct + '%' }"
+    />
   </div>
 </template>

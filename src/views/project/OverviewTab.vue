@@ -140,8 +140,16 @@ function cardModel(card: OverviewCardKey) {
   <div class="fade-in space-y-8">
     <div>
       <SectionHeading label="Overview" />
-      <div v-if="projectOverview.isPending.value" class="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <SkeletonBlock v-for="i in 6" :key="i" height="104px" rounded="0.75rem" />
+      <div
+        v-if="projectOverview.isPending.value"
+        class="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4"
+      >
+        <SkeletonBlock
+          v-for="i in 6"
+          :key="i"
+          height="104px"
+          rounded="0.75rem"
+        />
       </div>
       <ErrorState
         v-else-if="projectOverview.isError.value"
@@ -149,7 +157,10 @@ function cardModel(card: OverviewCardKey) {
         :error="projectOverview.error.value"
         :retry="() => projectOverview.refetch()"
       />
-      <div v-else class="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div
+        v-else
+        class="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4"
+      >
         <div
           v-for="card in cardOrder"
           :key="card"
@@ -157,7 +168,9 @@ function cardModel(card: OverviewCardKey) {
         >
           <template v-if="cardModel(card)">
             <div class="flex items-start justify-between gap-2">
-              <p class="text-13 font-medium text-muted">{{ cardModel(card)?.label }}</p>
+              <p class="text-13 font-medium text-muted">
+                {{ cardModel(card)?.label }}
+              </p>
               <StatusBadge
                 v-if="card === 'health' && overview?.health_status"
                 :label="humanizeStatus(overview.health_status)"
@@ -170,7 +183,9 @@ function cardModel(card: OverviewCardKey) {
             >
               {{ cardModel(card)?.value }}
             </div>
-            <p class="mt-1 text-13 text-ink-soft">{{ cardModel(card)?.detail }}</p>
+            <p class="mt-1 text-13 text-ink-soft">
+              {{ cardModel(card)?.detail }}
+            </p>
           </template>
         </div>
       </div>
@@ -180,8 +195,16 @@ function cardModel(card: OverviewCardKey) {
       <!-- Needs attention -->
       <div>
         <SectionHeading label="Needs attention" />
-        <div v-if="health.isPending.value" class="mt-3 space-y-2">
-          <SkeletonBlock v-for="i in 3" :key="i" height="56px" rounded="0.5rem" />
+        <div
+          v-if="health.isPending.value"
+          class="mt-3 space-y-2"
+        >
+          <SkeletonBlock
+            v-for="i in 3"
+            :key="i"
+            height="56px"
+            rounded="0.5rem"
+          />
         </div>
         <ErrorState
           v-else-if="health.isError.value"
@@ -194,7 +217,10 @@ function cardModel(card: OverviewCardKey) {
           class="mt-3"
           message="All clear — nothing needs attention on this project."
         />
-        <div v-else class="mt-3 border rounded-xl divide-y border-line bg-surface">
+        <div
+          v-else
+          class="mt-3 border rounded-xl divide-y border-line bg-surface"
+        >
           <AttentionRow
             v-for="(f, i) in health.needsAttention.value"
             :key="f.code + (f.subject_id ?? '') + i"
@@ -206,8 +232,16 @@ function cardModel(card: OverviewCardKey) {
       <!-- Upcoming -->
       <div>
         <SectionHeading label="Upcoming" />
-        <div v-if="upcoming.isPending.value" class="mt-3 space-y-2">
-          <SkeletonBlock v-for="i in 2" :key="i" height="72px" rounded="0.5rem" />
+        <div
+          v-if="upcoming.isPending.value"
+          class="mt-3 space-y-2"
+        >
+          <SkeletonBlock
+            v-for="i in 2"
+            :key="i"
+            height="72px"
+            rounded="0.5rem"
+          />
         </div>
         <ErrorState
           v-else-if="upcoming.isError.value"

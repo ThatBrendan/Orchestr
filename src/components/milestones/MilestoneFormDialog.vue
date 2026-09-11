@@ -70,32 +70,76 @@ async function submit() {
 </script>
 
 <template>
-  <AppModal :busy="create.isPending.value || update.isPending.value" :open="props.open" :title="props.milestone ? 'Edit milestone' : 'New milestone'" @close="emit('close')">
-    <form class="space-y-4" @submit.prevent="submit">
+  <AppModal
+    :busy="create.isPending.value || update.isPending.value"
+    :open="props.open"
+    :title="props.milestone ? 'Edit milestone' : 'New milestone'"
+    @close="emit('close')"
+  >
+    <form
+      class="space-y-4"
+      @submit.prevent="submit"
+    >
       <label class="block">
         <span class="text-13 font-medium block mb-1.5 text-ink-soft">Title</span>
-        <input v-model="form.title" required class="w-full border rounded-lg px-3.5 py-2.5 text-14 focus-ring border-line" />
+        <input
+          v-model="form.title"
+          required
+          class="w-full border rounded-lg px-3.5 py-2.5 text-14 focus-ring border-line"
+        >
       </label>
       <label class="block">
         <span class="text-13 font-medium block mb-1.5 text-ink-soft">Date</span>
-        <input v-model="form.on_date" type="date" required class="w-full border rounded-lg px-3 py-2.5 text-14 focus-ring border-line" />
+        <input
+          v-model="form.on_date"
+          type="date"
+          required
+          class="w-full border rounded-lg px-3 py-2.5 text-14 focus-ring border-line"
+        >
       </label>
       <label class="block">
         <span class="text-13 font-medium block mb-1.5 text-ink-soft">Linked activity</span>
-        <select v-model="form.commitment_id" class="w-full border rounded-lg px-3 py-2.5 text-14 focus-ring border-line bg-surface">
+        <select
+          v-model="form.commitment_id"
+          class="w-full border rounded-lg px-3 py-2.5 text-14 focus-ring border-line bg-surface"
+        >
           <option value="">None</option>
-          <option v-for="c in props.commitments" :key="c.id" :value="c.id">{{ c.title }}</option>
+          <option
+            v-for="c in props.commitments"
+            :key="c.id"
+            :value="c.id"
+          >{{ c.title }}</option>
         </select>
       </label>
       <label class="block">
         <span class="text-13 font-medium block mb-1.5 text-ink-soft">Notes</span>
-        <textarea v-model="form.notes" rows="2" class="w-full border rounded-lg px-3.5 py-2.5 text-14 focus-ring border-line" />
+        <textarea
+          v-model="form.notes"
+          rows="2"
+          class="w-full border rounded-lg px-3.5 py-2.5 text-14 focus-ring border-line"
+        />
       </label>
-      <p v-if="fieldError" class="text-13 text-danger">{{ fieldError }}</p>
+      <p
+        v-if="fieldError"
+        class="text-13 text-danger"
+      >
+        {{ fieldError }}
+      </p>
     </form>
     <template #footer>
-      <AppButton variant="secondary" size="sm" :disabled="create.isPending.value || update.isPending.value" @click="emit('close')">Cancel</AppButton>
-      <AppButton size="sm" :loading="create.isPending.value || update.isPending.value" @click="submit">
+      <AppButton
+        variant="secondary"
+        size="sm"
+        :disabled="create.isPending.value || update.isPending.value"
+        @click="emit('close')"
+      >
+        Cancel
+      </AppButton>
+      <AppButton
+        size="sm"
+        :loading="create.isPending.value || update.isPending.value"
+        @click="submit"
+      >
         {{ props.milestone ? "Save" : "Create milestone" }}
       </AppButton>
     </template>

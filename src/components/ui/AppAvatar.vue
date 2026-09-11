@@ -3,7 +3,7 @@ import { computed } from "vue";
 
 const props = withDefaults(
   defineProps<{ name: string; url?: string | null; size?: number; tone?: "ink" | "muted" }>(),
-  { size: 28, tone: "muted" },
+  { size: 28, tone: "muted", url: undefined },
 );
 
 const initials = computed(() =>
@@ -22,7 +22,7 @@ const initials = computed(() =>
     :alt="props.name"
     class="rounded-full object-cover shrink-0"
     :style="{ width: size + 'px', height: size + 'px' }"
-  />
+  >
   <div
     v-else
     class="rounded-full flex items-center justify-center font-semibold shrink-0"

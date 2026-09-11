@@ -173,21 +173,52 @@ watch(
 <template>
   <div class="min-h-screen bg-paper">
     <MarketingHeader />
-    <main id="main" class="max-w-6xl mx-auto px-5 md:px-8 py-14 md:py-20">
+    <main
+      id="main"
+      class="max-w-6xl mx-auto px-5 md:px-8 py-14 md:py-20"
+    >
       <article class="max-w-3xl mx-auto">
-        <p class="text-13 font-semibold uppercase tracking-wide text-accent">{{ page.eyebrow }}</p>
-        <h1 class="mt-3 font-display text-[34px] leading-tight font-semibold tracking-tight md:text-[46px]">{{ page.title }}</h1>
-        <p class="mt-5 max-w-2xl text-[17px] leading-relaxed text-ink-soft">{{ page.description }}</p>
+        <p class="text-13 font-semibold uppercase tracking-wide text-accent">
+          {{ page.eyebrow }}
+        </p>
+        <h1 class="mt-3 font-display text-[34px] leading-tight font-semibold tracking-tight md:text-[46px]">
+          {{ page.title }}
+        </h1>
+        <p class="mt-5 max-w-2xl text-[17px] leading-relaxed text-ink-soft">
+          {{ page.description }}
+        </p>
 
         <div class="mt-12 space-y-10">
-          <section v-for="section in page.sections" :key="section.heading" :aria-labelledby="section.heading">
-            <h2 :id="section.heading" class="font-display text-[22px] font-semibold tracking-tight">{{ section.heading }}</h2>
-            <p v-for="paragraph in section.paragraphs" :key="paragraph" class="mt-3 text-[15px] leading-7 text-ink-soft">{{ paragraph }}</p>
+          <section
+            v-for="section in page.sections"
+            :key="section.heading"
+            :aria-labelledby="section.heading"
+          >
+            <h2
+              :id="section.heading"
+              class="font-display text-[22px] font-semibold tracking-tight"
+            >
+              {{ section.heading }}
+            </h2>
+            <p
+              v-for="paragraph in section.paragraphs"
+              :key="paragraph"
+              class="mt-3 text-[15px] leading-7 text-ink-soft"
+            >
+              {{ paragraph }}
+            </p>
           </section>
         </div>
 
-        <p class="mt-12 border-t border-line pt-5 text-13 text-muted">Last updated: {{ updated }}</p>
-        <p v-if="isAbout" class="mt-3 text-13 text-muted">Built with a practical, founder-led approach.</p>
+        <p class="mt-12 border-t border-line pt-5 text-13 text-muted">
+          Last updated: {{ updated }}
+        </p>
+        <p
+          v-if="isAbout"
+          class="mt-3 text-13 text-muted"
+        >
+          Built with a practical, founder-led approach.
+        </p>
       </article>
     </main>
     <MarketingFooter />

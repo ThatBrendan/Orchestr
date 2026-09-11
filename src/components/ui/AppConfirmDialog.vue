@@ -17,10 +17,24 @@ const emit = defineEmits<{ close: []; confirm: [] }>();
 </script>
 
 <template>
-  <AppModal :open="props.open" :busy="props.loading" :title="props.title" @close="emit('close')">
-    <p class="text-14 text-ink-soft">{{ props.message }}</p>
+  <AppModal
+    :open="props.open"
+    :busy="props.loading"
+    :title="props.title"
+    @close="emit('close')"
+  >
+    <p class="text-14 text-ink-soft">
+      {{ props.message }}
+    </p>
     <template #footer>
-      <AppButton variant="secondary" size="sm" :disabled="props.loading" @click="emit('close')">Cancel</AppButton>
+      <AppButton
+        variant="secondary"
+        size="sm"
+        :disabled="props.loading"
+        @click="emit('close')"
+      >
+        Cancel
+      </AppButton>
       <AppButton
         size="sm"
         :loading="props.loading"

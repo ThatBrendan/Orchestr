@@ -89,8 +89,17 @@ async function submit() {
 </script>
 
 <template>
-  <AppModal :busy="create.isPending.value" :open="props.open" :title="step === 'profile' ? 'What are you planning?' : 'New project'" size="lg" @close="emit('close')">
-    <div v-if="step === 'profile'" class="grid gap-3 sm:grid-cols-2">
+  <AppModal
+    :busy="create.isPending.value"
+    :open="props.open"
+    :title="step === 'profile' ? 'What are you planning?' : 'New project'"
+    size="lg"
+    @close="emit('close')"
+  >
+    <div
+      v-if="step === 'profile'"
+      class="grid gap-3 sm:grid-cols-2"
+    >
       <button
         v-for="profileOption in PROJECT_PROFILES"
         :key="profileOption.value"
@@ -105,49 +114,116 @@ async function submit() {
       </button>
     </div>
 
-    <form v-else class="space-y-4" @submit.prevent="submit">
+    <form
+      v-else
+      class="space-y-4"
+      @submit.prevent="submit"
+    >
       <div class="rounded-xl border border-line bg-[#FBFBFA] px-4 py-3">
-        <div class="text-13 font-medium text-muted">Profile</div>
-        <div class="mt-0.5 text-14 font-semibold">{{ selectedProfile.label }}</div>
-        <div class="mt-0.5 text-13 text-ink-soft">{{ selectedProfile.description }}</div>
+        <div class="text-13 font-medium text-muted">
+          Profile
+        </div>
+        <div class="mt-0.5 text-14 font-semibold">
+          {{ selectedProfile.label }}
+        </div>
+        <div class="mt-0.5 text-13 text-ink-soft">
+          {{ selectedProfile.description }}
+        </div>
       </div>
 
       <label class="block">
         <span class="text-13 font-medium block mb-1.5 text-ink-soft">Project name</span>
-        <input v-model="form.name" required maxlength="120" class="w-full border rounded-lg px-3.5 py-2.5 text-14 focus-ring border-line" />
+        <input
+          v-model="form.name"
+          required
+          maxlength="120"
+          class="w-full border rounded-lg px-3.5 py-2.5 text-14 focus-ring border-line"
+        >
       </label>
 
       <div class="grid gap-3 sm:grid-cols-2">
         <label class="block">
           <span class="text-13 font-medium block mb-1.5 text-ink-soft">Start date</span>
-          <input v-model="form.starts_on" type="date" class="w-full border rounded-lg px-3 py-2.5 text-14 focus-ring border-line" />
+          <input
+            v-model="form.starts_on"
+            type="date"
+            class="w-full border rounded-lg px-3 py-2.5 text-14 focus-ring border-line"
+          >
         </label>
         <label class="block">
           <span class="text-13 font-medium block mb-1.5 text-ink-soft">End date</span>
-          <input v-model="form.ends_on" type="date" class="w-full border rounded-lg px-3 py-2.5 text-14 focus-ring border-line" />
+          <input
+            v-model="form.ends_on"
+            type="date"
+            class="w-full border rounded-lg px-3 py-2.5 text-14 focus-ring border-line"
+          >
         </label>
       </div>
 
       <label class="block">
         <span class="text-13 font-medium block mb-1.5 text-ink-soft">Timezone</span>
-        <input v-model="form.timezone" required class="w-full border rounded-lg px-3.5 py-2.5 text-14 focus-ring border-line" />
+        <input
+          v-model="form.timezone"
+          required
+          class="w-full border rounded-lg px-3.5 py-2.5 text-14 focus-ring border-line"
+        >
       </label>
 
       <label class="block">
         <span class="text-13 font-medium block mb-1.5 text-ink-soft">Currency</span>
-        <select v-model="form.currency" class="w-full border rounded-lg px-3 py-2.5 text-14 focus-ring border-line bg-surface">
-          <option v-for="c in CURRENCIES" :key="c" :value="c">{{ c }}</option>
+        <select
+          v-model="form.currency"
+          class="w-full border rounded-lg px-3 py-2.5 text-14 focus-ring border-line bg-surface"
+        >
+          <option
+            v-for="c in CURRENCIES"
+            :key="c"
+            :value="c"
+          >{{ c }}</option>
         </select>
         <span class="text-13 text-muted mt-1 block">Can't be changed once the project has costs.</span>
       </label>
-      <p v-if="fieldError" class="text-13 text-danger">{{ fieldError }}</p>
+      <p
+        v-if="fieldError"
+        class="text-13 text-danger"
+      >
+        {{ fieldError }}
+      </p>
     </form>
 
     <template #footer>
-      <AppButton v-if="step === 'details'" variant="secondary" size="sm" @click="step = 'profile'">Back</AppButton>
-      <AppButton v-else variant="secondary" size="sm" :disabled="create.isPending.value" @click="emit('close')">Cancel</AppButton>
-      <AppButton v-if="step === 'profile'" size="sm" @click="continueToDetails">Continue</AppButton>
-      <AppButton v-else size="sm" :loading="create.isPending.value" @click="submit">Create project</AppButton>
+      <AppButton
+        v-if="step === 'details'"
+        variant="secondary"
+        size="sm"
+        @click="step = 'profile'"
+      >
+        Back
+      </AppButton>
+      <AppButton
+        v-else
+        variant="secondary"
+        size="sm"
+        :disabled="create.isPending.value"
+        @click="emit('close')"
+      >
+        Cancel
+      </AppButton>
+      <AppButton
+        v-if="step === 'profile'"
+        size="sm"
+        @click="continueToDetails"
+      >
+        Continue
+      </AppButton>
+      <AppButton
+        v-else
+        size="sm"
+        :loading="create.isPending.value"
+        @click="submit"
+      >
+        Create project
+      </AppButton>
     </template>
   </AppModal>
 </template>

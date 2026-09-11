@@ -213,48 +213,136 @@ function canDeleteTask(task: Task): boolean {
 <template>
   <div class="mt-9">
     <div class="flex items-center justify-between mb-3">
-      <h2 class="font-display text-[17px] font-semibold">Tasks</h2>
-      <AppButton v-if="props.canEdit" variant="secondary" size="sm" @click="showAddForm = !showAddForm">
+      <h2 class="font-display text-[17px] font-semibold">
+        Tasks
+      </h2>
+      <AppButton
+        v-if="props.canEdit"
+        variant="secondary"
+        size="sm"
+        @click="showAddForm = !showAddForm"
+      >
         {{ showAddForm ? "Cancel" : "Add task" }}
       </AppButton>
     </div>
 
-    <form v-if="showAddForm" class="border rounded-xl p-3.5 mb-3 space-y-2.5 border-line bg-[#FBFBFA]" @submit.prevent="submitAdd">
-      <input v-model="addForm.title" placeholder="Task title" class="w-full border rounded-lg px-3 py-2 text-14 focus-ring border-line" />
+    <form
+      v-if="showAddForm"
+      class="border rounded-xl p-3.5 mb-3 space-y-2.5 border-line bg-[#FBFBFA]"
+      @submit.prevent="submitAdd"
+    >
+      <input
+        v-model="addForm.title"
+        placeholder="Task title"
+        class="w-full border rounded-lg px-3 py-2 text-14 focus-ring border-line"
+      >
       <div class="grid sm:grid-cols-4 gap-2">
-        <select v-model="addForm.assignee_member_id" class="border rounded-lg px-2.5 py-2 text-13.5 focus-ring border-line bg-surface">
-          <option value="">Unassigned</option>
-          <option v-for="m in assigneeCandidates" :key="m.member_id" :value="m.member_id">{{ m.display_name }}</option>
+        <select
+          v-model="addForm.assignee_member_id"
+          class="border rounded-lg px-2.5 py-2 text-13.5 focus-ring border-line bg-surface"
+        >
+          <option value="">
+            Unassigned
+          </option>
+          <option
+            v-for="m in assigneeCandidates"
+            :key="m.member_id"
+            :value="m.member_id"
+          >
+            {{ m.display_name }}
+          </option>
         </select>
-        <input v-model="addForm.due_on" type="date" class="border rounded-lg px-2.5 py-2 text-13.5 focus-ring border-line" />
-        <select v-model="addForm.repeat" class="border rounded-lg px-2.5 py-2 text-13.5 focus-ring border-line bg-surface">
-          <option v-for="option in REPEAT_OPTIONS" :key="option.value" :value="option.value">{{ option.label }}</option>
+        <input
+          v-model="addForm.due_on"
+          type="date"
+          class="border rounded-lg px-2.5 py-2 text-13.5 focus-ring border-line"
+        >
+        <select
+          v-model="addForm.repeat"
+          class="border rounded-lg px-2.5 py-2 text-13.5 focus-ring border-line bg-surface"
+        >
+          <option
+            v-for="option in REPEAT_OPTIONS"
+            :key="option.value"
+            :value="option.value"
+          >
+            {{ option.label }}
+          </option>
         </select>
-        <select v-model="addForm.commitment_id" class="border rounded-lg px-2.5 py-2 text-13.5 focus-ring border-line bg-surface">
-          <option value="">No linked activity</option>
-          <option v-for="c in props.commitments" :key="c.id" :value="c.id">{{ c.title }}</option>
+        <select
+          v-model="addForm.commitment_id"
+          class="border rounded-lg px-2.5 py-2 text-13.5 focus-ring border-line bg-surface"
+        >
+          <option value="">
+            No linked activity
+          </option>
+          <option
+            v-for="c in props.commitments"
+            :key="c.id"
+            :value="c.id"
+          >
+            {{ c.title }}
+          </option>
         </select>
       </div>
-      <p v-if="addError" class="text-13 text-danger">{{ addError }}</p>
-      <AppButton size="sm" :loading="create.isPending.value" @click="submitAdd">Add task</AppButton>
+      <p
+        v-if="addError"
+        class="text-13 text-danger"
+      >
+        {{ addError }}
+      </p>
+      <AppButton
+        size="sm"
+        :loading="create.isPending.value"
+        @click="submitAdd"
+      >
+        Add task
+      </AppButton>
     </form>
 
-    <div v-if="isPending" class="space-y-2">
-      <SkeletonBlock v-for="i in 3" :key="i" height="48px" rounded="0.5rem" />
+    <div
+      v-if="isPending"
+      class="space-y-2"
+    >
+      <SkeletonBlock
+        v-for="i in 3"
+        :key="i"
+        height="48px"
+        rounded="0.5rem"
+      />
     </div>
-    <ErrorState v-else-if="isError" :error="error" :retry="() => refetch()" />
-    <EmptyState v-else-if="tasks.length === 0" message="No tasks yet." />
-    <div v-else class="border rounded-xl divide-y border-line bg-surface">
-      <div v-for="t in tasks" :key="t.id" class="flex items-center gap-3 px-4 py-3">
+    <ErrorState
+      v-else-if="isError"
+      :error="error"
+      :retry="() => refetch()"
+    />
+    <EmptyState
+      v-else-if="tasks.length === 0"
+      message="No tasks yet."
+    />
+    <div
+      v-else
+      class="border rounded-xl divide-y border-line bg-surface"
+    >
+      <div
+        v-for="t in tasks"
+        :key="t.id"
+        class="flex items-center gap-3 px-4 py-3"
+      >
         <input
           type="checkbox"
           class="rounded border-line"
           :checked="t.status === 'done'"
           :disabled="!props.canEdit || busy"
           @change="toggleDone(t.id, t.status, !!t.recurrence_frequency)"
-        />
+        >
         <div class="min-w-0 flex-1">
-          <div class="text-14" :class="{ 'line-through text-muted': t.status === 'done' }">{{ t.title }}</div>
+          <div
+            class="text-14"
+            :class="{ 'line-through text-muted': t.status === 'done' }"
+          >
+            {{ t.title }}
+          </div>
           <div class="text-13 text-muted">
             {{ memberName(t.assignee_member_id) }}
             <span v-if="t.due_on"> · Due {{ time.dateOnly(t.due_on) }}</span>
@@ -266,32 +354,52 @@ function canDeleteTask(task: Task): boolean {
             v-if="t.recurrence_frequency"
             variant="secondary"
             size="sm"
-            :disabled="busy" @click="skipRecurringTask(t.id)"
+            :disabled="busy"
+            @click="skipRecurringTask(t.id)"
           >
             Skip next
           </AppButton>
           <select
             class="border rounded-lg px-2 py-1.5 text-13 focus-ring border-line bg-surface"
-            :disabled="busy" :value="t.status"
+            :disabled="busy"
+            :value="t.status"
             @change="changeStatus(t.id, $event)"
           >
-            <option :value="t.status">{{ t.status }}</option>
-            <option v-for="s in NEXT[t.status]" :key="s" :value="s">{{ s }}</option>
+            <option :value="t.status">
+              {{ t.status }}
+            </option>
+            <option
+              v-for="s in NEXT[t.status]"
+              :key="s"
+              :value="s"
+            >
+              {{ s }}
+            </option>
           </select>
           <select
             class="border rounded-lg px-2 py-1.5 text-13 focus-ring border-line bg-surface"
-            :disabled="busy" :value="t.assignee_member_id ?? ''"
+            :disabled="busy"
+            :value="t.assignee_member_id ?? ''"
             @change="changeAssignee(t.id, $event)"
           >
-            <option value="">Unassigned</option>
-            <option v-for="m in assigneeCandidates" :key="m.member_id" :value="m.member_id">{{ m.display_name }}</option>
+            <option value="">
+              Unassigned
+            </option>
+            <option
+              v-for="m in assigneeCandidates"
+              :key="m.member_id"
+              :value="m.member_id"
+            >
+              {{ m.display_name }}
+            </option>
           </select>
           <AppButton
             v-if="canDeleteTask(t)"
             variant="ghost"
             size="sm"
             class="!text-danger"
-            :disabled="busy" @click="confirmDeleteId = t.id"
+            :disabled="busy"
+            @click="confirmDeleteId = t.id"
           >
             Delete
           </AppButton>

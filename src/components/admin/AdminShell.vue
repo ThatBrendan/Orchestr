@@ -25,8 +25,15 @@ function isActive(match: readonly string[]) {
 <template>
   <div class="min-h-screen bg-canvas md:flex">
     <aside class="hidden md:flex w-64 shrink-0 border-r border-line bg-surface flex-col">
-      <RouterLink to="/" class="h-16 flex items-center px-5 border-b border-line focus-ring">
-        <img :src="orchestrioIcon" :alt="APP_NAME" class="h-12 w-auto" />
+      <RouterLink
+        to="/"
+        class="h-16 flex items-center px-5 border-b border-line focus-ring"
+      >
+        <img
+          :src="orchestrioIcon"
+          :alt="APP_NAME"
+          class="h-12 w-auto"
+        >
         <span class="ml-2 rounded bg-ink px-1.5 py-0.5 text-[11px] font-semibold uppercase text-white">Admin</span>
       </RouterLink>
 
@@ -38,7 +45,10 @@ function isActive(match: readonly string[]) {
           class="nav-item flex items-center gap-3 px-3 py-2 rounded-lg text-14 font-medium focus-ring transition-colors"
           :class="isActive(item.match) ? 'text-ink bg-[#F0F0EE]' : 'text-ink-soft hover:bg-[#F6F6F4]'"
         >
-          <AppIcon :name="item.icon" :size="18" />
+          <AppIcon
+            :name="item.icon"
+            :size="18"
+          />
           <span>{{ item.label }}</span>
         </RouterLink>
       </nav>
@@ -48,7 +58,10 @@ function isActive(match: readonly string[]) {
           :to="{ name: 'dashboard' }"
           class="flex items-center gap-2 rounded-lg px-3 py-2 text-14 font-medium text-ink-soft hover:bg-[#F6F6F4] focus-ring"
         >
-          <AppIcon name="arrowRight" :size="16" />
+          <AppIcon
+            name="arrowRight"
+            :size="16"
+          />
           <span>Open Orchestrio</span>
         </RouterLink>
       </div>
@@ -58,11 +71,21 @@ function isActive(match: readonly string[]) {
     <div class="min-w-0 flex-1">
       <header class="md:hidden sticky top-0 z-10 border-b border-line bg-surface">
         <div class="h-14 flex items-center justify-between px-4">
-          <RouterLink to="/" class="flex items-center gap-2 focus-ring">
-            <img :src="orchestrioIcon" :alt="APP_NAME" class="h-7 w-auto" />
+          <RouterLink
+            to="/"
+            class="flex items-center gap-2 focus-ring"
+          >
+            <img
+              :src="orchestrioIcon"
+              :alt="APP_NAME"
+              class="h-7 w-auto"
+            >
             <span class="rounded bg-ink px-1.5 py-0.5 text-[10px] font-semibold uppercase text-white">Admin</span>
           </RouterLink>
-          <RouterLink :to="{ name: 'dashboard' }" class="text-13 font-medium text-ink-soft focus-ring">
+          <RouterLink
+            :to="{ name: 'dashboard' }"
+            class="text-13 font-medium text-ink-soft focus-ring"
+          >
             Open Orchestrio
           </RouterLink>
         </div>

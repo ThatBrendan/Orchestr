@@ -37,22 +37,40 @@ const attention = computed(() => props.project.attention_count ?? 0);
   >
     <div class="flex items-start justify-between gap-6">
       <div class="min-w-0">
-        <div class="font-medium text-[15.5px]">{{ project.name }}</div>
-        <div class="text-13 mt-0.5 text-muted">{{ dates }}</div>
+        <div class="font-medium text-[15.5px]">
+          {{ project.name }}
+        </div>
+        <div class="text-13 mt-0.5 text-muted">
+          {{ dates }}
+        </div>
         <div class="mt-3 flex items-center gap-2 text-13 text-ink-soft flex-wrap">
           <span class="tnum">{{ project.progress_pct ?? 0 }}%</span>
           <span class="text-muted">complete</span>
-          <span v-if="showBudget" class="text-line">·</span>
-          <span v-if="showBudget" class="tnum">{{ spendLine }}</span>
+          <span
+            v-if="showBudget"
+            class="text-line"
+          >·</span>
+          <span
+            v-if="showBudget"
+            class="tnum"
+          >{{ spendLine }}</span>
         </div>
-        <div class="mt-2 text-13 text-muted">{{ profile.label }}</div>
+        <div class="mt-2 text-13 text-muted">
+          {{ profile.label }}
+        </div>
       </div>
       <div class="text-right shrink-0">
-        <div v-if="attention > 0" class="text-13 font-medium text-amber">
+        <div
+          v-if="attention > 0"
+          class="text-13 font-medium text-amber"
+        >
           {{ attention }} {{ attention === 1 ? "item needs" : "items need" }} attention
         </div>
         <div class="mt-3 inline-flex items-center gap-1 text-[13.5px] font-medium text-accent">
-          Open project <AppIcon name="chevronRight" :size="16" />
+          Open project <AppIcon
+            name="chevronRight"
+            :size="16"
+          />
         </div>
       </div>
     </div>

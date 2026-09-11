@@ -63,12 +63,23 @@ async function saveName() {
 
 <template>
   <PageContainer width="md">
-    <h1 class="font-display text-[26px] font-semibold tracking-tight">Settings</h1>
-    <p class="mt-1.5 text-14.5 text-ink-soft">Manage your account and preferences.</p>
+    <h1 class="font-display text-[26px] font-semibold tracking-tight">
+      Settings
+    </h1>
+    <p class="mt-1.5 text-14.5 text-ink-soft">
+      Manage your account and preferences.
+    </p>
 
     <div class="mt-8 space-y-2">
-      <SkeletonBlock v-if="isPending" height="180px" rounded="0.75rem" />
-      <div v-else class="border rounded-xl divide-y border-line bg-surface">
+      <SkeletonBlock
+        v-if="isPending"
+        height="180px"
+        rounded="0.75rem"
+      />
+      <div
+        v-else
+        class="border rounded-xl divide-y border-line bg-surface"
+      >
         <div class="px-5 py-4">
           <div class="flex items-center justify-between gap-4">
             <span class="text-14 font-medium text-ink-soft">Name</span>
@@ -78,21 +89,46 @@ async function saveName() {
                 class="min-w-0 flex-1 rounded-lg border border-line bg-surface px-3 py-2 text-14 focus-ring sm:max-w-xs"
                 maxlength="80"
                 autocomplete="name"
-              />
+              >
             </template>
-            <span v-else class="text-14">{{ profile?.display_name ?? "—" }}</span>
+            <span
+              v-else
+              class="text-14"
+            >{{ profile?.display_name ?? "—" }}</span>
           </div>
-          <p v-if="fieldError" class="mt-2 text-13 text-danger">{{ fieldError }}</p>
+          <p
+            v-if="fieldError"
+            class="mt-2 text-13 text-danger"
+          >
+            {{ fieldError }}
+          </p>
           <div class="mt-3 flex justify-end gap-2">
             <template v-if="editing">
-              <AppButton variant="secondary" size="sm" :disabled="updateName.isPending.value" @click="cancelEdit">
+              <AppButton
+                variant="secondary"
+                size="sm"
+                :disabled="updateName.isPending.value"
+                @click="cancelEdit"
+              >
                 Cancel
               </AppButton>
-              <AppButton size="sm" :loading="updateName.isPending.value" :disabled="!canSave" @click="saveName">
+              <AppButton
+                size="sm"
+                :loading="updateName.isPending.value"
+                :disabled="!canSave"
+                @click="saveName"
+              >
                 Save
               </AppButton>
             </template>
-            <AppButton v-else variant="secondary" size="sm" @click="startEdit">Edit</AppButton>
+            <AppButton
+              v-else
+              variant="secondary"
+              size="sm"
+              @click="startEdit"
+            >
+              Edit
+            </AppButton>
           </div>
         </div>
         <div class="flex items-center justify-between px-5 py-4">
@@ -113,6 +149,5 @@ async function saveName() {
         </div>
       </div>
     </div>
-
   </PageContainer>
 </template>

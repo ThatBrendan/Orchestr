@@ -66,44 +66,129 @@ function isPassed(m: Milestone): boolean {
   <div class="fade-in space-y-8">
     <div>
       <SectionHeading label="Full timeline" />
-      <div v-if="timeline.isPending.value" class="mt-3 space-y-2">
-        <SkeletonBlock v-for="i in 3" :key="i" height="72px" rounded="0.5rem" />
+      <div
+        v-if="timeline.isPending.value"
+        class="mt-3 space-y-2"
+      >
+        <SkeletonBlock
+          v-for="i in 3"
+          :key="i"
+          height="72px"
+          rounded="0.5rem"
+        />
       </div>
-      <ErrorState v-else-if="timeline.isError.value" class="mt-3" :error="timeline.error.value" :retry="() => timeline.refetch()" />
-      <EmptyState v-else-if="timeline.events.value.length === 0" class="mt-3" message="Nothing on the timeline yet." />
-      <UpcomingList v-else :events="timeline.events.value" :timezone="timezone" />
+      <ErrorState
+        v-else-if="timeline.isError.value"
+        class="mt-3"
+        :error="timeline.error.value"
+        :retry="() => timeline.refetch()"
+      />
+      <EmptyState
+        v-else-if="timeline.events.value.length === 0"
+        class="mt-3"
+        message="Nothing on the timeline yet."
+      />
+      <UpcomingList
+        v-else
+        :events="timeline.events.value"
+        :timezone="timezone"
+      />
     </div>
 
     <div>
       <div class="flex items-center justify-between">
         <SectionHeading label="Milestones" />
-        <AppButton v-if="canEdit" size="sm" @click="openCreate">New milestone</AppButton>
+        <AppButton
+          v-if="canEdit"
+          size="sm"
+          @click="openCreate"
+        >
+          New milestone
+        </AppButton>
       </div>
-      <div v-if="msPending" class="mt-3 space-y-2">
-        <SkeletonBlock v-for="i in 2" :key="i" height="52px" rounded="0.5rem" />
+      <div
+        v-if="msPending"
+        class="mt-3 space-y-2"
+      >
+        <SkeletonBlock
+          v-for="i in 2"
+          :key="i"
+          height="52px"
+          rounded="0.5rem"
+        />
       </div>
-      <ErrorState v-else-if="msError" class="mt-3" :error="msErr" :retry="() => msRefetch()" />
-      <EmptyState v-else-if="milestones.length === 0" class="mt-3" message="No milestones set.">
-        <template v-if="canEdit" #action>
-          <AppButton size="sm" @click="openCreate">Add a milestone</AppButton>
+      <ErrorState
+        v-else-if="msError"
+        class="mt-3"
+        :error="msErr"
+        :retry="() => msRefetch()"
+      />
+      <EmptyState
+        v-else-if="milestones.length === 0"
+        class="mt-3"
+        message="No milestones set."
+      >
+        <template
+          v-if="canEdit"
+          #action
+        >
+          <AppButton
+            size="sm"
+            @click="openCreate"
+          >
+            Add a milestone
+          </AppButton>
         </template>
       </EmptyState>
-      <div v-else class="mt-3 border rounded-xl divide-y border-line bg-surface">
-        <div v-for="m in milestones" :key="m.id" class="flex items-center gap-3.5 px-4 py-3.5">
+      <div
+        v-else
+        class="mt-3 border rounded-xl divide-y border-line bg-surface"
+      >
+        <div
+          v-for="m in milestones"
+          :key="m.id"
+          class="flex items-center gap-3.5 px-4 py-3.5"
+        >
           <div class="min-w-0 flex-1">
-            <div class="text-14 font-medium">{{ m.title }}</div>
-            <div class="text-13 text-muted">{{ DateTime.fromISO(m.on_date).toFormat("cccc d LLLL yyyy") }}</div>
+            <div class="text-14 font-medium">
+              {{ m.title }}
+            </div>
+            <div class="text-13 text-muted">
+              {{ DateTime.fromISO(m.on_date).toFormat("cccc d LLLL yyyy") }}
+            </div>
           </div>
-          <StatusBadge :label="isPassed(m) ? 'Passed' : 'Upcoming'" :tone="isPassed(m) ? 'neutral' : 'accent'" />
+          <StatusBadge
+            :label="isPassed(m) ? 'Passed' : 'Upcoming'"
+            :tone="isPassed(m) ? 'neutral' : 'accent'"
+          />
           <template v-if="canEdit">
-            <AppButton variant="secondary" size="sm" @click="openEdit(m)">Edit</AppButton>
-            <AppButton variant="ghost" size="sm" class="!text-danger" @click="confirmDeleteId = m.id">Delete</AppButton>
+            <AppButton
+              variant="secondary"
+              size="sm"
+              @click="openEdit(m)"
+            >
+              Edit
+            </AppButton>
+            <AppButton
+              variant="ghost"
+              size="sm"
+              class="!text-danger"
+              @click="confirmDeleteId = m.id"
+            >
+              Delete
+            </AppButton>
           </template>
         </div>
       </div>
     </div>
 
-    <MilestoneFormDialog :open="formOpen" :project-id="projectId" :commitments="commitments" :milestone="editingMilestone" @close="formOpen = false" />
+    <MilestoneFormDialog
+      :open="formOpen"
+      :project-id="projectId"
+      :commitments="commitments"
+      :milestone="editingMilestone"
+      @close="formOpen = false"
+    />
     <AppConfirmDialog
       :open="!!confirmDeleteId"
       title="Delete milestone"

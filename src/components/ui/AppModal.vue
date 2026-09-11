@@ -12,8 +12,14 @@ const widthClass = computed(() => (props.size === "lg" ? "max-w-2xl" : "max-w-md
 </script>
 
 <template>
-  <TransitionRoot :show="props.open" as="template">
-    <Dialog class="relative z-40" @close="!props.busy && emit('close')">
+  <TransitionRoot
+    :show="props.open"
+    as="template"
+  >
+    <Dialog
+      class="relative z-40"
+      @close="!props.busy && emit('close')"
+    >
       <TransitionChild
         as="template"
         enter="duration-150 ease-out"
@@ -23,7 +29,10 @@ const widthClass = computed(() => (props.size === "lg" ? "max-w-2xl" : "max-w-md
         leave-from="opacity-100"
         leave-to="opacity-0"
       >
-        <div class="fixed inset-0" style="background: rgba(20, 20, 18, 0.4)" />
+        <div
+          class="fixed inset-0"
+          style="background: rgba(20, 20, 18, 0.4)"
+        />
       </TransitionChild>
 
       <div class="fixed inset-0 flex items-center justify-center p-4">
@@ -38,13 +47,27 @@ const widthClass = computed(() => (props.size === "lg" ? "max-w-2xl" : "max-w-md
             :class="widthClass"
           >
             <div class="px-6 pt-5 pb-4 border-b border-line flex items-center justify-between shrink-0">
-              <DialogTitle class="font-display text-[17px] font-semibold">{{ props.title }}</DialogTitle>
-              <button :disabled="props.busy" class="text-ink-soft hover:text-ink" @click="!props.busy && emit('close')">
-                <AppIcon name="close" :size="18" />
+              <DialogTitle class="font-display text-[17px] font-semibold">
+                {{ props.title }}
+              </DialogTitle>
+              <button
+                :disabled="props.busy"
+                class="text-ink-soft hover:text-ink"
+                @click="!props.busy && emit('close')"
+              >
+                <AppIcon
+                  name="close"
+                  :size="18"
+                />
               </button>
             </div>
-            <div class="px-6 py-5 overflow-y-auto"><slot /></div>
-            <div v-if="$slots.footer" class="px-6 py-4 border-t border-line flex justify-end gap-2 shrink-0">
+            <div class="px-6 py-5 overflow-y-auto">
+              <slot />
+            </div>
+            <div
+              v-if="$slots.footer"
+              class="px-6 py-4 border-t border-line flex justify-end gap-2 shrink-0"
+            >
               <slot name="footer" />
             </div>
           </DialogPanel>

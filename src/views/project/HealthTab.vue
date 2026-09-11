@@ -56,14 +56,28 @@ const TABS: { key: Filter; label: string }[] = [
   <div class="fade-in">
     <div class="flex items-center justify-between flex-wrap gap-3 mb-5">
       <div class="flex items-center gap-3">
-        <SkeletonBlock v-if="summaryPending" width="120px" height="24px" />
-        <ProjectHealthBadge v-else :status="summaryStatus" />
-        <span v-if="!summaryPending && summary" class="text-13 text-muted">
+        <SkeletonBlock
+          v-if="summaryPending"
+          width="120px"
+          height="24px"
+        />
+        <ProjectHealthBadge
+          v-else
+          :status="summaryStatus"
+        />
+        <span
+          v-if="!summaryPending && summary"
+          class="text-13 text-muted"
+        >
           {{ summary.attention_count }} need{{ summary.attention_count === 1 ? "s" : "" }} attention
         </span>
       </div>
       <label class="flex items-center gap-2 text-13 text-ink-soft">
-        <input v-model="showResolved" type="checkbox" class="rounded border-line" />
+        <input
+          v-model="showResolved"
+          type="checkbox"
+          class="rounded border-line"
+        >
         Show dismissed/snoozed
       </label>
     </div>
@@ -80,12 +94,30 @@ const TABS: { key: Filter; label: string }[] = [
       </button>
     </div>
 
-    <div v-if="health.isPending.value" class="space-y-2">
-      <SkeletonBlock v-for="i in 4" :key="i" height="72px" rounded="0.75rem" />
+    <div
+      v-if="health.isPending.value"
+      class="space-y-2"
+    >
+      <SkeletonBlock
+        v-for="i in 4"
+        :key="i"
+        height="72px"
+        rounded="0.75rem"
+      />
     </div>
-    <ErrorState v-else-if="health.isError.value" :error="health.error.value" :retry="() => health.refetch()" />
-    <EmptyState v-else-if="visible.length === 0" message="Nothing here — all clear for this filter." />
-    <div v-else class="border rounded-xl divide-y border-line bg-surface">
+    <ErrorState
+      v-else-if="health.isError.value"
+      :error="health.error.value"
+      :retry="() => health.refetch()"
+    />
+    <EmptyState
+      v-else-if="visible.length === 0"
+      message="Nothing here — all clear for this filter."
+    />
+    <div
+      v-else
+      class="border rounded-xl divide-y border-line bg-surface"
+    >
       <FindingCard
         v-for="f in visible"
         :key="f.code + (f.subject_id ?? '') + f.subject_type"

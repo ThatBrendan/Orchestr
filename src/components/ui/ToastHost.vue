@@ -28,11 +28,20 @@ const { toasts } = storeToRefs(ui);
             'text-muted': t.kind === 'info',
           }"
         >
-          <AppIcon :name="t.kind === 'success' ? 'check' : 'alert'" :size="15" />
+          <AppIcon
+            :name="t.kind === 'success' ? 'check' : 'alert'"
+            :size="15"
+          />
         </span>
         <span class="flex-1 text-ink-soft">{{ t.message }}</span>
-        <button class="text-muted hover:text-ink" @click="ui.dismissToast(t.id)">
-          <AppIcon name="close" :size="14" />
+        <button
+          class="text-muted hover:text-ink"
+          @click="ui.dismissToast(t.id)"
+        >
+          <AppIcon
+            name="close"
+            :size="14"
+          />
         </button>
       </div>
     </TransitionGroup>

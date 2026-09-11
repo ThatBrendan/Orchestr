@@ -15,9 +15,20 @@ const message = computed(() => {
 
 <template>
   <div class="border rounded-xl p-8 text-center border-line bg-surface">
-    <p class="text-14 text-ink-soft">{{ message }}</p>
-    <div v-if="props.retry" class="mt-4 flex justify-center">
-      <AppButton variant="secondary" size="sm" @click="props.retry">Try again</AppButton>
+    <p class="text-14 text-ink-soft">
+      {{ message }}
+    </p>
+    <div
+      v-if="props.retry"
+      class="mt-4 flex justify-center"
+    >
+      <AppButton
+        variant="secondary"
+        size="sm"
+        @click="props.retry"
+      >
+        Try again
+      </AppButton>
     </div>
   </div>
 </template>

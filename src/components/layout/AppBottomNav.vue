@@ -29,7 +29,10 @@ function isActive(match: readonly string[]) {
       class="flex-1 flex flex-col items-center justify-center gap-1"
       :class="isActive(item.match) ? 'text-ink' : 'text-muted'"
     >
-      <AppIcon :name="item.icon" :size="18" />
+      <AppIcon
+        :name="item.icon"
+        :size="18"
+      />
       <span class="text-[11px]">{{ item.shortLabel }}</span>
     </RouterLink>
   </nav>

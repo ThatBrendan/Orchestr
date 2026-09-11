@@ -100,20 +100,54 @@ const time = computed(() => useProjectTime(timezone.value));
 <template>
   <div class="fade-in">
     <div class="flex items-center justify-between mb-4">
-      <p class="text-14 text-ink-soft">{{ commitments.length }} {{ commitments.length === 1 ? "activity" : "activities" }}</p>
-      <AppButton v-if="canEdit" size="sm" @click="openCreate">New activity</AppButton>
+      <p class="text-14 text-ink-soft">
+        {{ commitments.length }} {{ commitments.length === 1 ? "activity" : "activities" }}
+      </p>
+      <AppButton
+        v-if="canEdit"
+        size="sm"
+        @click="openCreate"
+      >
+        New activity
+      </AppButton>
     </div>
 
-    <div v-if="isPending" class="space-y-2">
-      <SkeletonBlock v-for="i in 4" :key="i" height="64px" rounded="0.75rem" />
+    <div
+      v-if="isPending"
+      class="space-y-2"
+    >
+      <SkeletonBlock
+        v-for="i in 4"
+        :key="i"
+        height="64px"
+        rounded="0.75rem"
+      />
     </div>
-    <ErrorState v-else-if="isError" :error="error" :retry="() => refetch()" />
-    <EmptyState v-else-if="commitments.length === 0" message="No activities planned yet.">
-      <template v-if="canEdit" #action>
-        <AppButton size="sm" @click="openCreate">Add the first activity</AppButton>
+    <ErrorState
+      v-else-if="isError"
+      :error="error"
+      :retry="() => refetch()"
+    />
+    <EmptyState
+      v-else-if="commitments.length === 0"
+      message="No activities planned yet."
+    >
+      <template
+        v-if="canEdit"
+        #action
+      >
+        <AppButton
+          size="sm"
+          @click="openCreate"
+        >
+          Add the first activity
+        </AppButton>
       </template>
     </EmptyState>
-    <div v-else class="border rounded-xl divide-y border-line bg-surface">
+    <div
+      v-else
+      class="border rounded-xl divide-y border-line bg-surface"
+    >
       <button
         v-for="c in commitments"
         :key="c.id"
@@ -121,7 +155,9 @@ const time = computed(() => useProjectTime(timezone.value));
         @click="openDetail(c.id)"
       >
         <div class="min-w-0 flex-1">
-          <div class="text-14 font-medium truncate">{{ c.title }}</div>
+          <div class="text-14 font-medium truncate">
+            {{ c.title }}
+          </div>
           <div class="text-13 text-muted capitalize">
             {{ activityTypeLabel(c.activity_type) }} · {{ categoryLabel(c.kind) }}
             <span v-if="c.starts_at"> · {{ time.dateOnly(c.starts_at) }}</span>
@@ -129,8 +165,14 @@ const time = computed(() => useProjectTime(timezone.value));
             <span v-if="ownerName(c.owner_member_id)"> · {{ ownerName(c.owner_member_id) }}</span>
           </div>
         </div>
-        <span v-if="c.estimated_cost_minor != null" class="text-13.5 text-ink-soft">{{ format(c.estimated_cost_minor, currency) }}</span>
-        <StatusBadge :label="commitmentStatusLabel(c.activity_type, c.status)" :tone="statusTone(c.status)" />
+        <span
+          v-if="c.estimated_cost_minor != null"
+          class="text-13.5 text-ink-soft"
+        >{{ format(c.estimated_cost_minor, currency) }}</span>
+        <StatusBadge
+          :label="commitmentStatusLabel(c.activity_type, c.status)"
+          :tone="statusTone(c.status)"
+        />
       </button>
     </div>
 

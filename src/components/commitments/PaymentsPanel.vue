@@ -120,26 +120,57 @@ const outstanding = computed(() => financials.value?.outstanding_minor ?? null);
   <div>
     <div class="flex items-center justify-between mb-3">
       <div>
-        <h3 class="text-13 font-semibold text-ink-soft uppercase tracking-wide">Payments</h3>
+        <h3 class="text-13 font-semibold text-ink-soft uppercase tracking-wide">
+          Payments
+        </h3>
         <p class="text-13 text-muted mt-0.5">
           Outstanding: <span class="font-medium text-ink">{{ outstanding != null ? format(outstanding, props.currency) : "—" }}</span>
         </p>
       </div>
-      <AppButton v-if="props.canEdit" variant="secondary" size="sm" @click="showAddForm = !showAddForm">
+      <AppButton
+        v-if="props.canEdit"
+        variant="secondary"
+        size="sm"
+        @click="showAddForm = !showAddForm"
+      >
         {{ showAddForm ? "Cancel" : "Add payment" }}
       </AppButton>
     </div>
 
-    <form v-if="showAddForm" class="border rounded-lg p-3.5 mb-3 space-y-3 border-line bg-[#FBFBFA]" @submit.prevent="submitAdd">
+    <form
+      v-if="showAddForm"
+      class="border rounded-lg p-3.5 mb-3 space-y-3 border-line bg-[#FBFBFA]"
+      @submit.prevent="submitAdd"
+    >
       <div class="grid grid-cols-3 gap-2">
-        <select v-model="addForm.type" class="border rounded-lg px-2.5 py-2 text-13.5 focus-ring border-line bg-surface">
-          <option v-for="t in TYPES" :key="t" :value="t">{{ t }}</option>
+        <select
+          v-model="addForm.type"
+          class="border rounded-lg px-2.5 py-2 text-13.5 focus-ring border-line bg-surface"
+        >
+          <option
+            v-for="t in TYPES"
+            :key="t"
+            :value="t"
+          >
+            {{ t }}
+          </option>
         </select>
-        <select v-model="addForm.direction" class="border rounded-lg px-2.5 py-2 text-13.5 focus-ring border-line bg-surface">
-          <option value="outgoing">Outgoing</option>
-          <option value="incoming">Incoming</option>
+        <select
+          v-model="addForm.direction"
+          class="border rounded-lg px-2.5 py-2 text-13.5 focus-ring border-line bg-surface"
+        >
+          <option value="outgoing">
+            Outgoing
+          </option>
+          <option value="incoming">
+            Incoming
+          </option>
         </select>
-        <input v-model="addForm.due_on" type="date" class="border rounded-lg px-2.5 py-2 text-13.5 focus-ring border-line" />
+        <input
+          v-model="addForm.due_on"
+          type="date"
+          class="border rounded-lg px-2.5 py-2 text-13.5 focus-ring border-line"
+        >
       </div>
       <input
         v-model="addForm.amount_major"
@@ -148,20 +179,56 @@ const outstanding = computed(() => financials.value?.outstanding_minor ?? null);
         min="0.01"
         :placeholder="`Amount (${props.currency})`"
         class="w-full border rounded-lg px-3 py-2 text-13.5 focus-ring border-line"
-      />
-      <p v-if="addError" class="text-13 text-danger">{{ addError }}</p>
-      <AppButton size="sm" :loading="createPayment.isPending.value" @click="submitAdd">Schedule payment</AppButton>
+      >
+      <p
+        v-if="addError"
+        class="text-13 text-danger"
+      >
+        {{ addError }}
+      </p>
+      <AppButton
+        size="sm"
+        :loading="createPayment.isPending.value"
+        @click="submitAdd"
+      >
+        Schedule payment
+      </AppButton>
     </form>
 
-    <div v-if="isPending" class="space-y-2">
-      <SkeletonBlock v-for="i in 2" :key="i" height="44px" rounded="0.5rem" />
+    <div
+      v-if="isPending"
+      class="space-y-2"
+    >
+      <SkeletonBlock
+        v-for="i in 2"
+        :key="i"
+        height="44px"
+        rounded="0.5rem"
+      />
     </div>
-    <ErrorState v-else-if="isError" :error="error" :retry="() => refetch()" />
-    <EmptyState v-else-if="payments.length === 0" message="No payments recorded for this activity yet." />
-    <div v-else class="border rounded-lg divide-y border-line">
-      <div v-for="p in payments" :key="p.id" class="px-3 py-2.5">
+    <ErrorState
+      v-else-if="isError"
+      :error="error"
+      :retry="() => refetch()"
+    />
+    <EmptyState
+      v-else-if="payments.length === 0"
+      message="No payments recorded for this activity yet."
+    />
+    <div
+      v-else
+      class="border rounded-lg divide-y border-line"
+    >
+      <div
+        v-for="p in payments"
+        :key="p.id"
+        class="px-3 py-2.5"
+      >
         <div class="flex items-center gap-2.5">
-          <StatusBadge :label="p.status" :tone="statusTone(p.status)" />
+          <StatusBadge
+            :label="p.status"
+            :tone="statusTone(p.status)"
+          />
           <span class="text-13.5 capitalize">{{ p.type }}</span>
           <span class="text-13.5 font-medium ml-auto">{{ format(p.amount_minor, props.currency) }}</span>
         </div>
@@ -170,24 +237,80 @@ const outstanding = computed(() => financials.value?.outstanding_minor ?? null);
           <span v-if="p.paid_on"> · Paid {{ time.dateOnly(p.paid_on) }}</span>
         </div>
 
-        <div v-if="props.canEdit && p.status === 'scheduled'" class="mt-2 flex gap-2">
-          <AppButton variant="secondary" size="sm" @click="openMarkPaid(p.id)">Mark paid</AppButton>
-          <AppButton variant="ghost" size="sm" :loading="setStatus.isPending.value" @click="cancelPayment(p.id)">Cancel</AppButton>
+        <div
+          v-if="props.canEdit && p.status === 'scheduled'"
+          class="mt-2 flex gap-2"
+        >
+          <AppButton
+            variant="secondary"
+            size="sm"
+            @click="openMarkPaid(p.id)"
+          >
+            Mark paid
+          </AppButton>
+          <AppButton
+            variant="ghost"
+            size="sm"
+            :loading="setStatus.isPending.value"
+            @click="cancelPayment(p.id)"
+          >
+            Cancel
+          </AppButton>
         </div>
 
-        <form v-if="markPaidRowId === p.id" class="mt-2.5 border rounded-lg p-3 space-y-2 border-line bg-[#FBFBFA]" @submit.prevent="submitMarkPaid">
+        <form
+          v-if="markPaidRowId === p.id"
+          class="mt-2.5 border rounded-lg p-3 space-y-2 border-line bg-[#FBFBFA]"
+          @submit.prevent="submitMarkPaid"
+        >
           <div class="grid grid-cols-2 gap-2">
-            <input v-model="markPaidForm.paid_on" type="date" class="border rounded-lg px-2.5 py-2 text-13.5 focus-ring border-line" />
-            <select v-model="markPaidForm.paid_by_member_id" class="border rounded-lg px-2.5 py-2 text-13.5 focus-ring border-line bg-surface">
-              <option value="">Paid by (optional)</option>
-              <option v-for="m in props.members" :key="m.member_id" :value="m.member_id">{{ m.display_name }}</option>
+            <input
+              v-model="markPaidForm.paid_on"
+              type="date"
+              class="border rounded-lg px-2.5 py-2 text-13.5 focus-ring border-line"
+            >
+            <select
+              v-model="markPaidForm.paid_by_member_id"
+              class="border rounded-lg px-2.5 py-2 text-13.5 focus-ring border-line bg-surface"
+            >
+              <option value="">
+                Paid by (optional)
+              </option>
+              <option
+                v-for="m in props.members"
+                :key="m.member_id"
+                :value="m.member_id"
+              >
+                {{ m.display_name }}
+              </option>
             </select>
           </div>
-          <input v-model="markPaidForm.method" placeholder="Method (optional)" class="w-full border rounded-lg px-2.5 py-2 text-13.5 focus-ring border-line" />
-          <p v-if="markPaidError" class="text-13 text-danger">{{ markPaidError }}</p>
+          <input
+            v-model="markPaidForm.method"
+            placeholder="Method (optional)"
+            class="w-full border rounded-lg px-2.5 py-2 text-13.5 focus-ring border-line"
+          >
+          <p
+            v-if="markPaidError"
+            class="text-13 text-danger"
+          >
+            {{ markPaidError }}
+          </p>
           <div class="flex gap-2">
-            <AppButton size="sm" :loading="markPaid.isPending.value" @click="submitMarkPaid">Confirm paid</AppButton>
-            <AppButton variant="secondary" size="sm" @click="markPaidRowId = null">Cancel</AppButton>
+            <AppButton
+              size="sm"
+              :loading="markPaid.isPending.value"
+              @click="submitMarkPaid"
+            >
+              Confirm paid
+            </AppButton>
+            <AppButton
+              variant="secondary"
+              size="sm"
+              @click="markPaidRowId = null"
+            >
+              Cancel
+            </AppButton>
           </div>
         </form>
       </div>

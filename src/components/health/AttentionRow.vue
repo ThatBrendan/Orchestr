@@ -27,20 +27,36 @@ const props = defineProps<{
   >
     <SeverityIcon :severity="finding.severity" />
     <div class="min-w-0 flex-1">
-      <div class="text-14 font-medium">{{ finding.message }}</div>
+      <div class="text-14 font-medium">
+        {{ finding.message }}
+      </div>
       <div class="text-13 text-ink-soft">
-        <span v-if="projectLabel" class="text-muted">{{ projectLabel }} · </span>{{ finding.resolution }}
+        <span
+          v-if="projectLabel"
+          class="text-muted"
+        >{{ projectLabel }} · </span>{{ finding.resolution }}
       </div>
     </div>
-    <span class="text-muted"><AppIcon name="chevronRight" :size="16" /></span>
+    <span class="text-muted"><AppIcon
+      name="chevronRight"
+      :size="16"
+    /></span>
   </RouterLink>
 
-  <div v-else class="flex items-center gap-3 px-4 py-3.5">
+  <div
+    v-else
+    class="flex items-center gap-3 px-4 py-3.5"
+  >
     <SeverityIcon :severity="finding.severity" />
     <div class="min-w-0 flex-1">
-      <div class="text-14 font-medium">{{ finding.message }}</div>
+      <div class="text-14 font-medium">
+        {{ finding.message }}
+      </div>
       <div class="text-13 text-ink-soft">
-        <span v-if="projectLabel" class="text-muted">{{ projectLabel }} · </span>{{ finding.resolution }}
+        <span
+          v-if="projectLabel"
+          class="text-muted"
+        >{{ projectLabel }} · </span>{{ finding.resolution }}
       </div>
     </div>
   </div>

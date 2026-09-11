@@ -34,32 +34,63 @@ const attentionLine = computed(() => {
 
 <template>
   <PageContainer>
-    <h1 class="font-display text-[26px] font-semibold tracking-tight">{{ greeting }}</h1>
-    <p class="mt-1.5 text-14.5 text-ink-soft">{{ attentionLine }}</p>
+    <h1 class="font-display text-[26px] font-semibold tracking-tight">
+      {{ greeting }}
+    </h1>
+    <p class="mt-1.5 text-14.5 text-ink-soft">
+      {{ attentionLine }}
+    </p>
 
     <!-- projects -->
     <div class="mt-9 space-y-3">
       <template v-if="isPending">
-        <SkeletonBlock v-for="i in 2" :key="i" height="120px" rounded="0.75rem" />
+        <SkeletonBlock
+          v-for="i in 2"
+          :key="i"
+          height="120px"
+          rounded="0.75rem"
+        />
       </template>
-      <ErrorState v-else-if="isError" :error="error" :retry="() => refetch()" />
+      <ErrorState
+        v-else-if="isError"
+        :error="error"
+        :retry="() => refetch()"
+      />
       <EmptyState
         v-else-if="projects.length === 0"
         title="No projects yet"
         message="Create your first project to start planning."
       >
         <template #action>
-          <AppButton @click="router.push({ name: 'projects' })">Go to Projects</AppButton>
+          <AppButton @click="router.push({ name: 'projects' })">
+            Go to Projects
+          </AppButton>
         </template>
       </EmptyState>
-      <ProjectSummaryRow v-for="p in projects" v-else :key="p.project_id" :project="p" />
+      <ProjectSummaryRow
+        v-for="p in projects"
+        v-else
+        :key="p.project_id"
+        :project="p"
+      />
     </div>
 
     <!-- needs attention (aggregated — one set-based call) -->
-    <div v-if="projects.length" class="mt-10">
+    <div
+      v-if="projects.length"
+      class="mt-10"
+    >
       <SectionHeading label="Needs attention" />
-      <div v-if="attention.isPending.value" class="mt-3 space-y-2">
-        <SkeletonBlock v-for="i in 3" :key="i" height="56px" rounded="0.5rem" />
+      <div
+        v-if="attention.isPending.value"
+        class="mt-3 space-y-2"
+      >
+        <SkeletonBlock
+          v-for="i in 3"
+          :key="i"
+          height="56px"
+          rounded="0.5rem"
+        />
       </div>
       <ErrorState
         v-else-if="attention.isError.value"
@@ -72,7 +103,10 @@ const attentionLine = computed(() => {
         class="mt-3"
         message="All clear — nothing needs attention across your projects."
       />
-      <div v-else class="mt-3 border rounded-xl divide-y border-line bg-surface">
+      <div
+        v-else
+        class="mt-3 border rounded-xl divide-y border-line bg-surface"
+      >
         <AttentionRow
           v-for="(f, i) in attention.findings.value"
           :key="f.project_id + f.code + (f.subject_id ?? '') + i"

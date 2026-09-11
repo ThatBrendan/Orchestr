@@ -14,10 +14,16 @@ const primary = computed(() =>
 </script>
 
 <template>
-  <section class="relative overflow-hidden" aria-labelledby="hero-heading">
+  <section
+    class="relative overflow-hidden"
+    aria-labelledby="hero-heading"
+  >
     <div class="max-w-6xl mx-auto px-5 md:px-8 pt-16 md:pt-24 pb-14 md:pb-20">
       <div class="max-w-2xl">
-        <h1 id="hero-heading" class="font-display text-[34px] leading-[1.12] md:text-[52px] md:leading-[1.08] font-semibold tracking-tight">
+        <h1
+          id="hero-heading"
+          class="font-display text-[34px] leading-[1.12] md:text-[52px] md:leading-[1.08] font-semibold tracking-tight"
+        >
           Turn complex plans into coordinated execution.
         </h1>
         <p class="mt-5 text-[16px] md:text-[18px] leading-relaxed text-ink-soft max-w-xl">
@@ -25,11 +31,21 @@ const primary = computed(() =>
           workspace — so everyone sees what's happening, who owns it, what it costs, and what's at risk.
         </p>
         <div class="mt-8 flex flex-wrap items-center gap-3">
-          <AppButton :to="primary.to" size="lg">
+          <AppButton
+            :to="primary.to"
+            size="lg"
+          >
             {{ primary.label }}
-            <AppIcon name="arrowRight" :size="16" />
+            <AppIcon
+              name="arrowRight"
+              :size="16"
+            />
           </AppButton>
-          <AppButton :to="{ path: '/', hash: '#how-it-works' }" variant="secondary" size="lg">
+          <AppButton
+            :to="{ path: '/', hash: '#how-it-works' }"
+            variant="secondary"
+            size="lg"
+          >
             See how it works
           </AppButton>
         </div>

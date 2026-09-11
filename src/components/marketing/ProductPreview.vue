@@ -42,39 +42,74 @@ const SAMPLE = {
     <div class="px-5 pt-5">
       <div class="flex items-start justify-between gap-4">
         <div>
-          <div class="font-medium text-[15px]">{{ SAMPLE.name }}</div>
-          <div class="text-13 text-muted mt-0.5">{{ SAMPLE.dates }}</div>
+          <div class="font-medium text-[15px]">
+            {{ SAMPLE.name }}
+          </div>
+          <div class="text-13 text-muted mt-0.5">
+            {{ SAMPLE.dates }}
+          </div>
         </div>
-        <div class="text-13 font-medium text-amber shrink-0">3 need attention</div>
+        <div class="text-13 font-medium text-amber shrink-0">
+          3 need attention
+        </div>
       </div>
-      <div class="mt-3"><ProgressBar :value="SAMPLE.progress" /></div>
+      <div class="mt-3">
+        <ProgressBar :value="SAMPLE.progress" />
+      </div>
     </div>
 
     <!-- tiles -->
     <div class="mt-5 px-5 py-4 border-y border-line flex flex-wrap gap-x-8 gap-y-3 bg-[#FCFCFB]">
-      <StatTile v-for="t in SAMPLE.tiles" :key="t.label" :value="t.value" :label="t.label" />
+      <StatTile
+        v-for="t in SAMPLE.tiles"
+        :key="t.label"
+        :value="t.value"
+        :label="t.label"
+      />
     </div>
 
     <div class="grid sm:grid-cols-2">
       <!-- commitments -->
       <div class="p-5 sm:border-r border-line">
-        <div class="text-[11px] font-semibold uppercase tracking-wide text-muted">Commitments</div>
+        <div class="text-[11px] font-semibold uppercase tracking-wide text-muted">
+          Commitments
+        </div>
         <div class="mt-2.5 space-y-2.5">
-          <div v-for="c in SAMPLE.commitments" :key="c.title" class="flex items-center gap-3">
+          <div
+            v-for="c in SAMPLE.commitments"
+            :key="c.title"
+            class="flex items-center gap-3"
+          >
             <div class="min-w-0 flex-1">
-              <div class="text-14 font-medium truncate">{{ c.title }}</div>
-              <div class="text-13" :class="c.owner === 'Unassigned' ? 'text-amber' : 'text-ink-soft'">{{ c.owner }}</div>
+              <div class="text-14 font-medium truncate">
+                {{ c.title }}
+              </div>
+              <div
+                class="text-13"
+                :class="c.owner === 'Unassigned' ? 'text-amber' : 'text-ink-soft'"
+              >
+                {{ c.owner }}
+              </div>
             </div>
-            <StatusBadge :label="c.status" :tone="c.tone" />
+            <StatusBadge
+              :label="c.status"
+              :tone="c.tone"
+            />
           </div>
         </div>
       </div>
 
       <!-- health -->
       <div class="p-5 border-t sm:border-t-0 border-line">
-        <div class="text-[11px] font-semibold uppercase tracking-wide text-muted">Planning health</div>
+        <div class="text-[11px] font-semibold uppercase tracking-wide text-muted">
+          Planning health
+        </div>
         <div class="mt-2.5 space-y-2.5">
-          <div v-for="(f, i) in SAMPLE.findings" :key="i" class="flex items-center gap-3">
+          <div
+            v-for="(f, i) in SAMPLE.findings"
+            :key="i"
+            class="flex items-center gap-3"
+          >
             <SeverityIcon :severity="f.severity" />
             <span class="text-13.5 text-ink-soft">{{ f.text }}</span>
           </div>

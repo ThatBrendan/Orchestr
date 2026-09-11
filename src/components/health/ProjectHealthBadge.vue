@@ -16,5 +16,8 @@ const map = computed(
 </script>
 
 <template>
-  <StatusBadge :label="map.label" :tone="map.tone" />
+  <StatusBadge
+    :label="map.label"
+    :tone="map.tone"
+  />
 </template>

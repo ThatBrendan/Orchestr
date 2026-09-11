@@ -21,13 +21,30 @@ function reload() {
 </script>
 
 <template>
-  <div v-if="crashed" class="min-h-screen flex items-center justify-center p-6 bg-paper">
+  <div
+    v-if="crashed"
+    class="min-h-screen flex items-center justify-center p-6 bg-paper"
+  >
     <div class="max-w-sm text-center">
-      <img :src="orchestrioIcon" :alt="APP_NAME" class="h-12 w-auto" />
-      <p class="mt-3 text-14 text-ink-soft">Something went wrong on this screen.</p>
-      <p class="mt-1 text-13 text-muted">{{ crashed }}</p>
+      <img
+        :src="orchestrioIcon"
+        :alt="APP_NAME"
+        class="h-12 w-auto"
+      >
+      <p class="mt-3 text-14 text-ink-soft">
+        Something went wrong on this screen.
+      </p>
+      <p class="mt-1 text-13 text-muted">
+        {{ crashed }}
+      </p>
       <div class="mt-5 flex justify-center">
-        <AppButton variant="secondary" size="sm" @click="reload">Reload</AppButton>
+        <AppButton
+          variant="secondary"
+          size="sm"
+          @click="reload"
+        >
+          Reload
+        </AppButton>
       </div>
     </div>
   </div>

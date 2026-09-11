@@ -17,7 +17,13 @@ const style = computed(
 </script>
 
 <template>
-  <div class="w-8 h-8 rounded-md flex items-center justify-center shrink-0" :class="style.box">
-    <AppIcon :name="style.icon" :size="16" />
+  <div
+    class="w-8 h-8 rounded-md flex items-center justify-center shrink-0"
+    :class="style.box"
+  >
+    <AppIcon
+      :name="style.icon"
+      :size="16"
+    />
   </div>
 </template>

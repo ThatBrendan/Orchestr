@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ICON_PATHS, type IconName } from "./icons";
 
+// Keep SVG markup sourced only from the checked-in ICON_PATHS map; never accept user HTML.
 const props = withDefaults(defineProps<{ name: IconName; size?: number }>(), { size: 18 });
 </script>
 

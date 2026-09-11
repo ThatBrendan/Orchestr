@@ -67,14 +67,32 @@ onBeforeUnmount(() => ctxStore.clear());
   <PageContainer>
     <div class="flex items-start justify-between gap-4 flex-wrap">
       <div>
-        <h1 class="font-display text-[24px] font-semibold tracking-tight">{{ project?.name }}</h1>
-        <p class="mt-1 text-[13.5px] text-muted">{{ dates }}</p>
-        <p class="mt-1 text-13 text-muted">{{ profileLabel }}</p>
-        <p v-if="archived" class="mt-1 text-13 text-amber font-medium">Archived — read only</p>
+        <h1 class="font-display text-[24px] font-semibold tracking-tight">
+          {{ project?.name }}
+        </h1>
+        <p class="mt-1 text-[13.5px] text-muted">
+          {{ dates }}
+        </p>
+        <p class="mt-1 text-13 text-muted">
+          {{ profileLabel }}
+        </p>
+        <p
+          v-if="archived"
+          class="mt-1 text-13 text-amber font-medium"
+        >
+          Archived — read only
+        </p>
       </div>
       <div class="flex items-center gap-2">
         <!-- Share is not in this build; shown disabled rather than faked -->
-        <AppButton variant="secondary" size="sm" disabled title="Not in this build">Share</AppButton>
+        <AppButton
+          variant="secondary"
+          size="sm"
+          disabled
+          title="Not in this build"
+        >
+          Share
+        </AppButton>
         <AppButton
           v-if="allowed('project.settings')"
           variant="secondary"
@@ -89,7 +107,12 @@ onBeforeUnmount(() => ctxStore.clear());
     <!-- stat tiles -->
     <div class="mt-6 border rounded-xl px-6 py-4 flex flex-wrap gap-x-10 gap-y-4 border-line bg-surface">
       <template v-if="finPending">
-        <SkeletonBlock v-for="i in 4" :key="i" width="90px" height="44px" />
+        <SkeletonBlock
+          v-for="i in 4"
+          :key="i"
+          width="90px"
+          height="44px"
+        />
       </template>
       <template v-else>
         <template v-if="showBudgetModule">
@@ -97,7 +120,10 @@ onBeforeUnmount(() => ctxStore.clear());
             :value="financials?.total_target_minor != null ? format(financials.total_target_minor, currency) : 'Not set'"
             label="Total budget"
           />
-          <StatTile :value="format(financials?.committed_spend_minor ?? 0, currency)" label="Committed" />
+          <StatTile
+            :value="format(financials?.committed_spend_minor ?? 0, currency)"
+            label="Committed"
+          />
           <StatTile
             :value="financials?.remaining_budget_minor != null ? format(financials.remaining_budget_minor, currency) : '—'"
             label="Remaining"
@@ -106,7 +132,10 @@ onBeforeUnmount(() => ctxStore.clear());
             "
           />
         </template>
-        <StatTile :value="(financials?.progress_pct ?? 0) + '%'" label="Complete" />
+        <StatTile
+          :value="(financials?.progress_pct ?? 0) + '%'"
+          label="Complete"
+        />
       </template>
     </div>
 

@@ -58,25 +58,63 @@ async function doReactivate() {
     <div class="min-w-0 flex-1">
       <div class="flex items-center gap-2 flex-wrap">
         <span class="text-14 font-medium">{{ healthCodeTitle(props.finding.code) }}</span>
-        <StatusBadge v-if="props.finding.subject_label" :label="props.finding.subject_label" tone="neutral" />
-        <StatusBadge v-if="props.finding.dismissed && props.finding.snoozed_until" :label="`Snoozed until ${props.finding.snoozed_until}`" tone="amber" />
-        <StatusBadge v-else-if="props.finding.dismissed" label="Dismissed" tone="neutral" />
+        <StatusBadge
+          v-if="props.finding.subject_label"
+          :label="props.finding.subject_label"
+          tone="neutral"
+        />
+        <StatusBadge
+          v-if="props.finding.dismissed && props.finding.snoozed_until"
+          :label="`Snoozed until ${props.finding.snoozed_until}`"
+          tone="amber"
+        />
+        <StatusBadge
+          v-else-if="props.finding.dismissed"
+          label="Dismissed"
+          tone="neutral"
+        />
       </div>
-      <p class="text-13.5 text-ink-soft mt-0.5">{{ props.finding.message }}</p>
-      <p class="text-13 text-muted mt-1">{{ props.finding.resolution }}</p>
+      <p class="text-13.5 text-ink-soft mt-0.5">
+        {{ props.finding.message }}
+      </p>
+      <p class="text-13 text-muted mt-1">
+        {{ props.finding.resolution }}
+      </p>
 
-      <div v-if="props.canDismiss" class="mt-2 flex gap-2">
+      <div
+        v-if="props.canDismiss"
+        class="mt-2 flex gap-2"
+      >
         <template v-if="!props.finding.dismissible">
           <span class="text-13 text-muted italic">Can only be resolved by fixing the underlying issue.</span>
         </template>
         <template v-else-if="props.finding.dismissed">
-          <AppButton variant="secondary" size="sm" :loading="reactivate.isPending.value" @click="doReactivate">
+          <AppButton
+            variant="secondary"
+            size="sm"
+            :loading="reactivate.isPending.value"
+            @click="doReactivate"
+          >
             Restore
           </AppButton>
         </template>
         <template v-else>
-          <AppButton variant="secondary" size="sm" :loading="dismiss.isPending.value" @click="doDismiss">Dismiss</AppButton>
-          <AppButton variant="ghost" size="sm" :loading="snooze.isPending.value" @click="doSnooze">Snooze 7 days</AppButton>
+          <AppButton
+            variant="secondary"
+            size="sm"
+            :loading="dismiss.isPending.value"
+            @click="doDismiss"
+          >
+            Dismiss
+          </AppButton>
+          <AppButton
+            variant="ghost"
+            size="sm"
+            :loading="snooze.isPending.value"
+            @click="doSnooze"
+          >
+            Snooze 7 days
+          </AppButton>
         </template>
       </div>
     </div>
