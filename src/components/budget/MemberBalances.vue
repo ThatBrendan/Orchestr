@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useProjectSettlement } from "@/composables/useSettlement";
 import { useMoney } from "@/composables/useMoney";
+import { getSettlementPresentation } from "@/lib/presentation";
 const props = defineProps<{ projectId: string; currency: string }>();
 const query = useProjectSettlement(() => props.projectId);
 const { format } = useMoney();
@@ -65,7 +66,7 @@ const { format } = useMoney();
             >
               <th
                 scope="row"
-                class="p-3 text-left font-medium"
+                class="max-w-[12rem] whitespace-normal [overflow-wrap:anywhere] p-3 text-left font-medium"
               >
                 {{ row.display_name }}{{ row.member_status==='removed' ? ' (removed)' : '' }}
               </th>
@@ -77,8 +78,18 @@ const { format } = useMoney();
               <td class="p-3">
                 {{ format(Math.abs(row.remaining_minor),currency) }}{{ row.remaining_minor<0 ? ' credit' : '' }}
               </td>
-              <td class="p-3">
-                {{ row.remaining_minor===0 ? 'Settled' : row.remaining_minor<0 ? 'Credit' : 'Payment remaining' }}
+              <td
+                class="p-3"
+              >
+                <span
+                  :class="{
+                    'text-danger': getSettlementPresentation(row.paid_minor, row.remaining_minor).tone === 'danger',
+                    'text-amber': getSettlementPresentation(row.paid_minor, row.remaining_minor).tone === 'amber',
+                    'text-accent': getSettlementPresentation(row.paid_minor, row.remaining_minor).tone === 'accent',
+                  }"
+                >
+                  {{ getSettlementPresentation(row.paid_minor, row.remaining_minor).label }}
+                </span>
               </td>
             </tr>
           </tbody>

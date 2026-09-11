@@ -73,7 +73,8 @@ function isActive(match: readonly string[]) {
         <div class="h-14 flex items-center justify-between px-4">
           <RouterLink
             to="/"
-            class="flex items-center gap-2 focus-ring"
+            aria-label="Orchestrio home"
+            class="flex min-h-11 items-center gap-2 focus-ring"
           >
             <img
               :src="orchestrioIcon"

@@ -8,6 +8,7 @@ import { useMoney } from "@/composables/useMoney";
 import { invalidatePlanning } from "@/composables/invalidation";
 import { supabase } from "@/lib/supabase";
 import { toAppError } from "@/lib/errors";
+import { getSettlementPresentation } from "@/lib/presentation";
 import type { Enums } from "@/types/database";
 import AppButton from "@/components/ui/AppButton.vue";
 const props = defineProps<{ id: string; projectId: string; currency: string; timezone: string; canEdit: boolean }>();
@@ -64,12 +65,24 @@ async function save() {
     <div
       v-for="row in query.data.value"
       :key="row.member_id"
-      class="rounded-lg border border-line p-3 text-13 space-y-2"
+      class="min-w-0 rounded-lg border border-line p-3 text-13 space-y-2 [overflow-wrap:anywhere]"
     >
       <p class="font-medium">
         {{ row.display_name }}{{ row.member_status === 'removed' ? ' (removed)' : '' }}
       </p>
-      <p>Share {{ format(row.allocated_minor,currency) }} · Paid {{ format(row.paid_minor,currency) }} · {{ row.remaining_minor === 0 ? 'Settled' : `${format(Math.abs(row.remaining_minor),currency)} ${row.remaining_minor < 0 ? 'credit' : 'remaining'}` }}</p>
+      <p class="flex flex-col gap-1 sm:flex-row sm:flex-wrap sm:gap-x-3">
+        <span>Share {{ format(row.allocated_minor,currency) }}</span>
+        <span>Paid {{ format(row.paid_minor,currency) }}</span>
+        <span
+          :class="{
+            'text-danger': getSettlementPresentation(row.paid_minor, row.remaining_minor).tone === 'danger',
+            'text-amber': getSettlementPresentation(row.paid_minor, row.remaining_minor).tone === 'amber',
+            'text-accent': getSettlementPresentation(row.paid_minor, row.remaining_minor).tone === 'accent',
+          }"
+        >
+          {{ getSettlementPresentation(row.paid_minor, row.remaining_minor).label }}<template v-if="row.remaining_minor > 0"> · {{ format(row.remaining_minor,currency) }} remaining</template><template v-else-if="row.remaining_minor < 0"> · {{ format(Math.abs(row.remaining_minor),currency) }} credit</template>
+        </span>
+      </p>
       <AppButton
         v-if="canEdit && row.member_status === 'active' && (isOrganizer || context?.memberId === row.member_id)"
         size="sm"

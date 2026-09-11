@@ -13,6 +13,7 @@ import ErrorState from "@/components/ui/ErrorState.vue";
 import AttentionRow from "@/components/health/AttentionRow.vue";
 import UpcomingList from "@/components/timeline/UpcomingList.vue";
 import StatusBadge from "@/components/ui/StatusBadge.vue";
+import { formatDuration } from "@/lib/presentation";
 
 const route = useRoute();
 const projectId = computed(() => String(route.params.projectId));
@@ -45,12 +46,12 @@ function countdownValue(): string {
   if (overview.value.days_until_end != null) {
     if (overview.value.days_until_end < 0) return "Ended";
     if (overview.value.days_until_end === 0) return "Today";
-    return `${overview.value.days_until_end}d`;
+    return formatDuration(overview.value.days_until_end, "day");
   }
   if (overview.value.days_until_start != null) {
     if (overview.value.days_until_start < 0) return "Started";
     if (overview.value.days_until_start === 0) return "Today";
-    return `${overview.value.days_until_start}d`;
+    return formatDuration(overview.value.days_until_start, "day");
   }
   return "No date";
 }

@@ -65,7 +65,7 @@ const groups = computed<Group[]>(() => {
         <div
           v-for="(i, idx) in g.items"
           :key="idx"
-          class="flex items-center gap-3 text-14"
+          class="flex flex-wrap items-start gap-3 text-14"
           :class="i.done ? 'text-muted' : ''"
         >
           <span
@@ -77,12 +77,13 @@ const groups = computed<Group[]>(() => {
           <RouterLink
             v-if="i.link"
             :to="i.link"
-            class="focus-ring hover:underline"
+            class="min-w-0 flex-1 [overflow-wrap:anywhere] focus-ring hover:underline"
           >
             {{ i.label }}
           </RouterLink>
           <span
             v-else
+            class="min-w-0 flex-1 [overflow-wrap:anywhere]"
             :class="i.done ? 'line-through' : ''"
           >{{ i.label }}</span>
           <StatusBadge

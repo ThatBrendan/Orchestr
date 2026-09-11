@@ -26,7 +26,7 @@ const props = defineProps<{
     class="flex items-center gap-3 px-4 py-3.5 hover:bg-[#FBFBFA] transition-colors"
   >
     <SeverityIcon :severity="finding.severity" />
-    <div class="min-w-0 flex-1">
+    <div class="min-w-0 flex-1 [overflow-wrap:anywhere]">
       <div class="text-14 font-medium">
         {{ finding.message }}
       </div>
@@ -48,7 +48,7 @@ const props = defineProps<{
     class="flex items-center gap-3 px-4 py-3.5"
   >
     <SeverityIcon :severity="finding.severity" />
-    <div class="min-w-0 flex-1">
+    <div class="min-w-0 flex-1 [overflow-wrap:anywhere]">
       <div class="text-14 font-medium">
         {{ finding.message }}
       </div>

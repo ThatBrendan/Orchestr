@@ -25,7 +25,7 @@ async function answer(token: string, action: "accept" | "decline") {
 
 <template>
   <button
-    class="ml-auto flex items-center gap-2 rounded-lg px-3 py-2 focus-ring text-13"
+    class="ml-auto flex min-h-11 shrink-0 items-center gap-2 rounded-lg px-3 py-2 focus-ring text-13"
     aria-label="Notifications"
     @click="open = true"
   >
@@ -37,7 +37,7 @@ async function answer(token: string, action: "accept" | "decline") {
       stroke="currentColor"
       stroke-width="1.8"
     ><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" /></svg>
-    <span>Notifications</span>
+    <span class="hidden sm:inline">Notifications</span>
     <span
       v-if="pending.data.value?.length"
       class="rounded-full bg-accent px-2 text-white"

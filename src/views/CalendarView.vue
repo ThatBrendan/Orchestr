@@ -405,7 +405,7 @@ function isPast(event: GlobalTimelineEvent): boolean {
             />
           </span>
           <span class="min-w-0 flex-1">
-            <span class="block truncate text-14 font-medium">{{ event.title }}</span>
+            <span class="block [overflow-wrap:anywhere] text-14 font-medium">{{ event.title }}</span>
             <span class="mt-0.5 block text-13 text-muted">{{ event.project_name }}</span>
             <span
               class="mt-1 block text-13"

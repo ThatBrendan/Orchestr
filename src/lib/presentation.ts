@@ -33,6 +33,23 @@ const ENTITY_LABELS: Record<string, string> = {
   projects: "Projects",
 };
 
+export type SettlementState = "unpaid" | "partial" | "settled";
+
+export function getSettlementPresentation(paidMinor: number, remainingMinor: number): {
+  state: SettlementState;
+  label: string;
+  tone: "danger" | "amber" | "accent";
+} {
+  if (remainingMinor === 0) return { state: "settled", label: "Settled", tone: "accent" };
+  if (paidMinor === 0 && remainingMinor > 0) return { state: "unpaid", label: "Unpaid", tone: "danger" };
+  if (remainingMinor > 0) return { state: "partial", label: "Partially paid", tone: "amber" };
+  return { state: "settled", label: "Credit", tone: "accent" };
+}
+
+export function formatDuration(value: number, unit: "day" | "hour" | "week"): string {
+  return `${value} ${unit}${value === 1 ? "" : "s"}`;
+}
+
 export function presentLabel(value: string | null | undefined): string {
   if (!value) return "-";
   return LABELS[value] ?? value.replace(/_/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());

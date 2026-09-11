@@ -19,7 +19,7 @@ import StatusBadge from "@/components/ui/StatusBadge.vue";
 import AppButton from "@/components/ui/AppButton.vue";
 import AppConfirmDialog from "@/components/ui/AppConfirmDialog.vue";
 import InviteMemberDialog from "@/components/members/InviteMemberDialog.vue";
-import { presentLabel } from "@/lib/presentation";
+import { getSettlementPresentation, presentLabel } from "@/lib/presentation";
 
 const route = useRoute();
 const projectId = computed(() => String(route.params.projectId));
@@ -32,7 +32,13 @@ const settlement = useProjectSettlement(projectId,budgetVisible);
 function balanceLabel(id: string) {
  const row=settlement.data.value?.members.find(m=>m.member_id===id);
  if(!row) return "";
- return row.remaining_minor===0 ? "Settled" : `${format(Math.abs(row.remaining_minor),row.currency)} ${row.remaining_minor<0 ? 'credit' : 'remaining'}`;
+ const presentation = getSettlementPresentation(row.paid_minor, row.remaining_minor);
+ return row.remaining_minor === 0 ? presentation.label : `${presentation.label} · ${format(Math.abs(row.remaining_minor),row.currency)} ${row.remaining_minor<0 ? 'credit' : 'remaining'}`;
+}
+
+function balanceTone(id: string) {
+ const row=settlement.data.value?.members.find(m=>m.member_id===id);
+ return row ? getSettlementPresentation(row.paid_minor, row.remaining_minor).tone : "accent";
 }
 
 const roster = computed(() => members.value.filter((m) => m.status !== "removed"));
@@ -150,7 +156,12 @@ const statusTone = (s: string) => (s === "invited" ? "amber" : s === "removed" ?
                 {{ m.display_name }}
                 <span
                   v-if="budgetVisible && balanceLabel(m.member_id)"
-                  class="block text-13 font-normal text-muted"
+                  class="block text-13 font-normal"
+                  :class="{
+                    'text-danger': balanceTone(m.member_id) === 'danger',
+                    'text-amber': balanceTone(m.member_id) === 'amber',
+                    'text-accent': balanceTone(m.member_id) === 'accent',
+                  }"
                 >{{ balanceLabel(m.member_id) }}</span>
               </div>
               <div class="text-13 text-muted capitalize">
@@ -234,7 +245,7 @@ const statusTone = (s: string) => (s === "invited" ? "amber" : s === "removed" ?
         >
           <span>{{ inv.email }}</span>
           <p class="text-13 text-muted capitalize">
-                {{ inv.status === 'pending' ? 'Pending invitation' : presentLabel(inv.status) }} · {{ presentLabel(inv.role) }}
+            {{ inv.status === 'pending' ? 'Pending invitation' : presentLabel(inv.status) }} · {{ presentLabel(inv.role) }}
           </p>
         </div>
       </section>

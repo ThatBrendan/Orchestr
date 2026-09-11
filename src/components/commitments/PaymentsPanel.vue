@@ -226,13 +226,13 @@ const outstanding = computed(() => financials.value?.outstanding_minor ?? null);
         :key="p.id"
         class="px-3 py-2.5"
       >
-        <div class="flex items-center gap-2.5">
+        <div class="flex flex-wrap items-center gap-2.5">
           <StatusBadge
             :label="presentLabel(p.status)"
             :tone="statusTone(p.status)"
           />
           <span class="text-13.5">{{ presentLabel(p.type) }}</span>
-          <span class="text-13.5 font-medium ml-auto">{{ format(p.amount_minor, props.currency) }}</span>
+          <span class="max-w-full [overflow-wrap:anywhere] text-13.5 font-medium sm:ml-auto">{{ format(p.amount_minor, props.currency) }}</span>
         </div>
         <div class="text-13 text-muted mt-1">
           <span v-if="p.due_on">Due {{ time.dateOnly(p.due_on) }}</span>
@@ -241,7 +241,7 @@ const outstanding = computed(() => financials.value?.outstanding_minor ?? null);
 
         <div
           v-if="props.canEdit && p.status === 'scheduled'"
-          class="mt-2 flex gap-2"
+          class="mt-2 flex flex-wrap gap-2"
         >
           <AppButton
             variant="secondary"
