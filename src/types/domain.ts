@@ -41,3 +41,5 @@ export interface ProjectContext {
 
 /** Money is always minor units in the project's single currency. */
 export type Minor = number;
+
+export type ProjectNote = V["v_project_notes"]["Row"];

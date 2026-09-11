@@ -21,6 +21,13 @@ export type Json =
 export interface Database {
   public: {
     Tables: {
+      project_notes: {
+        Row: { id: string; project_id: string; created_by: string | null; title: string; body: string; created_at: string; updated_at: string; deleted_at: string | null };
+        Insert: { id?: string; project_id: string; created_by?: string | null; title: string; body: string; created_at?: string; updated_at?: string; deleted_at?: string | null };
+        Update: { title?: string; body?: string; deleted_at?: string | null };
+        Relationships: [];
+      };
+
       currencies: {
         Row: { code: string; name: string; minor_unit: number; symbol: string | null };
         Insert: { code: string; name: string; minor_unit: number; symbol?: string | null };
@@ -519,6 +526,11 @@ export interface Database {
       };
     };
     Views: {
+      v_project_notes: {
+        Row: Database["public"]["Tables"]["project_notes"]["Row"] & { creator_name: string | null };
+        Relationships: [];
+      };
+
       v_my_projects: {
         Row: {
           project_id: string;
@@ -814,6 +826,10 @@ export interface Database {
       };
     };
     Functions: {
+      create_project_note: { Args: { p_project: string; p_title: string; p_body: string }; Returns: string };
+      update_project_note: { Args: { p_note: string; p_title: string; p_body: string }; Returns: string };
+      soft_delete_project_note: { Args: { p_note: string }; Returns: string };
+
       create_invitation: { Args: { p_project_id: string; p_email: string; p_role: MemberRole }; Returns: string };
       decline_invitation: { Args: { p_token: string }; Returns: string };
       list_my_invitations: { Args: Record<string, never>; Returns: { id: string; project_id: string; token: string; project_name: string; inviter_name: string | null; role: MemberRole; created_at: string }[] };

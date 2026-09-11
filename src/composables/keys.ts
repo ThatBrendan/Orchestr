@@ -12,6 +12,7 @@ export const qk = {
     people: () => ["me", "people"] as const,
   },
   project: {
+    notes: (id: string) => ["project", id, "notes"] as const,
     invitations: (id: string) => ["project", id, "invitations"] as const,
     root: (id: string) => ["project", id] as const,
     detail: (id: string) => ["project", id, "detail"] as const,

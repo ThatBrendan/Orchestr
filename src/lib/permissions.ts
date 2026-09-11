@@ -5,6 +5,7 @@ import type { MemberRole } from "@/types/database";
  * ADVISORY ONLY — RLS is the real gate. Used to disable/hide dead-end controls.
  */
 export type PermissionKey =
+  | "note.create"
   | "project.settings"
   | "project.archive"
   | "project.delete"
@@ -18,6 +19,7 @@ export type PermissionKey =
   | "finding.dismiss";
 
 const MATRIX: Record<PermissionKey, MemberRole[]> = {
+  "note.create": ["organizer", "member"],
   "project.settings": ["organizer"],
   "project.archive": ["organizer"],
   "project.delete": ["organizer"],
