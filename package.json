@@ -9,7 +9,11 @@
     "preview": "vite preview",
     "typecheck": "vue-tsc --noEmit",
     "lint": "eslint .",
-    "gen:types": "supabase gen types typescript --local > src/types/database.ts"
+    "gen:types": "supabase gen types typescript --local > src/types/database.ts",
+    "db:status": "supabase status",
+    "db:test": "supabase test db",
+    "env:test": "node scripts/environment.test.mjs",
+    "db:check-target": "node scripts/check-db-target.mjs"
   },
   "dependencies": {
     "@fontsource/inter": "^5.1.0",

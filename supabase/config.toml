@@ -16,6 +16,10 @@ port = 54322
 shadow_port = 54320
 major_version = 17
 
+# Test-user seed is opt-in; never auto-seed a persistent/cloud environment.
+[db.seed]
+enabled = false
+
 [db.pooler]
 enabled = false
 

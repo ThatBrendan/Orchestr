@@ -1,7 +1,14 @@
+-- Explicit opt-in required. LOCAL fixtures only; never use on production.
+do $$ begin
+  if current_setting('orchestr.allow_test_seed', true) is distinct from 'on' then
+    raise exception 'Test seeding requires an explicit local opt-in. See ENVIRONMENTS.md.';
+  end if;
+end $$;
+
 -- ============================================================================
 -- seed.sql  — development / staging fixtures (NEVER run against production)
 -- Ports the prototype's "Barcelona Stag Weekend" + "Sarah & John's Wedding".
--- Applied automatically by `supabase db reset`.
+-- Automatic seeding is disabled. See ENVIRONMENTS.md for local opt-in.
 --
 -- Runs as `postgres` (BYPASSRLS) but all triggers still fire. Because there is
 -- no JWT during seed, auth.uid() is null and app.tg_after_project_insert_create_member
@@ -159,3 +166,12 @@ from public.project_members m where m.project_id = 'bbbbbbbb-0000-0000-0000-0000
 insert into public.invitations (project_id, email, role, invited_by, token)
 values ('aaaaaaaa-0000-0000-0000-0000000000aa','newperson@example.com','member',
         'a11a0000-0000-0000-0000-000000000001','seed-invite-token-newperson');
+
+-- Additional synthetic scenarios for current modules; no production data.
+update public.projects set profile='group_trip' where id='aaaaaaaa-0000-0000-0000-0000000000aa';
+update public.projects set profile='wedding_event' where id='bbbbbbbb-0000-0000-0000-0000000000bb';
+insert into public.commitments(project_id,title,kind,activity_type,notes,recurrence_frequency,recurrence_interval,recurrence_start_date,owner_member_id)
+values('aaaaaaaa-0000-0000-0000-0000000000aa','Weekly planning check-in','other','task','Review the synthetic checklist.','weekly',1,current_date,
+'a11a0000-0000-0000-0000-000000000001');
+insert into public.project_notes(project_id,created_by,title,body) values
+('aaaaaaaa-0000-0000-0000-0000000000aa','a11a0000-0000-0000-0000-000000000001','Test planning notes','Synthetic fixture: confirm the activity schedule.');

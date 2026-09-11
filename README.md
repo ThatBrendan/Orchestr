@@ -65,7 +65,7 @@ Create your environment file:
 cp .env.example .env.local
 ```
 
-Add your Supabase configuration to `.env.local`, then run:
+Read [ENVIRONMENTS.md](ENVIRONMENTS.md) first. Add **local or isolated staging** Supabase configuration to `.env.local`, then run:
 
 ```bash id="qxfu0d"
 npm run dev
@@ -98,11 +98,13 @@ Database changes are managed through Supabase migrations:
 supabase/migrations/
 ```
 
-To apply pending migrations to the linked project:
+Before remote migration work, verify the link and review the migration list:
 
-```bash id="l9xv46"
-supabase db push
+```bash
+npm run db:check-target -- staging YOUR_STAGING_PROJECT_REF
 ```
+
+This command is read-only. `supabase db push` targets the linked remote; never run it without the checks and staging validation in [ENVIRONMENTS.md](ENVIRONMENTS.md). Production is never the first test target.
 
 ## Security
 

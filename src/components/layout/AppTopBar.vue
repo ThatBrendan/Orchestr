@@ -3,7 +3,7 @@ import InvitationNotifications from "./InvitationNotifications.vue";
 import { computed } from "vue";
 import { useRoute } from "vue-router";
 import { useProjectContext } from "@/composables/useProjectContext";
-import { APP_NAME } from "@/config";
+import { APP_NAME, config } from "@/config";
 
 const route = useRoute();
 const { project } = useProjectContext();
@@ -26,6 +26,10 @@ const title = computed(() => {
 <template>
   <div class="sticky top-0 z-10 h-14 flex items-center px-4 border-b border-line bg-surface">
     <span class="font-display font-semibold text-[16px] truncate">{{ title }}</span>
+    <span
+      v-if="config.env !== 'production'"
+      class="ml-3 text-[10px] uppercase tracking-wide text-muted"
+    >{{ config.env }}</span>
     <InvitationNotifications />
   </div>
 </template>

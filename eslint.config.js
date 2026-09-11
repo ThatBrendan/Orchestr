@@ -8,6 +8,7 @@ import globals from "globals";
 
 export default ts.config(
   { ignores: ["dist/", "node_modules/", "supabase/", "src/types/database.ts"] },
+  { files: ["scripts/**/*.{ts,mjs}"], languageOptions: { globals: globals.node } },
   js.configs.recommended,
   ...ts.configs.recommended,
   ...vue.configs["flat/recommended"],
