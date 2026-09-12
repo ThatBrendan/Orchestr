@@ -1,8 +1,9 @@
+import { trackProductEvent } from "@/lib/analytics";
 import { storeToRefs } from "pinia";
 import { useAuthStore } from "@/stores/auth";
 import { supabase } from "@/lib/supabase";
 import { queryClient } from "@/lib/query-client";
-import { toAppError } from "@/lib/errors";
+import { toAuthAppError } from "@/lib/errors";
 import { config } from "@/config";
 import { logger } from "@/lib/logger";
 
@@ -45,7 +46,8 @@ export function useAuth() {
 
   async function signInWithPassword(emailAddr: string, password: string) {
     const { error } = await supabase.auth.signInWithPassword({ email: emailAddr, password });
-    if (error) throw toAppError(error);
+    if (error) throw toAuthAppError(error);
+    trackProductEvent("login_completed");
   }
 
   /**
@@ -64,7 +66,9 @@ export function useAuth() {
       password,
       options: { emailRedirectTo: callbackUrl(redirectPath) },
     });
-    if (error) throw toAppError(error);
+    if (error) throw toAuthAppError(error);
+    if (data.session) trackProductEvent("signup_completed");
+    else trackProductEvent("signup_confirmation_requested");
     return { needsConfirmation: !data.session };
   }
 

@@ -1,3 +1,4 @@
+import { trackProductEvent } from "@/lib/analytics";
 import { supabase } from "@/lib/supabase";
 import { toAppError } from "@/lib/errors";
 import type { Tables, TablesInsert, TablesUpdate } from "@/types/database";
@@ -19,6 +20,7 @@ export async function listPayments(commitmentId: string): Promise<Payment[]> {
 export async function createPayment(input: TablesInsert<"payments">): Promise<Payment> {
   const { data, error } = await supabase.from("payments").insert(input).select("*").single();
   if (error) throw toAppError(error);
+  trackProductEvent("payment_recorded");
   return data;
 }
 

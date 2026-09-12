@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import { usePageMeta, DEFAULT_TITLE, DEFAULT_DESCRIPTION } from "@/composables/usePageMeta";
-import { config } from "@/config";
 import MarketingHeader from "@/components/marketing/MarketingHeader.vue";
 import MarketingFooter from "@/components/marketing/MarketingFooter.vue";
 import HeroSection from "@/components/marketing/HeroSection.vue";
@@ -11,7 +9,7 @@ import UseCasesSection from "@/components/marketing/UseCasesSection.vue";
 import PlanningHealthSection from "@/components/marketing/PlanningHealthSection.vue";
 import FinalCtaSection from "@/components/marketing/FinalCtaSection.vue";
 
-usePageMeta({ title: DEFAULT_TITLE, description: DEFAULT_DESCRIPTION, url: config.appUrl + "/" });
+
 </script>
 
 <template>

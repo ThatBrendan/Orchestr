@@ -1,3 +1,4 @@
+import { trackProductEvent } from "@/lib/analytics";
 import { supabase } from "@/lib/supabase";
 import { toAppError } from "@/lib/errors";
 import type { ProjectMember } from "@/types/domain";
@@ -33,6 +34,7 @@ export async function listMemberDirectory(projectId: string): Promise<MemberDire
 export async function inviteMember(projectId: string, email: string, role: Extract<MemberRole, "member" | "viewer">) {
   const { data, error } = await supabase.rpc("create_invitation", { p_project_id: projectId, p_email: email, p_role: role });
   if (error) throw toAppError(error);
+  trackProductEvent("member_invited");
   return { invitationId: data, emailed: false };
 }
 

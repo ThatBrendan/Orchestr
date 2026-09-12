@@ -18,16 +18,25 @@ const backTo = computed(() => (isAuthenticated.value ? { name: "dashboard" } : {
       >
         {{ APP_NAME }}
       </RouterLink>
+      <h1 class="mt-6 font-display text-3xl font-semibold">
+        Page not found
+      </h1>
       <p class="mt-3 text-14 text-ink-soft">
-        That page doesn't exist, or you don't have access to it.
+        The page you’re looking for doesn’t exist or may have moved.
       </p>
-      <div class="mt-5 flex justify-center">
+      <div class="mt-5 flex flex-wrap gap-3 justify-center">
         <AppButton
           variant="secondary"
           size="sm"
-          :to="backTo"
+          :to="{ name: 'landing' }"
         >
-          {{ isAuthenticated ? "Back to dashboard" : "Back to home" }}
+          Go home
+        </AppButton>
+        <AppButton
+          :to="isAuthenticated ? backTo : { name: 'login' }"
+          size="sm"
+        >
+          {{ isAuthenticated ? "Dashboard" : "Log in" }}
         </AppButton>
       </div>
     </div>

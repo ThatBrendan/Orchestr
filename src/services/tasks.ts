@@ -1,3 +1,4 @@
+import { trackProductEvent } from "@/lib/analytics";
 import { supabase } from "@/lib/supabase";
 import { AppError, toAppError } from "@/lib/errors";
 import type { Tables, TablesInsert, TablesUpdate, Enums } from "@/types/database";
@@ -21,6 +22,7 @@ export async function listTasks(projectId: string): Promise<Task[]> {
 export async function createTask(input: TablesInsert<"tasks">): Promise<Task> {
   const { data, error } = await supabase.from("tasks").insert(input).select("*").single();
   if (error) throw toAppError(error);
+  trackProductEvent("task_created");
   return data;
 }
 

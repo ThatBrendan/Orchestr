@@ -1,3 +1,4 @@
+import { trackProductEvent } from "@/lib/analytics";
 import { supabase } from "@/lib/supabase";
 import { toAppError } from "@/lib/errors";
 import type { MemberRole } from "@/types/database";
@@ -19,6 +20,7 @@ export async function getInvitation(token: string): Promise<InvitationPreview | 
 export async function acceptInvitation(token: string): Promise<string> {
   const { data, error } = await supabase.rpc("accept_invitation", { p_token: token });
   if (error) throw toAppError(error);
+  trackProductEvent("invitation_accepted");
   return data as string;
 }
 

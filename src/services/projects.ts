@@ -1,3 +1,4 @@
+import { trackProductEvent } from "@/lib/analytics";
 import { supabase } from "@/lib/supabase";
 import { AppError, toAppError } from "@/lib/errors";
 import type { MyProject, Project, ProjectInsert } from "@/types/domain";
@@ -35,6 +36,7 @@ export async function createProject(input: ProjectInsert): Promise<{ id: string 
     p_ends_on: input.ends_on ?? null,
   });
   if (error) throw toAppError(error);
+  trackProductEvent("project_created");
   return { id: data };
 }
 
