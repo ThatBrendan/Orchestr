@@ -16,5 +16,5 @@ export const config = Object.freeze({
 /** Product name — resolved: Orchestrio. */
 export const APP_NAME = "Orchestrio";
 
-/** Supply a real public privacy/support address before broad launch. */
-export const PUBLIC_CONTACT_EMAIL = "";
+/** Official public contact for general, privacy and terms enquiries. */
+export const PUBLIC_CONTACT_EMAIL = "admin@orchestrio.io";

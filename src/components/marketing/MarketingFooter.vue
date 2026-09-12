@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { RouterLink } from "vue-router";
-import { APP_NAME } from "@/config";
+import { APP_NAME, PUBLIC_CONTACT_EMAIL } from "@/config";
 import orchestrioIcon from "@/assets/orchestrio-icon.svg";
 import { PUBLIC_SECTION_LINKS } from "./scroll";
 
@@ -82,6 +82,12 @@ const columns = [
               >
                 About
               </RouterLink>
+            </li>
+            <li>
+              <a
+                :href="`mailto:${PUBLIC_CONTACT_EMAIL}`"
+                class="text-13.5 text-ink-soft hover:text-ink focus-ring [overflow-wrap:anywhere]"
+              >{{ PUBLIC_CONTACT_EMAIL }}</a>
             </li>
           </ul>
         </nav>

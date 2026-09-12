@@ -7,11 +7,10 @@ import MarketingHeader from "@/components/marketing/MarketingHeader.vue";
 import MarketingFooter from "@/components/marketing/MarketingFooter.vue";
 
 type PageKind = "about" | "privacy" | "terms";
-type ContentSection = { heading: string; paragraphs: string[]; items?: string[] };
+type ContentSection = { heading: string; paragraphs: string[]; items?: string[]; contactIntro?: string };
 
 const route = useRoute();
-const updated = "10 September 2026";
-const contact = PUBLIC_CONTACT_EMAIL || "A public privacy/support email address still needs to be configured.";
+const updated = computed(() => route.name === "about" ? "10 September 2026" : "12 September 2026");
 
 const content: Record<PageKind, { eyebrow: string; title: string; description: string; sections: ContentSection[] }> = {
   about: {
@@ -95,7 +94,8 @@ const content: Record<PageKind, { eyebrow: string; title: string; description: s
       },
       {
         heading: "Contact",
-        paragraphs: [contact],
+        paragraphs: [],
+        contactIntro: "For privacy enquiries or requests about your information, email",
       },
     ],
   },
@@ -150,8 +150,8 @@ const content: Record<PageKind, { eyebrow: string; title: string; description: s
         heading: "Changes and contact",
         paragraphs: [
           "These terms may be updated as Orchestrio develops. The updated date below will change when material updates are made.",
-          contact,
         ],
+        contactIntro: "For questions about these terms or using Orchestrio, email",
       },
     ],
   },
@@ -206,6 +206,16 @@ watch(
               class="mt-3 text-[15px] leading-7 text-ink-soft"
             >
               {{ paragraph }}
+            </p>
+            <p
+              v-if="section.contactIntro"
+              class="mt-3 text-[15px] leading-7 text-ink-soft"
+            >
+              {{ section.contactIntro }}
+              <a
+                :href="`mailto:${PUBLIC_CONTACT_EMAIL}`"
+                class="underline underline-offset-4 focus-ring [overflow-wrap:anywhere]"
+              >{{ PUBLIC_CONTACT_EMAIL }}</a>.
             </p>
           </section>
         </div>
