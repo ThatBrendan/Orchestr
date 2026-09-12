@@ -70,7 +70,7 @@ function isActive(match: readonly string[]) {
 
     <div class="min-w-0 flex-1">
       <header class="md:hidden sticky top-0 z-10 border-b border-line bg-surface">
-        <div class="h-14 flex items-center justify-between px-4">
+        <div class="min-h-14 flex flex-wrap items-center justify-between gap-2 px-4">
           <RouterLink
             to="/"
             aria-label="Orchestrio home"
@@ -89,6 +89,7 @@ function isActive(match: readonly string[]) {
           >
             Open Orchestrio
           </RouterLink>
+          <UserMenu compact />
         </div>
         <nav class="flex overflow-x-auto px-2 pb-2">
           <RouterLink

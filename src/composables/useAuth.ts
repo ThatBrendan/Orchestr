@@ -1,13 +1,17 @@
 import { trackProductEvent } from "@/lib/analytics";
 import { storeToRefs } from "pinia";
+import { ref } from "vue";
+import { useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
+import { useProjectContextStore } from "@/stores/project-context";
 import { supabase } from "@/lib/supabase";
 import { queryClient } from "@/lib/query-client";
-import { toAuthAppError } from "@/lib/errors";
+import { AppError, toAuthAppError } from "@/lib/errors";
 import { config } from "@/config";
 import { logger } from "@/lib/logger";
 
 let wired = false;
+const signingOut = ref(false);
 
 /**
  * Auth composable (docs/TECHNICAL_ARCHITECTURE.md §5, §10).
@@ -28,12 +32,14 @@ export function initAuth() {
     if (!store.ready) store.markReady();
     if (event === "SIGNED_OUT") {
       queryClient.clear();
+      useProjectContextStore().clear();
     }
     logger.debug("auth state", { event });
   });
 }
 
 export function useAuth() {
+  const router = useRouter();
   const store = useAuthStore();
   const { user, session, ready, isAuthenticated, userId, email } = storeToRefs(store);
 
@@ -73,9 +79,32 @@ export function useAuth() {
   }
 
   async function signOut() {
-    await supabase.auth.signOut();
-    queryClient.clear();
-    store.reset();
+    if (signingOut.value) return;
+    signingOut.value = true;
+    try {
+      let remoteSignOutFailed = false;
+      try {
+        const { error } = await supabase.auth.signOut();
+        if (error) throw error;
+      } catch {
+        // The installed SDK can emit SIGNED_OUT even when remote revocation
+        // fails. Respect that local logout; never leave a stale protected page.
+        if (store.isAuthenticated) {
+          throw new AppError("auth", "Couldn't sign out. Check your connection and try again.");
+        }
+        remoteSignOutFailed = true;
+      }
+      store.reset();
+      useProjectContextStore().clear();
+      // Preserve the existing full cache reset, including protected mutations.
+      queryClient.clear();
+      await router.replace("/");
+      if (remoteSignOutFailed) {
+        throw new AppError("auth", "Signed out on this device, but couldn't confirm sign-out on other devices. Sign in and try again to retry.");
+      }
+    } finally {
+      signingOut.value = false;
+    }
   }
 
   return {
@@ -88,5 +117,6 @@ export function useAuth() {
     signInWithPassword,
     signUpWithPassword,
     signOut,
+    signingOut,
   };
 }

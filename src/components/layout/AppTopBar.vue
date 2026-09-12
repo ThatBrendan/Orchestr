@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import InvitationNotifications from "./InvitationNotifications.vue";
+import UserMenu from "./UserMenu.vue";
 import { computed } from "vue";
 import { useRoute } from "vue-router";
 import { useProjectContext } from "@/composables/useProjectContext";
@@ -43,5 +44,9 @@ const title = computed(() => {
       class="ml-2 shrink-0 text-[10px] uppercase tracking-wide text-muted"
     >{{ config.env }}</span>
     <InvitationNotifications />
+    <UserMenu
+      compact
+      class="md:hidden"
+    />
   </div>
 </template>
