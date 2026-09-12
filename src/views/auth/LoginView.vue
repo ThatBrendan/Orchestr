@@ -3,14 +3,11 @@ import { ref } from "vue";
 import { RouterLink, useRoute, useRouter } from "vue-router";
 import { useAuth } from "@/composables/useAuth";
 import { useToast } from "@/composables/useToast";
-import { usePageMeta } from "@/composables/usePageMeta";
 import { safeRedirect } from "@/router/guards";
 import { toAppError } from "@/lib/errors";
 import { APP_NAME } from "@/config";
 import orchestrioIcon from "@/assets/orchestrio-icon.svg";
 import AppButton from "@/components/ui/AppButton.vue";
-
-usePageMeta({ title: `Log in · ${APP_NAME}`, description: `Log in to your ${APP_NAME} workspace.` });
 
 const route = useRoute();
 const router = useRouter();
@@ -25,7 +22,7 @@ const dest = () => safeRedirect(route.query.redirect) ?? "/app";
 const signupTo = { name: "signup", query: route.query.redirect ? { redirect: String(route.query.redirect) } : undefined };
 
 async function submit() {
-  if (!email.value || !password.value) return;
+  if (busy.value || !email.value.trim() || !password.value) return;
   busy.value = true;
   try {
     await signInWithPassword(email.value.trim(), password.value);

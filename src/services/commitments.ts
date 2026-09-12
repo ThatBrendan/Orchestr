@@ -1,3 +1,4 @@
+import { trackProductEvent } from "@/lib/analytics";
 import { supabase } from "@/lib/supabase";
 import { AppError, toAppError } from "@/lib/errors";
 import type { Tables, TablesInsert, TablesUpdate, CommitmentStatus, Json } from "@/types/database";
@@ -22,6 +23,8 @@ export async function createCommitment(input: TablesInsert<"commitments"> & { co
   const { costSplit, project_id, ...fields } = input;
   const { data, error } = await supabase.rpc("save_activity_with_split", { p_project: project_id, p_commitment: null, p_fields: fields, p_split: costSplit ?? null });
   if (error) throw toAppError(error);
+  if (costSplit != null) trackProductEvent("cost_split_saved");
+  trackProductEvent("activity_created");
   return data;
 }
 
@@ -35,6 +38,7 @@ export async function updateCommitment(
   if (readError) throw toAppError(readError);
   const { data, error } = await supabase.rpc("save_activity_with_split", { p_project: current.project_id, p_commitment: id, p_fields: patch, p_split: costSplit ?? null });
   if (error) throw toAppError(error);
+  if (costSplit != null) trackProductEvent("cost_split_saved");
   return data;
 }
 
@@ -42,6 +46,7 @@ export async function updateCommitment(
 export async function setCommitmentStatus(id: string, status: CommitmentStatus): Promise<Commitment> {
   const { data, error } = await supabase.from("commitments").update({ status }).eq("id", id).select("*").single();
   if (error) throw toAppError(error);
+  if (status === "completed") trackProductEvent("activity_completed");
   return data;
 }
 
@@ -65,6 +70,7 @@ export async function completeCommitmentOccurrence(commitmentId: string, occurre
     p_occurrence_date: occurrenceDate,
   });
   if (error) throw toAppError(error);
+  trackProductEvent("activity_completed");
 }
 
 export async function skipCommitmentOccurrence(commitmentId: string, occurrenceDate: string, reason: string): Promise<void> {

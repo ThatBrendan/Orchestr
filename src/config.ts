@@ -13,8 +13,4 @@ export const config = Object.freeze({
     output.VITE_APP_ENV === "development",
 });
 
-/** Product name — resolved: Orchestrio. */
-export const APP_NAME = "Orchestrio";
-
-/** Supply a real public privacy/support address before broad launch. */
-export const PUBLIC_CONTACT_EMAIL = "";
+export { APP_NAME, PUBLIC_CONTACT_EMAIL, PUBLIC_ORIGIN } from "./publicSite";

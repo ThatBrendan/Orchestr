@@ -2,11 +2,38 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
-  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }],
+  "rewrites": [
+    {
+      "source": "/app/:path*",
+      "destination": "/spa"
+    },
+    {
+      "source": "/admin/:path*",
+      "destination": "/spa"
+    },
+    {
+      "source": "/auth/:path*",
+      "destination": "/spa"
+    },
+    {
+      "source": "/invite/:path*",
+      "destination": "/spa"
+    },
+    {
+      "source": "/access-denied",
+      "destination": "/spa"
+    }
+  ],
   "headers": [
     {
       "source": "/assets/(.*)",
-      "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }]
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
     }
-  ]
+  ],
+  "cleanUrls": true
 }

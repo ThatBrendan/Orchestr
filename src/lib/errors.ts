@@ -105,3 +105,24 @@ export function toAppError(e: unknown): AppError {
   }
   return new AppError("unexpected", "Something went wrong.", { cause: e });
 }
+
+/** Public authentication errors never display provider messages verbatim. */
+export function toAuthAppError(error: unknown): AppError {
+  const code = error && typeof error === "object" && "code" in error ? String(error.code) : "";
+  if (["over_request_rate_limit", "over_email_send_rate_limit"].includes(code)) {
+    return new AppError("rate_limit", "Too many attempts. Please wait a few minutes and try again.");
+  }
+  const messages: Record<string, string> = {
+    invalid_credentials: "Email or password is incorrect.",
+    email_not_confirmed: "Confirm your email address before logging in.",
+    weak_password: "Choose a stronger password of at least 8 characters.",
+    email_address_invalid: "Enter a valid email address.",
+    signup_disabled: "Signups are currently unavailable. Please try again later.",
+    user_already_exists: "Unable to create this account. Try logging in instead.",
+  };
+  if (Object.hasOwn(messages, code)) return new AppError("auth", messages[code]!);
+  if (error instanceof Error && /fetch|network/i.test(error.message)) {
+    return new AppError("network", "Network problem — check your connection.");
+  }
+  return new AppError("auth", "Unable to sign in or create your account. Please try again.");
+}

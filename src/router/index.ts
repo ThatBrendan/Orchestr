@@ -1,6 +1,6 @@
 import { createRouter, createWebHistory, type RouteRecordRaw } from "vue-router";
 import { requireAuth, requireGuest, requirePlatformAdmin, hydrateProjectContext } from "./guards";
-import { DEFAULT_TITLE, resetPageMeta } from "@/composables/usePageMeta";
+import { DEFAULT_TITLE, setRouteMeta } from "@/composables/usePageMeta";
 import { APP_NAME } from "@/config";
 
 const routes: RouteRecordRaw[] = [
@@ -125,10 +125,7 @@ export const router = createRouter({
 // Keep the project context in sync with :projectId on every navigation.
 router.beforeEach(hydrateProjectContext);
 
-// Document title fallback for routes that don't call usePageMeta().
-// (Public views call usePageMeta() in onMounted, which runs after this.)
-router.afterEach((to) => {
-  const t = to.meta.title;
-  document.title = typeof t === "string" ? t : DEFAULT_TITLE;
-  if (to.meta.public !== true) resetPageMeta();
+// One metadata owner also clears stale canonical, social and structured tags.
+router.afterEach((to, _from, failure) => {
+  if (!failure) setRouteMeta(to.path, typeof to.meta.title === "string" ? to.meta.title : to.name === "not-found" ? "Page not found | Orchestrio" : APP_NAME);
 });

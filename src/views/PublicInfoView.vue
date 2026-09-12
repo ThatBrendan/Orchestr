@@ -1,17 +1,15 @@
 <script setup lang="ts">
-import { computed, watch } from "vue";
+import { computed } from "vue";
 import { useRoute } from "vue-router";
-import { APP_NAME, PUBLIC_CONTACT_EMAIL } from "@/config";
-import { setPageMeta } from "@/composables/usePageMeta";
+import { PUBLIC_CONTACT_EMAIL } from "@/config";
 import MarketingHeader from "@/components/marketing/MarketingHeader.vue";
 import MarketingFooter from "@/components/marketing/MarketingFooter.vue";
 
 type PageKind = "about" | "privacy" | "terms";
-type ContentSection = { heading: string; paragraphs: string[]; items?: string[] };
+type ContentSection = { heading: string; paragraphs: string[]; items?: string[]; contactIntro?: string };
 
 const route = useRoute();
-const updated = "10 September 2026";
-const contact = PUBLIC_CONTACT_EMAIL || "A public privacy/support email address still needs to be configured.";
+const updated = computed(() => route.name === "about" ? "10 September 2026" : "12 September 2026");
 
 const content: Record<PageKind, { eyebrow: string; title: string; description: string; sections: ContentSection[] }> = {
   about: {
@@ -64,7 +62,7 @@ const content: Record<PageKind, { eyebrow: string; title: string; description: s
         heading: "Information collected automatically",
         paragraphs: [
           "Authentication and session information is handled through Supabase. Hosting and infrastructure providers may process basic technical request information, such as IP address, browser and device details, and service logs.",
-          "We do not currently advertise or use a separate analytics service in this application.",
+          "We do not display advertising. On the production site, we use Vercel Web Analytics, when enabled, to understand page visits, traffic sources and a small set of product actions. Our event payloads contain action names only. We remove query strings, fragments and private route identifiers from analytics URLs, and exclude authentication callback and invitation URLs. We do not send names, emails, project titles, notes or payment amounts in these events.",
         ],
       },
       {
@@ -95,7 +93,8 @@ const content: Record<PageKind, { eyebrow: string; title: string; description: s
       },
       {
         heading: "Contact",
-        paragraphs: [contact],
+        paragraphs: [],
+        contactIntro: "For privacy enquiries or requests about your information, email",
       },
     ],
   },
@@ -150,8 +149,8 @@ const content: Record<PageKind, { eyebrow: string; title: string; description: s
         heading: "Changes and contact",
         paragraphs: [
           "These terms may be updated as Orchestrio develops. The updated date below will change when material updates are made.",
-          contact,
         ],
+        contactIntro: "For questions about these terms or using Orchestrio, email",
       },
     ],
   },
@@ -160,14 +159,6 @@ const content: Record<PageKind, { eyebrow: string; title: string; description: s
 const kind = computed<PageKind>(() => (route.name as PageKind) ?? "about");
 const page = computed(() => content[kind.value]);
 const isAbout = computed(() => kind.value === "about");
-watch(
-  [kind, page],
-  ([currentKind, currentPage]) => {
-    setPageMeta({ title: `${currentPage.eyebrow} · ${APP_NAME}`, description: currentPage.description });
-    if (currentKind !== "about") window.scrollTo({ top: 0, behavior: "auto" });
-  },
-  { immediate: true },
-);
 </script>
 
 <template>
@@ -206,6 +197,16 @@ watch(
               class="mt-3 text-[15px] leading-7 text-ink-soft"
             >
               {{ paragraph }}
+            </p>
+            <p
+              v-if="section.contactIntro"
+              class="mt-3 text-[15px] leading-7 text-ink-soft"
+            >
+              {{ section.contactIntro }}
+              <a
+                :href="`mailto:${PUBLIC_CONTACT_EMAIL}`"
+                class="underline underline-offset-4 focus-ring [overflow-wrap:anywhere]"
+              >{{ PUBLIC_CONTACT_EMAIL }}</a>.
             </p>
           </section>
         </div>

@@ -1,19 +1,14 @@
 <script setup lang="ts">
+import { trackProductEvent } from "@/lib/analytics";
 import { ref } from "vue";
 import { RouterLink, useRoute, useRouter } from "vue-router";
 import { useAuth } from "@/composables/useAuth";
 import { useToast } from "@/composables/useToast";
-import { usePageMeta } from "@/composables/usePageMeta";
 import { safeRedirect } from "@/router/guards";
 import { toAppError } from "@/lib/errors";
 import { APP_NAME } from "@/config";
 import orchestrioIcon from "@/assets/orchestrio-icon.svg";
 import AppButton from "@/components/ui/AppButton.vue";
-
-usePageMeta({
-  title: `Get started · ${APP_NAME}`,
-  description: `Create an ${APP_NAME} account and start turning plans into coordinated execution.`,
-});
 
 const route = useRoute();
 const router = useRouter();
@@ -23,19 +18,24 @@ const toast = useToast();
 const email = ref("");
 const password = ref("");
 const busy = ref(false);
+let signupStarted = false;
 const outcome = ref<null | "confirm">(null);
 
 const dest = () => safeRedirect(route.query.redirect) ?? "/app";
 const loginTo = { name: "login", query: route.query.redirect ? { redirect: String(route.query.redirect) } : undefined };
 
 async function submit() {
-  if (!email.value) return;
+  if (busy.value || !email.value.trim()) return;
   busy.value = true;
   try {
     const redirectPath = safeRedirect(route.query.redirect);
     if (password.value.length < 8) {
       toast.error("Use a password of at least 8 characters.");
       return;
+    }
+    if (!signupStarted) {
+      trackProductEvent("signup_started");
+      signupStarted = true;
     }
     const { needsConfirmation } = await signUpWithPassword(email.value.trim(), password.value, redirectPath);
     if (needsConfirmation) {

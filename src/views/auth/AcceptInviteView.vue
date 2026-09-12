@@ -25,6 +25,7 @@ const { preview, accept: acceptMutation, decline: declineMutation } = useInvitat
 });
 
 async function decline() {
+  if (acceptMutation.isPending.value || declineMutation.isPending.value) return;
   try {
     await declineMutation.mutateAsync();
     toast.success("Invitation declined.");
@@ -33,6 +34,7 @@ async function decline() {
 }
 
 async function accept() {
+  if (acceptMutation.isPending.value || declineMutation.isPending.value) return;
   try {
     const projectId = await acceptMutation.mutateAsync();
     toast.success("You've joined the project.");
