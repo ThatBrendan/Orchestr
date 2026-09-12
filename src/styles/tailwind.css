@@ -10,6 +10,21 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Native controls are shared across forms (including teleported dialogs).
+ * Keep mobile text entry above Safari's focus-zoom threshold. Deliberately
+ * outside Tailwind layers, with specificity above text-size utilities.
+ * Coarse pointers also cover tablets and phones in landscape.
+ */
+@media (max-width: 767px), (pointer: coarse) {
+  body :is(
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]):not([type="hidden"]):not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="image"]),
+    textarea,
+    select
+  ) {
+    font-size: max(16px, 1rem);
+  }
+}
+
 @layer base {
   html,
   body,

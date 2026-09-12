@@ -26,6 +26,8 @@ async function submit() {
   busy.value = true;
   try {
     await signInWithPassword(email.value.trim(), password.value);
+    // Release the keyboard before rendering the authenticated route.
+    if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
     await router.push(dest());
   } catch (e) {
     toast.error(toAppError(e).message);

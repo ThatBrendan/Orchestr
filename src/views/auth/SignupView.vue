@@ -38,6 +38,8 @@ async function submit() {
       signupStarted = true;
     }
     const { needsConfirmation } = await signUpWithPassword(email.value.trim(), password.value, redirectPath);
+    // Release the keyboard before replacing the form or navigating onward.
+    if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
     if (needsConfirmation) {
       // NOT signed in — Supabase requires email confirmation.
       outcome.value = "confirm";
