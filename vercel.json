@@ -22,6 +22,14 @@
     {
       "source": "/access-denied",
       "destination": "/spa"
+    },
+    {
+      "source": "/forgot-password",
+      "destination": "/spa"
+    },
+    {
+      "source": "/reset-password",
+      "destination": "/spa"
     }
   ],
   "headers": [

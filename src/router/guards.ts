@@ -10,19 +10,11 @@ import * as projectsService from "@/services/projects";
 import * as adminService from "@/services/admin";
 import { toAppError } from "@/lib/errors";
 
-/**
- * Sanitise a `?redirect=` value: allow only internal, non-protocol-relative paths.
- * Prevents open-redirect. Returns null if unsafe/absent.
- */
-export function safeRedirect(raw: unknown): string | null {
-  if (typeof raw !== "string" || raw.length === 0) return null;
-  if (!raw.startsWith("/") || raw.startsWith("//") || raw.startsWith("/\\")) return null;
-  if (raw.includes("\\") || /^\/[^/]*:/.test(raw)) return null;
-  return raw;
-}
+import { safeRedirect } from "@/lib/authPolicy";
+export { safeRedirect } from "@/lib/authPolicy";
 
 /** Wait until the initial Supabase session has resolved. */
-function whenReady(): Promise<void> {
+export function whenReady(): Promise<void> {
   const auth = useAuthStore();
   if (auth.ready) return Promise.resolve();
   const { ready } = storeToRefs(auth);

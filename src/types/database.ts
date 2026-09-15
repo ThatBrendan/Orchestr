@@ -21,6 +21,12 @@ export type Json =
 export interface Database {
   public: {
     Tables: {
+      notifications: {
+        Row: { id: string; project_id: string; commitment_id: string; recipient_user_id: string; kind: "activity_created"; created_at: string; read_at: string | null };
+        Insert: { id?: string; project_id: string; commitment_id: string; recipient_user_id: string; kind?: "activity_created"; created_at?: string; read_at?: string | null };
+        Update: { read_at?: string | null };
+        Relationships: [];
+      };
       project_notes: {
         Row: { id: string; project_id: string; created_by: string | null; title: string; body: string; created_at: string; updated_at: string; deleted_at: string | null };
         Insert: { id?: string; project_id: string; created_by?: string | null; title: string; body: string; created_at?: string; updated_at?: string; deleted_at?: string | null };
@@ -536,6 +542,10 @@ export interface Database {
       };
     };
     Views: {
+      v_my_activity_notifications: {
+        Row: { id: string; project_id: string; commitment_id: string; created_at: string; read_at: string | null; activity_title: string; project_name: string };
+        Relationships: [];
+      };
       v_project_member_settlements: { Row: { project_id: string; member_id: string; display_name: string; member_status: string; currency: string; allocated_minor: number; paid_minor: number; remaining_minor: number }; Relationships: [] };
       v_project_settlement_totals: { Row: { project_id: string; remaining_minor: number; credit_minor: number }; Relationships: [] };
       v_activity_member_settlements: { Row: { project_id: string; commitment_id: string; member_id: string; display_name: string; member_status: string; allocated_minor: number; paid_minor: number; remaining_minor: number }; Relationships: [] };
@@ -845,6 +855,7 @@ export interface Database {
       };
     };
     Functions: {
+      mark_notification_read: { Args: { p_notification: string }; Returns: string | null };
       record_member_payment: { Args: { p_commitment: string; p_member: string; p_amount: number; p_type: Database["public"]["Enums"]["payment_type"]; p_paid_now: boolean; p_date: string }; Returns: string };
       set_activity_cost_split: { Args: { p_commitment: string; p_split: Json }; Returns: undefined };
       save_activity_with_split: { Args: { p_project: string; p_commitment: string | null; p_fields: Json; p_split: Json | null }; Returns: Database["public"]["Tables"]["commitments"]["Row"] };

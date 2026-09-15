@@ -51,13 +51,15 @@ export async function updateProject(
 }
 
 /** Status change (archive / unarchive / mark active or completed) — legality enforced by DB trigger. */
-export async function setProjectStatus(projectId: string, status: ProjectStatus): Promise<Project> {
-  const { data, error } = await supabase
+export async function setProjectStatus(projectId: string, status: ProjectStatus, from?: ProjectStatus): Promise<Project> {
+  let query = supabase
     .from("projects")
     .update({ status })
-    .eq("id", projectId)
-    .select("*")
-    .single();
+    .eq("id", projectId);
+  // Compare the state shown in the confirmation dialog. A stale reopen cannot
+  // accidentally restore a project someone has since archived or deleted.
+  if (from) query = query.eq("status", from);
+  const { data, error } = await query.select("*").single();
   if (error) throw toAppError(error);
   return data;
 }

@@ -1,3 +1,4 @@
+import { projectGroup } from "@/lib/projectLifecycle";
 import { computed } from "vue";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/vue-query";
 import { qk } from "./keys";
@@ -12,6 +13,9 @@ export function useMyProjects() {
   });
   return {
     projects: computed(() => q.data.value ?? []),
+    activeProjects: computed(() => (q.data.value ?? []).filter(p => projectGroup(p.status) === "active")),
+    pastProjects: computed(() => (q.data.value ?? []).filter(p => projectGroup(p.status) === "past")),
+    archivedProjects: computed(() => (q.data.value ?? []).filter(p => projectGroup(p.status) === "archived")),
     isPending: q.isPending,
     isError: q.isError,
     error: q.error,
@@ -50,7 +54,7 @@ export function useUpdateProject(projectId: string) {
 export function useSetProjectStatus(projectId: string) {
   const client = useQueryClient();
   return useMutation({
-    mutationFn: (status: ProjectStatus) => projectsService.setProjectStatus(projectId, status),
+    mutationFn: (change: { status: ProjectStatus; from?: ProjectStatus }) => projectsService.setProjectStatus(projectId, change.status, change.from),
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: qk.project.root(projectId) });
       void client.invalidateQueries({ queryKey: qk.me.attention() });

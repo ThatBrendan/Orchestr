@@ -1,6 +1,8 @@
-import { createRouter, createWebHistory, type RouteRecordRaw } from "vue-router";
-import { requireAuth, requireGuest, requirePlatformAdmin, hydrateProjectContext } from "./guards";
+import { createRouter, createWebHistory, START_LOCATION, type RouteRecordRaw } from "vue-router";
+import { requireAuth, requireGuest, requirePlatformAdmin, hydrateProjectContext, whenReady } from "./guards";
 import { DEFAULT_TITLE, setRouteMeta } from "@/composables/usePageMeta";
+import { initialAuthLink } from "@/lib/supabase";
+import { useAuthStore } from "@/stores/auth";
 import { APP_NAME } from "@/config";
 
 const routes: RouteRecordRaw[] = [
@@ -42,6 +44,18 @@ const routes: RouteRecordRaw[] = [
     component: () => import("@/views/auth/SignupView.vue"),
     beforeEnter: requireGuest,
     meta: { public: true, title: `Get started · ${APP_NAME}` },
+  },
+  {
+    path: "/forgot-password",
+    name: "forgot-password",
+    component: () => import("@/views/auth/ForgotPasswordView.vue"),
+    meta: { public: true, title: `Forgot password · ${APP_NAME}` },
+  },
+  {
+    path: "/reset-password",
+    name: "reset-password",
+    component: () => import("@/views/auth/ResetPasswordView.vue"),
+    meta: { public: true, title: `Reset password · ${APP_NAME}` },
   },
   {
     path: "/auth/callback",
@@ -123,7 +137,27 @@ export const router = createRouter({
 });
 
 // Keep the project context in sync with :projectId on every navigation.
-router.beforeEach(hydrateProjectContext);
+router.beforeEach(async (to, from) => {
+  await whenReady();
+  // Supabase can return an email link to its Site URL instead of /auth/callback.
+  // The SDK has already hydrated the session; hand this initial landing to the
+  // same callback resolver. Ordinary visits to the public homepage stay public.
+  if (from === START_LOCATION && to.path === "/" && initialAuthLink.pathname === "/"
+    && (initialAuthLink.isLink || initialAuthLink.hasError)) {
+    return {
+      name: "auth.callback",
+      query: initialAuthLink.redirect ? { redirect: initialAuthLink.redirect } : {},
+      replace: true,
+    };
+  }
+  if (useAuthStore().recovery && !["reset-password", "auth.callback"].includes(String(to.name))) {
+    return { name: "reset-password" };
+  }
+  if ((to.path === "/app" || to.path.startsWith("/app/") || to.path === "/admin" || to.path.startsWith("/admin/")) && !useAuthStore().isAuthenticated) {
+    return { name: "login", query: { redirect: to.fullPath } };
+  }
+  return hydrateProjectContext(to);
+});
 
 // One metadata owner also clears stale canonical, social and structured tags.
 router.afterEach((to, _from, failure) => {

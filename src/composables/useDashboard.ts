@@ -39,7 +39,7 @@ export function useUpdateMyDisplayName() {
  * v_my_projects.attention_count, so no extra round-trip for the headline number.
  */
 export function useDashboardAttention() {
-  const { projects } = useMyProjects();
+  const { activeProjects: projects } = useMyProjects();
 
   const q = useQuery({
     queryKey: qk.me.attention(),

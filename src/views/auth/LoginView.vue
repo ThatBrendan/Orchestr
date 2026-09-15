@@ -4,19 +4,22 @@ import { RouterLink, useRoute, useRouter } from "vue-router";
 import { useAuth } from "@/composables/useAuth";
 import { useToast } from "@/composables/useToast";
 import { safeRedirect } from "@/router/guards";
-import { toAppError } from "@/lib/errors";
+import { toAuthAppError } from "@/lib/errors";
 import { APP_NAME } from "@/config";
 import orchestrioIcon from "@/assets/orchestrio-icon.svg";
 import AppButton from "@/components/ui/AppButton.vue";
 
 const route = useRoute();
 const router = useRouter();
-const { signInWithPassword } = useAuth();
+const { signInWithPassword, resendConfirmation } = useAuth();
 const toast = useToast();
 
 const email = ref("");
 const password = ref("");
 const busy = ref(false);
+const unconfirmedEmail = ref("");
+const resendBusy = ref(false);
+const resendMessage = ref("");
 
 const dest = () => safeRedirect(route.query.redirect) ?? "/app";
 const signupTo = { name: "signup", query: route.query.redirect ? { redirect: String(route.query.redirect) } : undefined };
@@ -30,15 +33,27 @@ async function submit() {
     if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
     await router.push(dest());
   } catch (e) {
-    toast.error(toAppError(e).message);
+    const failure = toAuthAppError(e);
+    if (failure.code === "email_not_confirmed") unconfirmedEmail.value = email.value.trim();
+    toast.error(failure.message);
   } finally {
     busy.value = false;
   }
 }
+async function resend() {
+  if (resendBusy.value || !unconfirmedEmail.value) return;
+  resendBusy.value = true;
+  resendMessage.value = "";
+  try {
+    await resendConfirmation(unconfirmedEmail.value, safeRedirect(route.query.redirect));
+    resendMessage.value = "Confirmation email sent.";
+  } catch (e) { resendMessage.value = toAuthAppError(e, "email").message; }
+  finally { resendBusy.value = false; }
+}
 </script>
 
 <template>
-  <div class="min-h-screen flex items-center justify-center px-6 bg-paper">
+  <div class="min-h-screen flex items-center justify-center px-6 py-10 bg-paper">
     <div class="w-full max-w-sm fade-in">
       <RouterLink
         :to="{ name: 'landing' }"
@@ -81,6 +96,13 @@ async function submit() {
           >
         </label>
 
+        <RouterLink
+          :to="{ name: 'forgot-password' }"
+          class="block text-right text-13 text-accent focus-ring"
+        >
+          Forgot password?
+        </RouterLink>
+
         <AppButton
           type="submit"
           :loading="busy"
@@ -89,6 +111,27 @@ async function submit() {
           Log in
         </AppButton>
       </form>
+
+      <div
+        v-if="unconfirmedEmail"
+        class="mt-4"
+      >
+        <AppButton
+          variant="secondary"
+          block
+          :loading="resendBusy"
+          @click="resend"
+        >
+          Resend confirmation email
+        </AppButton>
+        <p
+          v-if="resendMessage"
+          role="status"
+          class="mt-3 text-13"
+        >
+          {{ resendMessage }}
+        </p>
+      </div>
 
       <p class="mt-6 text-center text-13 text-muted">
         Don't have an account?

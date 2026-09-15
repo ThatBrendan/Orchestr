@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { computed, ref } from "vue";
 import { useMyProjects } from "@/composables/useProjects";
 import PageContainer from "@/components/ui/PageContainer.vue";
 import SkeletonBlock from "@/components/ui/SkeletonBlock.vue";
@@ -10,8 +10,11 @@ import AppIcon from "@/components/ui/AppIcon.vue";
 import ProjectSummaryRow from "@/components/projects/ProjectSummaryRow.vue";
 import NewProjectDialog from "@/components/projects/NewProjectDialog.vue";
 
-const { projects, isPending, isError, error, refetch } = useMyProjects();
+const { activeProjects, pastProjects, archivedProjects, isPending, isError, error, refetch } = useMyProjects();
 const showNew = ref(false);
+const group = ref<"active" | "past" | "archived">("active");
+const projects = computed(() => group.value === "past" ? pastProjects.value : group.value === "archived" ? archivedProjects.value : activeProjects.value);
+const groups = [{ id: "active", label: "Active" }, { id: "past", label: "Past" }, { id: "archived", label: "Archived" }] as const;
 </script>
 
 <template>
@@ -33,7 +36,22 @@ const showNew = ref(false);
       </AppButton>
     </div>
 
-    <div class="mt-8 space-y-3">
+    <div
+      class="mt-6 flex gap-2"
+      role="group"
+      aria-label="Project group"
+    >
+      <AppButton
+        v-for="tab in groups"
+        :key="tab.id"
+        :variant="group === tab.id ? 'primary' : 'secondary'"
+        :aria-pressed="group === tab.id"
+        @click="group = tab.id"
+      >
+        {{ tab.label }}
+      </AppButton>
+    </div>
+    <div class="mt-6 space-y-3">
       <template v-if="isPending">
         <SkeletonBlock
           v-for="i in 3"
@@ -49,11 +67,14 @@ const showNew = ref(false);
       />
       <EmptyState
         v-else-if="projects.length === 0"
-        title="No projects yet"
-        message="Create your first project to start planning."
+        :title="group === 'past' ? 'No past projects yet.' : group === 'archived' ? 'No archived projects.' : 'No active projects yet.'"
+        :message="group === 'past' ? 'Completed projects will appear here.' : group === 'archived' ? 'Archived projects remain available here.' : 'Create your first project to start planning.'"
       >
         <template #action>
-          <AppButton @click="showNew = true">
+          <AppButton
+            v-if="group === 'active'"
+            @click="showNew = true"
+          >
             New project
           </AppButton>
         </template>

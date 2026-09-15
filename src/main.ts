@@ -14,7 +14,7 @@ app.use(createPinia());
 app.use(VueQueryPlugin, { queryClient });
 
 // Wire the Supabase session listener before the router resolves the first route.
-initAuth();
+initAuth(() => { void router.replace("/reset-password"); });
 
 initAnalytics(router);
 app.use(router);

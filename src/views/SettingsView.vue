@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import PasswordForm from "@/components/ui/PasswordForm.vue";
 import { computed, ref, watch } from "vue";
 import { useMyProfile, useUpdateMyDisplayName } from "@/composables/useDashboard";
 import { useToast } from "@/composables/useToast";
@@ -149,5 +150,17 @@ async function saveName() {
         </div>
       </div>
     </div>
+    <section
+      class="mt-8 max-w-sm border rounded-xl p-5 border-line bg-surface"
+      aria-labelledby="change-password-title"
+    >
+      <h2
+        id="change-password-title"
+        class="mb-4 font-display text-lg font-semibold"
+      >
+        Change password
+      </h2>
+      <PasswordForm label="Change password" />
+    </section>
   </PageContainer>
 </template>
