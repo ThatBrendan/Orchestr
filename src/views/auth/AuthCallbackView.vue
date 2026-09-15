@@ -15,7 +15,7 @@ watch(() => auth.ready, (ready) => {
   if (!ready || resolved) return;
   resolved = true;
   const recovery = auth.recovery || initialAuthLink.recovery;
-  if (auth.linkError || !auth.isAuthenticated || !initialAuthLink.isLink) {
+  if (auth.linkError || !auth.isAuthenticated) {
     failed.value = true;
     // Remove spent codes/error details; preserve only the validated invitation destination.
     const redirect = safeRedirect(route.query.redirect);
@@ -23,7 +23,7 @@ watch(() => auth.ready, (ready) => {
     return;
   }
   if (recovery) { void router.replace("/reset-password"); return; }
-  if (initialAuthLink.signup) trackProductEvent("signup_completed");
+  if (initialAuthLink.isLink && initialAuthLink.signup) trackProductEvent("signup_completed");
   void router.replace(safeRedirect(route.query.redirect) ?? "/app");
 }, { immediate: true });
 </script>

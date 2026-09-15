@@ -40,9 +40,11 @@ export function readAuthLink(href: string) {
   const url = new URL(href);
   const hash = new URLSearchParams(url.hash.slice(1));
   return {
+    pathname: url.pathname,
+    redirect: safeRedirect(url.searchParams.get("redirect")),
     isLink: url.searchParams.has("code") || hash.has("access_token"),
     hasError: [url.searchParams, hash].some(p => p.has("error") || p.has("error_code")),
     recovery: url.pathname === "/reset-password" || url.searchParams.get("mode") === "recovery" || hash.get("type") === "recovery",
-    signup: url.searchParams.get("mode") === "signup",
+    signup: url.searchParams.get("mode") === "signup" || hash.get("type") === "signup",
   };
 }

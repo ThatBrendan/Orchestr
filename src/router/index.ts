@@ -1,6 +1,7 @@
-import { createRouter, createWebHistory, type RouteRecordRaw } from "vue-router";
+import { createRouter, createWebHistory, START_LOCATION, type RouteRecordRaw } from "vue-router";
 import { requireAuth, requireGuest, requirePlatformAdmin, hydrateProjectContext, whenReady } from "./guards";
 import { DEFAULT_TITLE, setRouteMeta } from "@/composables/usePageMeta";
+import { initialAuthLink } from "@/lib/supabase";
 import { useAuthStore } from "@/stores/auth";
 import { APP_NAME } from "@/config";
 
@@ -136,8 +137,19 @@ export const router = createRouter({
 });
 
 // Keep the project context in sync with :projectId on every navigation.
-router.beforeEach(async (to) => {
+router.beforeEach(async (to, from) => {
   await whenReady();
+  // Supabase can return an email link to its Site URL instead of /auth/callback.
+  // The SDK has already hydrated the session; hand this initial landing to the
+  // same callback resolver. Ordinary visits to the public homepage stay public.
+  if (from === START_LOCATION && to.path === "/" && initialAuthLink.pathname === "/"
+    && (initialAuthLink.isLink || initialAuthLink.hasError)) {
+    return {
+      name: "auth.callback",
+      query: initialAuthLink.redirect ? { redirect: initialAuthLink.redirect } : {},
+      replace: true,
+    };
+  }
   if (useAuthStore().recovery && !["reset-password", "auth.callback"].includes(String(to.name))) {
     return { name: "reset-password" };
   }

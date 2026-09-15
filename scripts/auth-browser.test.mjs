@@ -26,7 +26,10 @@ async function fixture(options = {}) {
       const endpoint = url.pathname.split('/').at(-1);
       if (state.error?.endpoint === endpoint) return reply({ code: state.error.code, msg: 'SECRET PROVIDER DETAIL' }, state.error.status || 400);
       if (endpoint === 'signup') return reply(state.signupSession ? token() : { ...state.user, email_confirmed_at: null });
-      if (endpoint === 'token') return reply(token());
+      if (endpoint === 'token') {
+        if (state.tokenDelay) await new Promise(resolve=>setTimeout(resolve,state.tokenDelay));
+        return reply(token());
+      }
       if (endpoint === 'user') {
         if (req.method() === 'PUT' && state.nonceRequired && body.nonce !== '123456') return reply({code:'reauthentication_needed', msg:'PRIVATE'}, 400);
         return reply(state.user);
@@ -91,6 +94,73 @@ try {
     await page.getByRole('status').filter({hasText:'Too many attempts'}).waitFor();
     await page.goto(origin+'/app');
     await page.waitForURL(/\/login/);
+  });
+  await test('confirmation returned to homepage hands off to callback and dashboard', async ({page}) => {
+    await signup(page);
+    await page.getByRole('heading',{name:'Check your email'}).waitFor();
+    await page.goto(origin+'/?code=mock-code');
+    await page.waitForURL(origin+'/app');
+    await page.getByRole('heading').filter({hasText:'Beta'}).waitFor();
+  });
+  for (const [name, redirect, destination] of [
+    ['default dashboard', '', '/app'],
+    ['safe internal destination', '/app/settings', '/app/settings'],
+    ['external destination rejected', 'https://evil.example', '/app'],
+    ['homepage destination rejected', '/', '/app'],
+  ]) {
+    await test(`confirmation callback: ${name}`, async ({page}) => {
+      await signup(page);
+      await page.getByRole('heading',{name:'Check your email'}).waitFor();
+      await page.goto(origin+'/auth/callback?mode=signup&code=mock-code&redirect='+encodeURIComponent(redirect));
+      await page.waitForURL(origin+destination);
+    });
+  }
+  await test('already-authenticated callback keeps safe destination without a new link', async ({page}) => {
+    await login(page);
+    await page.goto(origin+'/auth/callback?redirect=%2Fapp%2Fsettings');
+    await page.waitForURL(origin+'/app/settings');
+  });
+  await test('homepage confirmation preserves the explicit invite destination', async ({page}) => {
+    await signup(page, '/signup?redirect=%2Finvite%2Fmock-token');
+    await page.getByRole('heading',{name:'Check your email'}).waitFor();
+    await page.goto(origin+'/?code=mock-code&redirect=%2Finvite%2Fmock-token');
+    await page.waitForURL(origin+'/invite/mock-token');
+    await page.getByText('Shared test project',{exact:true}).waitFor();
+  });
+  await test('homepage recovery remains separate from dashboard', async ({page}) => {
+    await page.goto(origin+'/forgot-password');
+    await page.getByLabel('Email',{exact:true}).fill(user.email);
+    await page.getByRole('button',{name:'Send reset link'}).click();
+    await page.getByRole('status').filter({hasText:'If an account exists'}).waitFor();
+    await page.goto(origin+'/?code=mock-recovery-code');
+    await page.waitForURL(origin+'/reset-password');
+    await page.getByLabel(/^New password/).waitFor();
+  });
+  await test('ordinary authenticated homepage remains public without replaying confirmation', async ({page}) => {
+    await signup(page);
+    await page.getByRole('heading',{name:'Check your email'}).waitFor();
+    await page.goto(origin+'/?code=mock-code');
+    await page.waitForURL(origin+'/app');
+    await page.evaluate(async () => { await document.querySelector('#app').__vue_app__.config.globalProperties.$router.push('/'); });
+    await page.getByRole('link',{name:'Open Orchestrio',exact:true}).first().waitFor();
+    assert.equal(new URL(page.url()).pathname,'/');
+    await page.reload();
+    await page.getByRole('link',{name:'Open Orchestrio',exact:true}).first().waitFor();
+    assert.equal(new URL(page.url()).pathname,'/');
+  });
+  await test('callback waits for delayed PKCE session resolution', async ({page,state}) => {
+    state.tokenDelay = 700;
+    await signup(page);
+    await page.getByRole('heading',{name:'Check your email'}).waitFor();
+    await page.goto(origin+'/auth/callback?mode=signup&code=mock-code');
+    await page.waitForURL(origin+'/app');
+    await page.getByRole('heading').filter({hasText:'Beta'}).waitFor();
+  });
+  await test('failed homepage confirmation never accepts an unrelated existing session', async ({page}) => {
+    await login(page);
+    await page.goto(origin+'/?code=missing-verifier');
+    await page.waitForURL(origin+'/auth/callback');
+    await page.getByRole('alert').filter({hasText:'invalid or expired'}).waitFor();
   });
   await test('confirmed signup callback preserves invitation and acceptance RPC', async ({page,state}) => {
     await signup(page, '/signup?redirect=%2Finvite%2Fmock-token');

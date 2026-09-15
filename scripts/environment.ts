@@ -16,8 +16,11 @@ export function prepareEnvironment(input: Record<string, string | undefined>, co
       if (env.VITE_APP_ENV !== "production" || env.VERCEL_GIT_COMMIT_REF !== "main") throw new Error("Production requires main and VITE_APP_ENV=production.");
     } else if (env.VERCEL_ENV === "preview") {
       if (env.VITE_APP_ENV !== "staging") throw new Error("Preview requires VITE_APP_ENV=staging.");
-      if (!env.VERCEL_URL || !/^[a-z0-9.-]+$/i.test(env.VERCEL_URL)) throw new Error("Missing valid VERCEL_URL.");
-      env.VITE_APP_URL = `https://${env.VERCEL_URL}`;
+      // Email links must return to the branch origin where the PKCE flow began,
+      // not the different immutable deployment hostname supplied by VERCEL_URL.
+      const previewHost = env.VERCEL_BRANCH_URL || env.VERCEL_URL;
+      if (!previewHost || !/^[a-z0-9.-]+$/i.test(previewHost)) throw new Error("Missing valid Vercel preview hostname.");
+      env.VITE_APP_URL = `https://${previewHost}`;
     } else if (env.VITE_APP_ENV === "production") throw new Error("Vercel Development cannot target production.");
   }
   const publicConfig = parsePublicEnvironment(env);

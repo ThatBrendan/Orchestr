@@ -11,6 +11,11 @@ const preview = { ...staging, VERCEL: '1', VERCEL_ENV: 'preview', VERCEL_URL: 't
 assert.equal(prepareEnvironment(local, 'serve').VITE_APP_ENV, 'development');
 assert.equal(prepareEnvironment(staging, 'build').VITE_APP_ENV, 'staging');
 assert.equal(prepareEnvironment(preview, 'build').VITE_APP_URL, 'https://test-preview.example.com');
+const developOrigin = 'https://orchestrio-git-dev-thatbrendans-projects.vercel.app';
+const branchPreview = { ...preview, VERCEL_GIT_COMMIT_REF: 'dev', VERCEL_BRANCH_URL: new URL(developOrigin).hostname, VERCEL_URL: 'orchestrio-immutable-build.example.com' };
+assert.equal(prepareEnvironment(branchPreview, 'build').VITE_APP_URL, developOrigin);
+assert.equal(prepareEnvironment({ ...branchPreview, VITE_APP_URL: 'https://orchestrio.io' }, 'build').VITE_APP_URL, developOrigin);
+assert.throws(() => prepareEnvironment({ ...branchPreview, VERCEL_BRANCH_URL: 'https://bad.example/path' }, 'build'));
 for (const patch of [
  { VITE_SUPABASE_PUBLISHABLE_KEY: 'sb_secret_never_ship_this' },
  { VITE_SUPABASE_PUBLISHABLE_KEY: 'invalid-not-a-public-key' },
