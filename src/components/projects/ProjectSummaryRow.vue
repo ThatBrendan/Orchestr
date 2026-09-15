@@ -39,6 +39,7 @@ const attention = computed(() => props.project.attention_count ?? 0);
       <div class="min-w-0 [overflow-wrap:anywhere]">
         <div class="font-medium text-[15.5px]">
           {{ project.name }}
+          <span class="ml-2 text-13 font-normal capitalize text-muted">{{ project.status }}</span>
         </div>
         <div class="text-13 mt-0.5 text-muted">
           {{ dates }}
@@ -61,7 +62,7 @@ const attention = computed(() => props.project.attention_count ?? 0);
       </div>
       <div class="text-left sm:text-right sm:max-w-[45%]">
         <div
-          v-if="attention > 0"
+          v-if="attention > 0 && (project.status === 'draft' || project.status === 'active')"
           class="text-13 font-medium text-amber"
         >
           {{ attention }} {{ attention === 1 ? "item needs" : "items need" }} attention

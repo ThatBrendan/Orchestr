@@ -14,7 +14,7 @@ import AttentionRow from "@/components/health/AttentionRow.vue";
 
 const router = useRouter();
 const { profile } = useMyProfile();
-const { projects, isPending, isError, error, refetch } = useMyProjects();
+const { activeProjects: projects, isPending, isError, error, refetch } = useMyProjects();
 const attention = useDashboardAttention();
 
 const greeting = computed(() => {

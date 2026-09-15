@@ -11,7 +11,7 @@ import { PROJECT_PROFILES, isProjectModuleVisible, profileDefinition, setModuleV
 import AppButton from "@/components/ui/AppButton.vue";
 import AppConfirmDialog from "@/components/ui/AppConfirmDialog.vue";
 import SectionHeading from "@/components/ui/SectionHeading.vue";
-import type { ProjectProfile } from "@/types/database";
+import type { ProjectProfile, ProjectStatus } from "@/types/database";
 import type { Project } from "@/types/domain";
 
 const route = useRoute();
@@ -117,10 +117,14 @@ async function saveWorkspace() {
   }
 }
 
-async function changeStatus(status: "active" | "archived" | "completed") {
+const confirmLifecycle = ref<"complete" | "reopen" | null>(null);
+async function changeStatus(status: ProjectStatus, from?: ProjectStatus) {
+  if (setStatus.isPending.value || !canArchive.value) return;
   try {
-    await setStatus.mutateAsync(status);
-    toast.success(status === "archived" ? "Project archived." : `Project marked as ${status}.`);
+    const saved = await setStatus.mutateAsync({ status, from });
+    syncContext(saved);
+    confirmLifecycle.value = null;
+    toast.success(status === "completed" ? "Project completed. Find it in Past Projects." : status === "archived" ? "Project archived." : "Project is active.");
   } catch (e) {
     toast.error(toAppError(e).message);
   }
@@ -267,13 +271,22 @@ const status = computed(() => project.value?.status);
         </p>
         <div class="mt-3 flex flex-wrap gap-2">
           <AppButton
+            v-if="status === 'draft' && canArchive"
+            variant="secondary"
+            size="sm"
+            :loading="setStatus.isPending.value"
+            @click="changeStatus('active', 'draft')"
+          >
+            Activate project
+          </AppButton>
+          <AppButton
             v-if="status === 'active' && canArchive"
             variant="secondary"
             size="sm"
             :loading="setStatus.isPending.value"
-            @click="changeStatus('completed')"
+            @click="confirmLifecycle = 'complete'"
           >
-            Mark completed
+            Complete project
           </AppButton>
           <AppButton
             v-if="status !== 'archived' && canArchive"
@@ -298,9 +311,9 @@ const status = computed(() => project.value?.status);
             variant="secondary"
             size="sm"
             :loading="setStatus.isPending.value"
-            @click="changeStatus('active')"
+            @click="confirmLifecycle = 'reopen'"
           >
-            Reopen
+            Reopen project
           </AppButton>
         </div>
         <p
@@ -327,6 +340,15 @@ const status = computed(() => project.value?.status);
       </div>
     </template>
 
+    <AppConfirmDialog
+      :open="confirmLifecycle !== null"
+      :title="confirmLifecycle === 'complete' ? 'Complete this project?' : 'Reopen this project?'"
+      :message="confirmLifecycle === 'complete' ? 'This will move the project to Past Projects. You can reopen it later if needed.' : 'This will return the project to Active Projects.'"
+      :confirm-label="confirmLifecycle === 'complete' ? 'Complete project' : 'Reopen project'"
+      :loading="setStatus.isPending.value"
+      @close="confirmLifecycle = null"
+      @confirm="confirmLifecycle === 'complete' ? changeStatus('completed', 'active') : changeStatus('active', 'completed')"
+    />
     <AppConfirmDialog
       :open="confirmDelete"
       title="Delete project"
