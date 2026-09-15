@@ -14,7 +14,9 @@
     "db:test": "supabase test db",
     "seo:test": "node scripts/seo.test.mjs",
     "env:test": "node scripts/environment.test.mjs",
-    "db:check-target": "node scripts/check-db-target.mjs"
+    "db:check-target": "node scripts/check-db-target.mjs",
+    "auth:test": "node scripts/auth.test.mjs",
+    "auth:browser:test": "node scripts/auth-browser.test.mjs"
   },
   "dependencies": {
     "@fontsource/inter": "^5.1.0",
@@ -41,6 +43,7 @@
     "eslint": "^9.12.0",
     "eslint-plugin-vue": "^9.28.0",
     "globals": "^15.10.0",
+    "playwright": "1.62.1",
     "postcss": "^8.4.47",
     "tailwindcss": "^3.4.13",
     "typescript": "^5.6.2",

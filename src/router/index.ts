@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory, type RouteRecordRaw } from "vue-router";
-import { requireAuth, requireGuest, requirePlatformAdmin, hydrateProjectContext } from "./guards";
+import { requireAuth, requireGuest, requirePlatformAdmin, hydrateProjectContext, whenReady } from "./guards";
 import { DEFAULT_TITLE, setRouteMeta } from "@/composables/usePageMeta";
+import { useAuthStore } from "@/stores/auth";
 import { APP_NAME } from "@/config";
 
 const routes: RouteRecordRaw[] = [
@@ -42,6 +43,18 @@ const routes: RouteRecordRaw[] = [
     component: () => import("@/views/auth/SignupView.vue"),
     beforeEnter: requireGuest,
     meta: { public: true, title: `Get started · ${APP_NAME}` },
+  },
+  {
+    path: "/forgot-password",
+    name: "forgot-password",
+    component: () => import("@/views/auth/ForgotPasswordView.vue"),
+    meta: { public: true, title: `Forgot password · ${APP_NAME}` },
+  },
+  {
+    path: "/reset-password",
+    name: "reset-password",
+    component: () => import("@/views/auth/ResetPasswordView.vue"),
+    meta: { public: true, title: `Reset password · ${APP_NAME}` },
   },
   {
     path: "/auth/callback",
@@ -123,7 +136,16 @@ export const router = createRouter({
 });
 
 // Keep the project context in sync with :projectId on every navigation.
-router.beforeEach(hydrateProjectContext);
+router.beforeEach(async (to) => {
+  await whenReady();
+  if (useAuthStore().recovery && !["reset-password", "auth.callback"].includes(String(to.name))) {
+    return { name: "reset-password" };
+  }
+  if ((to.path === "/app" || to.path.startsWith("/app/") || to.path === "/admin" || to.path.startsWith("/admin/")) && !useAuthStore().isAuthenticated) {
+    return { name: "login", query: { redirect: to.fullPath } };
+  }
+  return hydrateProjectContext(to);
+});
 
 // One metadata owner also clears stale canonical, social and structured tags.
 router.afterEach((to, _from, failure) => {

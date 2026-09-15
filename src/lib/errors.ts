@@ -107,12 +107,18 @@ export function toAppError(e: unknown): AppError {
 }
 
 /** Public authentication errors never display provider messages verbatim. */
-export function toAuthAppError(error: unknown): AppError {
+export function toAuthAppError(error: unknown, context: "auth" | "email" | "password" = "auth"): AppError {
+  if (error instanceof AppError) return error;
   const code = error && typeof error === "object" && "code" in error ? String(error.code) : "";
   if (["over_request_rate_limit", "over_email_send_rate_limit"].includes(code)) {
     return new AppError("rate_limit", "Too many attempts. Please wait a few minutes and try again.");
   }
   const messages: Record<string, string> = {
+    reauthentication_needed: "Verify your identity with an email code to change your password.",
+    reauthentication_not_valid: "That verification code is invalid or expired. Request a new code.",
+    same_password: "Choose a different password from your current password.",
+    session_not_found: "Your session has expired. Log in again.",
+    otp_expired: "This confirmation link has expired. Request a new email.",
     invalid_credentials: "Email or password is incorrect.",
     email_not_confirmed: "Confirm your email address before logging in.",
     weak_password: "Choose a stronger password of at least 8 characters.",
@@ -120,9 +126,9 @@ export function toAuthAppError(error: unknown): AppError {
     signup_disabled: "Signups are currently unavailable. Please try again later.",
     user_already_exists: "Unable to create this account. Try logging in instead.",
   };
-  if (Object.hasOwn(messages, code)) return new AppError("auth", messages[code]!);
+  if (Object.hasOwn(messages, code)) return new AppError("auth", messages[code]!, { code });
   if (error instanceof Error && /fetch|network/i.test(error.message)) {
     return new AppError("network", "Network problem — check your connection.");
   }
-  return new AppError("auth", "Unable to sign in or create your account. Please try again.");
+  return new AppError("auth", context === "email" ? "Unable to send the email right now. Try again shortly." : context === "password" ? "Unable to update your password. Please try again." : "Unable to sign in or create your account. Please try again.");
 }
