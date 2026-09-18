@@ -40,13 +40,13 @@ watch(() => auth.ready, (ready) => {
       <RouterLink
         v-if="initialAuthLink.recovery"
         to="/forgot-password"
-        class="block mt-4 text-accent focus-ring"
+        class="block mt-4 text-brand-dark focus-ring"
       >
         Request a new reset link
       </RouterLink>
       <RouterLink
         :to="{ name: 'login', query: safeRedirect(route.query.redirect) ? { redirect: safeRedirect(route.query.redirect) } : {} }"
-        class="block mt-4 text-accent focus-ring"
+        class="block mt-4 text-brand-dark focus-ring"
       >
         Back to log in
       </RouterLink>

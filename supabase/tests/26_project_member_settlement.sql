@@ -20,7 +20,7 @@ values
 
 select pg_temp.login('aa250000-0000-0000-0000-000000000025','settlement-a@t.co');
 create temporary table pg_temp.ctx as
-select public.create_project('Execution actual cost','UTC','GBP',null,null,'team_project') as project_id;
+select public.create_project('Execution actual cost','UTC','GBP','2026-01-01',null,'team_project') as project_id;
 
 set local role postgres;
 insert into public.project_members (project_id, user_id, display_name, role)

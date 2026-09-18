@@ -24,11 +24,10 @@ const primary = computed(() =>
           id="hero-heading"
           class="font-display text-[34px] leading-[1.12] md:text-[52px] md:leading-[1.08] font-semibold tracking-tight"
         >
-          Turn complex plans into coordinated execution.
+          Plan together. Keep <span class="text-brand">everything in one place</span>.
         </h1>
         <p class="mt-5 text-[16px] md:text-[18px] leading-relaxed text-ink-soft max-w-xl">
-          Orchestrio brings costs, responsibilities, commitments, deadlines, logistics and progress into one shared
-          workspace — so everyone sees what's happening, who owns it, what it costs, and what's at risk.
+          Organise categories, activities, costs, deadlines and people without piecing everything together from chats, spreadsheets and notes.
         </p>
         <div class="mt-8 flex flex-wrap items-center gap-3">
           <AppButton

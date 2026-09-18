@@ -160,7 +160,7 @@ const statusTone = (s: string) => (s === "invited" ? "amber" : s === "removed" ?
                   :class="{
                     'text-danger': balanceTone(m.member_id) === 'danger',
                     'text-amber': balanceTone(m.member_id) === 'amber',
-                    'text-accent': balanceTone(m.member_id) === 'accent',
+                    'text-success': balanceTone(m.member_id) === 'accent',
                   }"
                 >{{ balanceLabel(m.member_id) }}</span>
               </div>

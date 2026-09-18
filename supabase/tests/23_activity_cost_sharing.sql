@@ -20,7 +20,7 @@ values
 
 select pg_temp.login('aa230000-0000-0000-0000-000000000023','split-a@t.co');
 create temporary table pg_temp.ctx as
-select public.create_project('Split actual cost','UTC','GBP',null,null,'team_project') as project_id;
+select public.create_project('Split actual cost','UTC','GBP','2026-01-01',null,'team_project') as project_id;
 
 set local role postgres;
 insert into public.project_members (project_id, user_id, display_name, role)
@@ -91,7 +91,7 @@ select throws_ok($$select public.set_activity_cost_split((select id from pg_temp
 select pg_temp.login('dd230000-0000-0000-0000-000000000023','split-d@t.co');
 select throws_ok($$select public.set_activity_cost_split((select id from pg_temp.item),'{"mode":"none"}'::jsonb)$$,'42501',null,'Nonmember cannot change split');
 select is((select count(*)::int from public.v_activity_cost_shares where commitment_id=(select id from pg_temp.item)),0,'Project isolation');
-create temporary table pg_temp.foreign_project as select public.create_project('Unrelated','UTC','GBP',null,null,'team_project') as project_id;
+create temporary table pg_temp.foreign_project as select public.create_project('Unrelated','UTC','GBP','2026-01-01',null,'team_project') as project_id;
 create temporary table pg_temp.foreign_member as select id from public.project_members where project_id=(select project_id from pg_temp.foreign_project);
 select pg_temp.login('aa230000-0000-0000-0000-000000000023','split-a@t.co');
 select throws_ok($$select public.set_activity_cost_split((select id from pg_temp.item),jsonb_build_object('mode','even','cost',10000,'members',jsonb_build_array((select id from pg_temp.foreign_member))))$$,'42501',null,'Wrong project member rejected');

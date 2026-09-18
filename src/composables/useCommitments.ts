@@ -166,8 +166,11 @@ export function useDeleteCommitment(projectId: string) {
   const client = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => commitmentsService.softDeleteCommitment(id),
-    onSuccess: () => {
-      return invalidateCommitmentEffects(client, projectId);
+    onSuccess: async (_data, id) => {
+      await client.cancelQueries({ queryKey: qk.project.commitments(projectId) });
+      client.setQueryData<commitmentsService.Commitment[]>(qk.project.commitments(projectId), rows => rows?.filter(row => row.id !== id));
+      client.removeQueries({ queryKey: ["commitment", id] });
+      await invalidateCommitmentEffects(client, projectId);
     },
   });
 }

@@ -67,7 +67,7 @@ const attention = computed(() => props.project.attention_count ?? 0);
         >
           {{ attention }} {{ attention === 1 ? "item needs" : "items need" }} attention
         </div>
-        <div class="mt-3 inline-flex items-center gap-1 text-[13.5px] font-medium text-accent">
+        <div class="mt-3 inline-flex items-center gap-1 text-[13.5px] font-medium text-brand-dark">
           Open project <AppIcon
             name="chevronRight"
             :size="16"

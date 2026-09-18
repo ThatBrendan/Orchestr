@@ -79,7 +79,7 @@ async function leave() {
       <RouterLink
         v-else
         to="/forgot-password"
-        class="block mt-4 text-accent focus-ring"
+        class="block mt-4 text-brand-dark focus-ring"
       >
         Request a new reset link
       </RouterLink>

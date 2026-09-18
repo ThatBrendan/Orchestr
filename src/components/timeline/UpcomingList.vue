@@ -18,7 +18,7 @@ const DEADLINE_TYPES = new Set(["payment_due", "task_due", "recurring_commitment
 interface Item {
   label: string;
   status: string | null;
-  link: { name: string; params: { projectId: string }; query: { commitment: string; occurrence: string } } | null;
+  link: { name: string; params: { projectId: string }; query: Record<string,string> } | null;
   time: string;
   allDay: boolean;
   done: boolean;
@@ -32,7 +32,7 @@ interface Group {
 const groups = computed<Group[]>(() => {
   const now = Date.now();
   const byDay = new Map<string, Group>();
-  for (const e of props.events) {
+  for (const e of props.events.filter(e=>e.subject_type!=='milestone')) {
     const day = t.value.dayLabel(e.occurs_at);
     if (!byDay.has(day)) byDay.set(day, { day, items: [] });
     const done = !!e.status && DONE_STATUSES.has(e.status);
@@ -40,7 +40,7 @@ const groups = computed<Group[]>(() => {
     byDay.get(day)!.items.push({
       label: e.title,
       status: e.is_recurring_occurrence ? e.status : null,
-      link: e.subject_type === "commitment" && e.occurrence_date ? { name: "project.commitments", params: { projectId: e.project_id }, query: { commitment: e.subject_id, occurrence: e.occurrence_date } } : null,
+      link: ['commitment','task'].includes(e.subject_type) ? {name:'project.commitments',params:{projectId:e.project_id},query:{[e.subject_type==='task'?'item':'commitment']:e.subject_id,...(e.occurrence_date?{occurrence:e.occurrence_date}:{})}}:null,
       time: e.all_day ? "" : t.value.time(e.occurs_at),
       allDay: e.all_day,
       done,

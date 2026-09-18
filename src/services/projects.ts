@@ -27,6 +27,7 @@ export async function getProject(projectId: string): Promise<Project> {
 }
 
 export async function createProject(input: ProjectInsert): Promise<{ id: string }> {
+  if (!input.starts_on) throw new AppError("validation", "Choose a start date.");
   const { data, error } = await supabase.rpc("create_project", {
     p_name: input.name,
     p_timezone: input.timezone,

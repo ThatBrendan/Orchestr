@@ -24,7 +24,7 @@ const primary = computed(() =>
       Keep the whole plan moving.
     </h2>
     <p class="mt-4 text-[16px] text-ink-soft max-w-xl mx-auto">
-      Bring the costs, owners, deadlines and progress into one place — and stop chasing the details.
+      Bring the activities, costs, deadlines and progress into one place — and stop chasing the details.
     </p>
     <div class="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
       <AppButton
@@ -41,7 +41,7 @@ const primary = computed(() =>
       Already have an account?
       <RouterLink
         :to="{ name: 'login' }"
-        class="text-accent font-medium focus-ring"
+        class="text-brand-dark font-medium focus-ring"
       >
         Log in
       </RouterLink>

@@ -20,7 +20,7 @@ const content: Record<PageKind, { eyebrow: string; title: string; description: s
       {
         heading: "Why I started building it",
         paragraphs: [
-          "I kept seeing the same problem: planning rarely happens in one place. Plans end up spread across WhatsApp, email, spreadsheets, notes, documents, calendars and different people.",
+          "I'm Brendan Ugo-Emeribe, founder of Orchestrio. I started building it after repeatedly seeing the same problem: planning rarely happens in one place. Plans end up spread across WhatsApp, email, spreadsheets, notes, documents, calendars and different people.",
           "The original idea grew from wanting a better way to coordinate plans without constantly piecing together information from different tools and conversations.",
         ],
       },
@@ -169,7 +169,7 @@ const isAbout = computed(() => kind.value === "about");
       class="max-w-6xl mx-auto px-5 md:px-8 py-14 md:py-20"
     >
       <article class="max-w-3xl mx-auto">
-        <p class="text-13 font-semibold uppercase tracking-wide text-accent">
+        <p class="text-13 font-semibold uppercase tracking-wide text-brand-dark">
           {{ page.eyebrow }}
         </p>
         <h1 class="mt-3 font-display text-[34px] leading-tight font-semibold tracking-tight md:text-[46px]">

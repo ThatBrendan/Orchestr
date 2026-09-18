@@ -43,7 +43,7 @@ function isActive(match: readonly string[]) {
           :key="item.label"
           :to="item.to"
           class="nav-item flex items-center gap-3 px-3 py-2 rounded-lg text-14 font-medium focus-ring transition-colors"
-          :class="isActive(item.match) ? 'text-ink bg-[#F0F0EE]' : 'text-ink-soft hover:bg-[#F6F6F4]'"
+          :class="isActive(item.match) ? 'text-brand-dark bg-brand-soft' : 'text-ink-soft hover:bg-secondary'"
         >
           <AppIcon
             :name="item.icon"
@@ -97,7 +97,7 @@ function isActive(match: readonly string[]) {
             :key="item.label"
             :to="item.to"
             class="shrink-0 rounded-lg px-3 py-1.5 text-13 font-medium focus-ring"
-            :class="isActive(item.match) ? 'bg-[#F0F0EE] text-ink' : 'text-muted'"
+            :class="isActive(item.match) ? 'bg-brand-soft text-brand-dark' : 'text-muted'"
           >
             {{ item.label }}
           </RouterLink>

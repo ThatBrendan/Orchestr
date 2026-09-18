@@ -11,7 +11,7 @@ insert into auth.users (instance_id,id,aud,role,email,raw_app_meta_data,raw_user
 values ('00000000-0000-0000-0000-000000000000','aa270000-0000-0000-0000-000000000027','authenticated','authenticated','completion-a@t.co','{}','{}',now(),now(),'','','',''),
        ('00000000-0000-0000-0000-000000000000','bb270000-0000-0000-0000-000000000027','authenticated','authenticated','completion-b@t.co','{}','{}',now(),now(),'','','','');
 select pg_temp.login('aa270000-0000-0000-0000-000000000027','completion-a@t.co');
-create temporary table pg_temp.ctx as select public.create_project('Completion gating','UTC','GBP',null,null,'team_project') as project_id;
+create temporary table pg_temp.ctx as select public.create_project('Completion gating','UTC','GBP','2026-01-01',null,'team_project') as project_id;
 set local role postgres;
 insert into public.project_members(project_id,user_id,display_name,role)
 select project_id,'bb270000-0000-0000-0000-000000000027','Completion B','member' from pg_temp.ctx;

@@ -168,7 +168,7 @@ async function resend() {
         Already have an account?
         <RouterLink
           :to="loginTo"
-          class="text-accent font-medium focus-ring"
+          class="text-brand-dark font-medium focus-ring"
         >
           {{ outcome === "confirm" ? "Back to log in" : "Log in" }}
         </RouterLink>

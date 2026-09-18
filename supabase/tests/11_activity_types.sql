@@ -18,7 +18,7 @@ values
 
 select pg_temp.login('aa110000-0000-0000-0000-000000000011','activity-a@t.co');
 create temporary table pg_temp.ctx as
-select public.create_project('Activity types','UTC','GBP',null,null,'team_project') as project_id;
+select public.create_project('Activity types','UTC','GBP','2026-01-01',null,'team_project') as project_id;
 
 insert into public.commitments (project_id, title, kind, activity_type, status)
 select project_id, 'Set up social media pages', 'other', 'task', 'idea' from pg_temp.ctx;

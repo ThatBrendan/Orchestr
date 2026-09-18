@@ -3,10 +3,10 @@ import SeverityIcon from "@/components/ui/SeverityIcon.vue";
 
 // Illustrative findings — fixed marketing content, scoped to this component.
 const CHECKS = [
-  { severity: "warning" as const, label: "Missing owner", detail: "A commitment with nobody responsible for it." },
+  { severity: "warning" as const, label: "Missing assignee", detail: "An activity with nobody responsible for it." },
   { severity: "blocker" as const, label: "Overdue payment", detail: "A scheduled payment past its due date." },
   { severity: "warning" as const, label: "Incomplete booking", detail: "Confirmed, but no confirmation reference." },
-  { severity: "warning" as const, label: "Overdue task", detail: "A task past its due date and still open." },
+  { severity: "warning" as const, label: "Overdue activity", detail: "An activity past its due date and still open." },
   { severity: "warning" as const, label: "Budget overrun", detail: "Projected spend above the plan's budget." },
 ];
 </script>
@@ -19,7 +19,7 @@ const CHECKS = [
   >
     <div class="max-w-6xl mx-auto px-5 md:px-8 py-16 md:py-24 grid lg:grid-cols-2 gap-10 items-start">
       <div>
-        <div class="text-13 font-semibold uppercase tracking-wide text-accent">
+        <div class="text-13 font-semibold uppercase tracking-wide text-brand-dark">
           Planning health
         </div>
         <h2

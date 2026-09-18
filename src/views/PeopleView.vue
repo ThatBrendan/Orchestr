@@ -137,19 +137,6 @@ function roleTone(role: string) {
           <div class="mt-0.5 text-13 text-muted">
             {{ projectLabel(person.project_count) }}
           </div>
-          <div class="mt-1 flex flex-wrap gap-1.5">
-            <span
-              v-for="project in person.projects.slice(0, 3)"
-              :key="project.project_id + project.member_id"
-              class="rounded-full border border-line px-2 py-0.5 text-12 text-ink-soft"
-            >
-              {{ project.project_name }}
-            </span>
-            <span
-              v-if="person.projects.length > 3"
-              class="px-2 py-0.5 text-12 text-muted"
-            >+{{ person.projects.length - 3 }}</span>
-          </div>
         </div>
       </button>
     </div>

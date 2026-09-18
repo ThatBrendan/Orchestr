@@ -38,6 +38,8 @@ const columns = [
           >
             <img
               :src="orchestrioIcon"
+              width="112"
+              height="48"
               alt=""
               class="h-12 w-auto"
             >

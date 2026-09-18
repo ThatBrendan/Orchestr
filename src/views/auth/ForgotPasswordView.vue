@@ -64,7 +64,7 @@ async function submit() {
     </form>
     <RouterLink
       to="/login"
-      class="block mt-6 text-center text-13 text-accent focus-ring"
+      class="block mt-6 text-center text-13 text-brand-dark focus-ring"
     >
       Back to log in
     </RouterLink>

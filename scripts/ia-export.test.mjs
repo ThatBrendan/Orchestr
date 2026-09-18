@@ -1,0 +1,18 @@
+import assert from 'node:assert/strict';
+import path from 'node:path';
+import {build} from 'vite';
+const output=await build({configFile:false,logLevel:'silent',resolve:{alias:{'@':path.resolve('src')}},build:{write:false,minify:false,lib:{entry:'src/lib/projectCsv.ts',formats:['es']}}});
+const result=Array.isArray(output)?output[0]:output;
+const api=await import(`data:text/javascript;base64,${Buffer.from(result.output.find(i=>i.type==='chunk').code).toString('base64')}`);
+assert.equal(api.csvCell('a,"b"\r\nc'),'"a,""b""\r\nc"');
+assert.equal(api.csvCell('=SUM(1,2)'),'"\'=SUM(1,2)"');
+assert.equal(api.csvCell('\t@evil'),'"\'\t@evil"');
+assert.equal(api.csvCell('-12.50'),'"-12.50"');
+const id='31000000-0000-0000-0000-000000000001';
+const rows=[{id,source:'commitment',area_id:id,title:'Taxi, airport',item_type:'booking',status:'completed',assignee_member_id:id,item_date:'2027-06-18T00:00:00Z',cost_minor:10000,paid_minor:10000,outstanding_minor:0},{id:'second',source:'task',title:'Contact club',item_type:'task',status:'in_progress',cost_minor:null,paid_minor:0,outstanding_minor:0}];
+const csv=api.projectCsv({name:'Ibiza 2027',currency:'GBP',timezone:'Europe/London'},rows,[{id,title:'Transport'}],[{member_id:id,display_name:'Brendan'}]);
+assert(csv.startsWith('\uFEFF"Project","Category","Activity","Type"'));
+assert(csv.includes('"Transport","Taxi, airport","Booking","Completed","Brendan","18/06/2027","100.00","100.00","0.00","GBP"'));
+assert(csv.includes('"Contact club","Task","In progress"'));assert(!csv.includes(id));assert(!csv.includes('in_progress'));assert(csv.includes('"","0.00","0.00","GBP"'));
+for(const [currency,minor,expected] of [['JPY',100,'100'],['KWD',1234,'1.234']])assert(api.projectCsv({name:'Test',currency,timezone:'UTC'},[{...rows[0],cost_minor:minor}],[],[]).includes('"'+expected+'"'));
+console.log('PASS CSV escaping, formula defense, human labels, null cost, currency precision, dates and no IDs');

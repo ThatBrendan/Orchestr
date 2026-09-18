@@ -7,18 +7,18 @@ const STEPS = [
   },
   {
     n: "02",
-    title: "Add commitments and people",
-    body: "Capture activities and bookings, assign an owner to each, and record what they cost.",
+    title: "Add activities and people",
+    body: "Add categories, activities and any costs. Invite people when you’re ready.",
   },
   {
     n: "03",
-    title: "Track costs, ownership and deadlines",
-    body: "Watch committed spend, payments and outstanding balances update as the plan takes shape.",
+    title: "Keep up with the plan",
+    body: "See deadlines, progress and payments in one place.",
   },
   {
     n: "04",
-    title: "Resolve risks and execute",
-    body: "Clear the issues Orchestrio flags — missing owners, overdue payments, incomplete bookings — and run the plan.",
+    title: "Get things done",
+    body: "Complete activities as you go. Reuse repeating activities for regular work.",
   },
 ];
 </script>
@@ -37,7 +37,7 @@ const STEPS = [
         How it works
       </h2>
       <p class="mt-3 text-[16px] text-ink-soft max-w-2xl">
-        Four steps from a rough idea to a plan that runs itself.
+        From the first idea to the last task.
       </p>
 
       <ol class="mt-10 grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -46,7 +46,7 @@ const STEPS = [
           :key="s.n"
           class="rounded-xl border border-line bg-paper p-5"
         >
-          <div class="font-display text-13 font-semibold text-accent tnum">
+          <div class="font-display text-13 font-semibold text-brand-dark tnum">
             {{ s.n }}
           </div>
           <h3 class="mt-2 text-[15px] font-semibold">

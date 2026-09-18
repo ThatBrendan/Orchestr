@@ -20,6 +20,8 @@ const initials = computed(() =>
     v-if="props.url"
     :src="props.url"
     :alt="props.name"
+    :width="size"
+    :height="size"
     class="rounded-full object-cover shrink-0"
     :style="{ width: size + 'px', height: size + 'px' }"
   >

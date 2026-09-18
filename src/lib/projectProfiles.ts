@@ -27,7 +27,7 @@ export const PROJECT_PROFILES: ProjectProfileDefinition[] = [
   {
     value: "house_move",
     label: "House Move & Checklist",
-    description: "Keep tasks, deadlines and responsibilities organised.",
+    description: "Keep activities, deadlines and responsibilities organised.",
     defaultModules: ["overview", "commitments", "timeline", "people", "notes", "health"],
   },
   {

@@ -31,6 +31,8 @@ const setStatus = useSetProjectStatus(projectId.value);
 const del = useDeleteProject(projectId.value);
 
 const form = reactive({
+  timezone: "UTC",
+  currency: "GBP",
   name: "",
   description: "",
   starts_on: "",
@@ -44,6 +46,8 @@ watch(
   project,
   (p) => {
     if (!p) return;
+    form.timezone=p.timezone;
+    form.currency=p.currency;
     form.name = p.name;
     form.description = p.description ?? "";
     form.starts_on = p.starts_on ?? "";
@@ -85,6 +89,8 @@ async function saveDetails() {
   }
   try {
     const saved = await update.mutateAsync({
+      timezone:form.timezone.trim(),
+      currency:form.currency.trim().toUpperCase(),
       name: form.name.trim(),
       description: form.description.trim() || null,
       starts_on: form.starts_on || null,
@@ -196,8 +202,20 @@ const status = computed(() => project.value?.status);
               >
             </label>
           </div>
+          <div class="grid gap-3 sm:grid-cols-2">
+            <label class="block text-13">Timezone<input
+              v-model="form.timezone"
+              required
+              class="block w-full border border-line rounded-lg p-2"
+            ></label><label class="block text-13">Currency<input
+              v-model="form.currency"
+              required
+              maxlength="3"
+              class="block w-full border border-line rounded-lg p-2"
+            ></label>
+          </div>
           <p class="text-13 text-muted">
-            Currency is {{ project?.currency }} — locked once activities or payments exist.
+            Currency is {{ project?.currency }} — locked once Activities or payments exist.
           </p>
           <p
             v-if="fieldError"

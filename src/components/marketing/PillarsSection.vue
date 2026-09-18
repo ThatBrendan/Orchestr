@@ -4,33 +4,33 @@ import type { IconName } from "@/components/ui/icons";
 
 const PILLARS: { title: string; body: string; icon: IconName }[] = [
   {
-    title: "Commitments",
-    body: "Keep activities, bookings and important commitments organised in one place, each with its cost, dates and status.",
+    title: "Categories and activities",
+    body: "Keep the work, bookings and details of your project together.",
     icon: "projects",
   },
   {
-    title: "Ownership",
-    body: "Make responsibility explicit. Every commitment has an owner, so everyone knows who's handling what.",
+    title: "Work together",
+    body: "Assign activities when you need to share the work.",
     icon: "flag",
   },
   {
     title: "Money",
-    body: "Track planned cost, committed spend, payments, refunds and what's still outstanding — for the plan and per person.",
+    body: "See what things cost, what’s paid and what’s left to pay.",
     icon: "coins",
   },
   {
     title: "Timeline",
-    body: "Bring bookings, payment deadlines, tasks and milestones together chronologically, in the plan's own timezone.",
+    body: "Bring bookings, payment deadlines and activities together chronologically, in the plan's own timezone.",
     icon: "calendar",
   },
   {
     title: "People",
-    body: "See participants, their responsibilities and their involvement across the whole plan.",
+    body: "See people, their responsibilities and their involvement across the whole plan.",
     icon: "people",
   },
   {
-    title: "Planning health",
-    body: "Surface missing owners, overdue payments, incomplete bookings, budget risk and other issues before they bite.",
+    title: "Stay on track",
+    body: "Catch overdue activities, upcoming payments and unfinished bookings.",
     icon: "alert",
   },
 ];
@@ -58,7 +58,7 @@ const PILLARS: { title: string; body: string; icon: IconName }[] = [
         :key="p.title"
         class="rounded-xl border border-line bg-surface p-5"
       >
-        <div class="w-9 h-9 rounded-lg bg-accent-soft text-accent flex items-center justify-center">
+        <div class="w-9 h-9 rounded-lg bg-brand-soft text-brand-dark flex items-center justify-center">
           <AppIcon
             :name="p.icon"
             :size="18"

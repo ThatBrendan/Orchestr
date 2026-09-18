@@ -16,13 +16,13 @@ const SAMPLE = {
   progress: 68,
   tiles: [
     { value: "£9,000", label: "Total budget" },
-    { value: "£7,240", label: "Committed" },
+    { value: "£7,240", label: "Cost" },
     { value: "£1,760", label: "Remaining" },
     { value: "68%", label: "Complete" },
   ],
   findings: [
     { severity: "blocker" as const, text: "£1,200 venue balance overdue" },
-    { severity: "warning" as const, text: "Airport transfer has no owner" },
+    { severity: "warning" as const, text: "Airport transfer task is overdue" },
     { severity: "warning" as const, text: "Dinner booking has no reference" },
   ],
   commitments: [
@@ -37,7 +37,7 @@ const SAMPLE = {
   <div
     class="rounded-2xl border border-line bg-surface shadow-[0_1px_2px_rgba(20,20,18,0.04),0_12px_32px_-12px_rgba(20,20,18,0.12)] overflow-hidden"
     role="img"
-    aria-label="Illustration of the Orchestrio project workspace: budget summary, commitments with owners, and planning health findings"
+    aria-label="Illustration of the Orchestrio project workspace: costs, activities, people and upcoming work"
   >
     <!-- header -->
     <div class="px-5 pt-5">
@@ -73,7 +73,7 @@ const SAMPLE = {
       <!-- commitments -->
       <div class="p-5 sm:border-r border-line">
         <div class="text-[11px] font-semibold uppercase tracking-wide text-muted">
-          Commitments
+          Activities
         </div>
         <div class="mt-2.5 space-y-2.5">
           <div
@@ -86,8 +86,7 @@ const SAMPLE = {
                 {{ c.title }}
               </div>
               <div
-                class="text-13"
-                :class="c.owner === 'Unassigned' ? 'text-amber' : 'text-ink-soft'"
+                class="text-13 text-ink-soft"
               >
                 {{ c.owner }}
               </div>
@@ -103,7 +102,7 @@ const SAMPLE = {
       <!-- health -->
       <div class="p-5 border-t sm:border-t-0 border-line">
         <div class="text-[11px] font-semibold uppercase tracking-wide text-muted">
-          Planning health
+          Needs attention
         </div>
         <div class="mt-2.5 space-y-2.5">
           <div
