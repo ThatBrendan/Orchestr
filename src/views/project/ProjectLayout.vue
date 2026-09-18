@@ -3,19 +3,23 @@ import { useQuery } from "@tanstack/vue-query";
 import { useAuth } from "@/composables/useAuth";
 import { qk } from "@/composables/keys";
 import { getMyMembership } from "@/services/members";
-import { computed, onBeforeUnmount, watch } from "vue";
+import { computed, onBeforeUnmount, ref, watch } from "vue";
 import { RouterView, useRoute, useRouter } from "vue-router";
 import { useProjectContext } from "@/composables/useProjectContext";
 import { useProjectContextStore } from "@/stores/project-context";
-import { useProject, useProjectFinancials } from "@/composables/useProject";
+import { useProject } from "@/composables/useProject";
 import { useProjectTime } from "@/composables/useProjectTime";
-import { useMoney } from "@/composables/useMoney";
-import { isProjectModuleVisible, profileDefinition } from "@/lib/projectProfiles";
+import { profileDefinition } from "@/lib/projectProfiles";
 import PageContainer from "@/components/ui/PageContainer.vue";
-import StatTile from "@/components/ui/StatTile.vue";
-import SkeletonBlock from "@/components/ui/SkeletonBlock.vue";
 import AppButton from "@/components/ui/AppButton.vue";
+import AppModal from "@/components/ui/AppModal.vue";
+import AppIcon from "@/components/ui/AppIcon.vue";
 import ProjectTabs from "./ProjectTabs.vue";
+import ProjectSettingsView from "./ProjectSettingsView.vue";
+import { useCommitments } from "@/composables/useCommitments";
+import { useMemberDirectory } from "@/composables/useProject";
+import { downloadProjectCsv } from "@/lib/projectExport";
+import { useToast } from "@/composables/useToast";
 
 const route = useRoute();
 const router = useRouter();
@@ -44,8 +48,6 @@ watch(liveProject, (next) => {
   }
 });
 
-const { financials, isPending: finPending } = useProjectFinancials(projectId);
-const { format } = useMoney();
 const time = computed(() => useProjectTime(project.value?.timezone ?? "UTC"));
 
 const dates = computed(() =>
@@ -53,10 +55,27 @@ const dates = computed(() =>
 );
 const currency = computed(() => project.value?.currency ?? "GBP");
 const archived = computed(() => project.value?.status === "archived");
-const showBudgetModule = computed(() =>
-  isProjectModuleVisible(project.value?.profile, project.value?.module_visibility, "budget"),
-);
 const profileLabel = computed(() => profileDefinition(project.value?.profile).label);
+const { commitments } = useCommitments(projectId);
+const { members } = useMemberDirectory(projectId);
+const toast = useToast();
+const settingsOpen = ref(false);
+const exporting = ref(false);
+watch(()=>route.query.settings,value=>{if(value==='1'&&allowed('project.settings'))settingsOpen.value=true;},{immediate:true});
+watch(settingsOpen,value=>{if(!value&&route.query.settings){const query={...route.query};delete query.settings;void router.replace({query});}});
+
+async function exportProject() {
+  if (!project.value || exporting.value) return;
+  exporting.value = true;
+  try {
+    await downloadProjectCsv(project.value, commitments.value, members.value, currency.value);
+    toast.success("Project export downloaded.");
+  } catch (error) {
+    toast.error(error instanceof Error ? error.message : "The project export could not be created.");
+  } finally {
+    exporting.value = false;
+  }
+}
 
 // ProjectLayout stays mounted while switching tabs / projects (the guard re-hydrates
 // context on a projectId change); it only unmounts when leaving the project area.
@@ -84,59 +103,28 @@ onBeforeUnmount(() => ctxStore.clear());
         </p>
       </div>
       <div class="flex items-center gap-2">
-        <!-- Share is not in this build; shown disabled rather than faked -->
         <AppButton
           variant="secondary"
           size="sm"
-          disabled
-          title="Not in this build"
+          :loading="exporting"
+          @click="exportProject"
         >
-          Share
+          Export
         </AppButton>
         <AppButton
           v-if="allowed('project.settings')"
           variant="secondary"
           size="sm"
-          @click="router.push({ name: 'project.settings', params: { projectId } })"
+          aria-label="Open project settings"
+          title="Project settings"
+          @click="settingsOpen = true"
         >
-          Project settings
+          <AppIcon
+            name="settings"
+            :size="16"
+          />
         </AppButton>
       </div>
-    </div>
-
-    <!-- stat tiles -->
-    <div class="mt-6 border rounded-xl px-6 py-4 flex flex-wrap gap-x-10 gap-y-4 border-line bg-surface">
-      <template v-if="finPending">
-        <SkeletonBlock
-          v-for="i in 4"
-          :key="i"
-          width="90px"
-          height="44px"
-        />
-      </template>
-      <template v-else>
-        <template v-if="showBudgetModule">
-          <StatTile
-            :value="financials?.total_target_minor != null ? format(financials.total_target_minor, currency) : 'Not set'"
-            label="Total budget"
-          />
-          <StatTile
-            :value="format(financials?.committed_spend_minor ?? 0, currency)"
-            label="Committed"
-          />
-          <StatTile
-            :value="financials?.remaining_budget_minor != null ? format(financials.remaining_budget_minor, currency) : '—'"
-            label="Remaining"
-            :tone="
-              financials?.remaining_budget_minor != null && financials.remaining_budget_minor < 0 ? 'amber' : 'default'
-            "
-          />
-        </template>
-        <StatTile
-          :value="(financials?.progress_pct ?? 0) + '%'"
-          label="Complete"
-        />
-      </template>
     </div>
 
     <ProjectTabs :project-id="projectId" />
@@ -144,5 +132,14 @@ onBeforeUnmount(() => ctxStore.clear());
     <div class="mt-7">
       <RouterView :key="projectId + String(route.name)" />
     </div>
+
+    <AppModal
+      :open="settingsOpen"
+      title="Project settings"
+      size="lg"
+      @close="settingsOpen = false"
+    >
+      <ProjectSettingsView />
+    </AppModal>
   </PageContainer>
 </template>

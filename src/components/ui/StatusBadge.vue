@@ -2,12 +2,13 @@
 import { computed } from "vue";
 
 // Tone-mapped pill, matching the prototype's statusBadge().
-const props = defineProps<{ label: string; tone?: "accent" | "amber" | "danger" | "neutral" }>();
+const props = defineProps<{ label: string; tone?: "accent" | "success" | "amber" | "danger" | "neutral" }>();
 
 const cls = computed(
   () =>
     ({
-      accent: "bg-accent-soft text-accent",
+      accent: "bg-brand-soft text-brand-dark",
+      success: "bg-success-soft text-success",
       amber: "bg-amber-soft text-amber",
       danger: "bg-danger-soft text-danger",
       neutral: "bg-[#F1F1EF] text-ink-soft",

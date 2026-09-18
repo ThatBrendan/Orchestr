@@ -85,7 +85,7 @@ export async function getFullTimeline(projectId: string): Promise<TimelineEvent[
     p_end: end.toISOString(),
   });
   if (error) throw toAppError(error);
-  return (data ?? []).sort((a, b) => a.occurs_at.localeCompare(b.occurs_at));
+  return (data ?? []).filter(e=>e.subject_type!=='milestone').sort((a, b) => a.occurs_at.localeCompare(b.occurs_at));
 }
 
 export async function getUpcomingEvents(projectId: string, days = 14): Promise<TimelineEvent[]> {
@@ -97,5 +97,5 @@ export async function getUpcomingEvents(projectId: string, days = 14): Promise<T
     p_end: until.toISOString(),
   });
   if (error) throw toAppError(error);
-  return (data ?? []).sort((a, b) => a.occurs_at.localeCompare(b.occurs_at));
+  return (data ?? []).filter(e=>e.subject_type!=='milestone').sort((a, b) => a.occurs_at.localeCompare(b.occurs_at));
 }

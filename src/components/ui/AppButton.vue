@@ -27,9 +27,9 @@ const classes = computed(() => {
     lg: "px-5 py-2.5 text-14.5",
   }[props.size];
   const variant = {
-    primary: "bg-ink text-white hover:bg-black",
-    secondary: "border border-line text-ink-soft hover:bg-[#FBFBFA]",
-    ghost: "text-ink-soft hover:bg-[#F3F3F0]",
+    primary: "bg-brand text-white hover:bg-brand-dark",
+    secondary: "border border-line bg-secondary text-ink hover:bg-brand-soft",
+    ghost: "text-ink-soft hover:bg-brand-soft",
   }[props.variant];
   return [base, size, variant, props.block ? "w-full" : ""];
 });

@@ -1,197 +1,56 @@
 <script setup lang="ts">
-import { computed } from "vue";
-import { useRoute } from "vue-router";
-import { useProjectContext } from "@/composables/useProjectContext";
-import { useProjectHealth, useProjectOverview, useUpcoming } from "@/composables/useProject";
-import { useMoney } from "@/composables/useMoney";
-import { isProjectModuleVisible } from "@/lib/projectProfiles";
-import { overviewConfig, type OverviewCardKey } from "@/lib/projectOverview";
-import SectionHeading from "@/components/ui/SectionHeading.vue";
-import SkeletonBlock from "@/components/ui/SkeletonBlock.vue";
-import EmptyState from "@/components/ui/EmptyState.vue";
-import ErrorState from "@/components/ui/ErrorState.vue";
-import AttentionRow from "@/components/health/AttentionRow.vue";
-import UpcomingList from "@/components/timeline/UpcomingList.vue";
-import StatusBadge from "@/components/ui/StatusBadge.vue";
-import { formatDuration } from "@/lib/presentation";
-
-const route = useRoute();
-const projectId = computed(() => String(route.params.projectId));
-const { project } = useProjectContext();
-const { format } = useMoney();
-
-const projectOverview = useProjectOverview(projectId);
-const health = useProjectHealth(projectId);
-const upcoming = useUpcoming(projectId);
-const overview = computed(() => projectOverview.overview.value);
-const currency = computed(() => project.value?.currency ?? "GBP");
-const budgetVisible = computed(() =>
-  isProjectModuleVisible(project.value?.profile, project.value?.module_visibility, "budget"),
-);
-const cardOrder = computed(() =>
-  overviewConfig(project.value?.profile).cards.filter((card) => card !== "budget" || budgetVisible.value),
-);
-
-function countLabel(count: number | null | undefined, singular: string, plural = `${singular}s`): string {
-  const value = count ?? 0;
-  return `${value} ${value === 1 ? singular : plural}`;
-}
-
-function humanizeStatus(value: string | null | undefined): string {
-  return (value ?? "healthy").replace(/_/g, " ");
-}
-
-function countdownValue(): string {
-  if (!overview.value) return "—";
-  if (overview.value.days_until_end != null) {
-    if (overview.value.days_until_end < 0) return "Ended";
-    if (overview.value.days_until_end === 0) return "Today";
-    return formatDuration(overview.value.days_until_end, "day");
-  }
-  if (overview.value.days_until_start != null) {
-    if (overview.value.days_until_start < 0) return "Started";
-    if (overview.value.days_until_start === 0) return "Today";
-    return formatDuration(overview.value.days_until_start, "day");
-  }
-  return "No date";
-}
-
-function cardModel(card: OverviewCardKey) {
-  const o = overview.value;
-  if (!o) return null;
-  const models = {
-    countdown: {
-      label: "Countdown",
-      value: countdownValue(),
-      detail: o.ends_on ? "Until project end" : o.starts_on ? "Until project start" : "Add project dates",
-      tone: "default",
-    },
-    progress: {
-      label: "Progress",
-      value: `${o.progress_pct ?? 0}%`,
-      detail: `${countLabel(o.completed_activity_count, "completed")} · ${countLabel(o.open_activity_count, "open")}`,
-      tone: "default",
-    },
-    activities: {
-      label: "Activities",
-      value: String(o.activity_count),
-      detail: `${countLabel(o.task_count, "task")} · ${countLabel(o.purchase_count, "purchase")}`,
-      tone: "default",
-    },
-    bookings: {
-      label: "Bookings",
-      value: `${o.booked_booking_count}/${o.booking_count}`,
-      detail: `${countLabel(o.supplier_count, "supplier")} tracked`,
-      tone: "default",
-    },
-    budget: {
-      label: "Budget",
-      value: o.total_target_minor == null ? "Not set" : format(o.total_target_minor, currency.value),
-      detail: `Planned ${format(o.total_cost_minor, currency.value)} · Paid ${format(o.net_actual_spend_minor, currency.value)} · ${o.remaining_budget_minor == null ? "No budget target set" : o.remaining_budget_minor === 0 ? "On budget" : `${format(Math.abs(o.remaining_budget_minor), currency.value)} ${o.remaining_budget_minor < 0 ? "over budget" : "remaining"}`}`,
-      tone: o.remaining_budget_minor != null && o.remaining_budget_minor < 0 ? "amber" : "default",
-    },
-    payments: {
-      label: "Payments",
-      value: format(o.outstanding_minor, currency.value),
-      detail: `${countLabel(o.payment_overdue_count, "overdue")} · ${countLabel(o.payment_due_soon_count, "due soon", "due soon")}`,
-      tone: o.payment_overdue_count > 0 ? "amber" : "default",
-    },
-    people: {
-      label: "People",
-      value: String(o.active_member_count),
-      detail: "Active collaborators",
-      tone: "default",
-    },
-    milestones: {
-      label: "Milestones",
-      value: String(o.upcoming_milestone_count),
-      detail: o.next_milestone_on ? `Next ${o.next_milestone_on}` : `${countLabel(o.milestone_count, "milestone")} total`,
-      tone: "default",
-    },
-    overdue: {
-      label: "Overdue",
-      value: String(o.overdue_activity_count),
-      detail: "Activities past their date",
-      tone: o.overdue_activity_count > 0 ? "amber" : "default",
-    },
-    owners: {
-      label: "Owners",
-      value: String(o.unowned_activity_count),
-      detail: "Open activities without an owner",
-      tone: o.unowned_activity_count > 0 ? "amber" : "default",
-    },
-    health: {
-      label: "Planning Health",
-      value: String(o.attention_count ?? 0),
-      detail: humanizeStatus(o.health_status),
-      tone: (o.attention_count ?? 0) > 0 ? "amber" : "default",
-    },
-    upcoming: {
-      label: "Upcoming",
-      value: String(upcoming.events.value.length),
-      detail: "Next 14 days",
-      tone: "default",
-    },
-  } satisfies Record<OverviewCardKey, { label: string; value: string; detail: string; tone: "default" | "amber" }>;
-  return models[card];
-}
+import {computed} from 'vue';
+import {useRoute} from 'vue-router';
+import {useProjectContext} from '@/composables/useProjectContext';
+import {useProjectHealth,useUpcoming,useProjectFinancials} from '@/composables/useProject';
+import {useMoney} from '@/composables/useMoney';
+import SectionHeading from '@/components/ui/SectionHeading.vue';
+import SkeletonBlock from '@/components/ui/SkeletonBlock.vue';
+import ErrorState from '@/components/ui/ErrorState.vue';
+import EmptyState from '@/components/ui/EmptyState.vue';
+import AttentionRow from '@/components/health/AttentionRow.vue';
+import UpcomingList from '@/components/timeline/UpcomingList.vue';
+import MemberBalances from '@/components/budget/MemberBalances.vue';
+const route=useRoute(),projectId=computed(()=>String(route.params.projectId));
+const {project}=useProjectContext(),{format}=useMoney();
+const financials=useProjectFinancials(projectId),health=useProjectHealth(projectId),upcoming=useUpcoming(projectId);
+const currency=computed(()=>project.value?.currency??'GBP');
 </script>
-
 <template>
-  <div class="fade-in space-y-8">
-    <div>
-      <SectionHeading label="Overview" />
-      <div
-        v-if="projectOverview.isPending.value"
-        class="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4"
-      >
-        <SkeletonBlock
-          v-for="i in 6"
-          :key="i"
-          height="104px"
-          rounded="0.75rem"
-        />
-      </div>
+  <div class="space-y-8 fade-in">
+    <section aria-label="Project spending">
+      <p v-if="financials.isPending.value">
+        Loading spending…
+      </p>
       <ErrorState
-        v-else-if="projectOverview.isError.value"
-        class="mt-3"
-        :error="projectOverview.error.value"
-        :retry="() => projectOverview.refetch()"
+        v-else-if="financials.isError.value"
+        :error="financials.error.value"
+        :retry="()=>financials.refetch()"
       />
       <div
-        v-else
-        class="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4"
+        v-else-if="financials.financials.value"
+        class="grid gap-4 sm:grid-cols-2"
       >
-        <div
-          v-for="card in cardOrder"
-          :key="card"
-          class="rounded-xl border border-line bg-surface p-4"
-        >
-          <template v-if="cardModel(card)">
-            <div class="flex items-start justify-between gap-2">
-              <p class="text-13 font-medium text-muted">
-                {{ cardModel(card)?.label }}
-              </p>
-              <StatusBadge
-                v-if="card === 'health' && overview?.health_status"
-                :label="humanizeStatus(overview.health_status)"
-                :tone="(overview.attention_count ?? 0) > 0 ? 'amber' : 'accent'"
-              />
-            </div>
-            <div
-              class="mt-2 font-display text-[24px] font-semibold tnum"
-              :class="cardModel(card)?.tone === 'amber' ? 'text-amber' : 'text-ink'"
-            >
-              {{ cardModel(card)?.value }}
-            </div>
-            <p class="mt-1 text-13 text-ink-soft">
-              {{ cardModel(card)?.detail }}
-            </p>
-          </template>
+        <div class="rounded-xl border border-line bg-surface p-5">
+          <p class="text-13 text-muted">
+            Budget
+          </p><p class="mt-2 font-display text-2xl font-semibold">
+            {{ financials.financials.value.total_target_minor==null?'Not set':format(financials.financials.value.total_target_minor,currency) }}
+          </p>
+        </div>
+        <div class="rounded-xl border border-line bg-surface p-5">
+          <p class="text-13 text-muted">
+            Spent so far
+          </p><p class="mt-2 font-display text-2xl font-semibold">
+            {{ format(financials.financials.value.net_actual_spend_minor,currency) }}
+          </p>
         </div>
       </div>
-    </div>
-
+      <MemberBalances
+        :project-id="projectId"
+        :currency="currency"
+      />
+    </section>
     <div class="grid md:grid-cols-2 gap-8">
       <!-- Needs attention -->
       <div>

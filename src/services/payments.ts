@@ -10,6 +10,7 @@ export async function listPayments(commitmentId: string): Promise<Payment[]> {
   const { data, error } = await supabase
     .from("payments")
     .select("*")
+    .is("deleted_at", null)
     .eq("commitment_id", commitmentId)
     .order("due_on", { ascending: true, nullsFirst: false })
     .order("created_at", { ascending: true });

@@ -98,7 +98,7 @@ async function resend() {
 
         <RouterLink
           :to="{ name: 'forgot-password' }"
-          class="block text-right text-13 text-accent focus-ring"
+          class="block text-right text-13 text-brand-dark focus-ring"
         >
           Forgot password?
         </RouterLink>
@@ -137,7 +137,7 @@ async function resend() {
         Don't have an account?
         <RouterLink
           :to="signupTo"
-          class="text-accent font-medium focus-ring"
+          class="text-brand-dark font-medium focus-ring"
         >
           Sign up
         </RouterLink>

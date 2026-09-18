@@ -12,6 +12,7 @@ export async function listTasks(projectId: string): Promise<Task[]> {
   const { data, error } = await supabase
     .from("tasks")
     .select("*")
+    .is("deleted_at", null)
     .eq("project_id", projectId)
     .order("due_on", { ascending: true, nullsFirst: false })
     .order("created_at", { ascending: true });
@@ -19,8 +20,9 @@ export async function listTasks(projectId: string): Promise<Task[]> {
   return data ?? [];
 }
 
-export async function createTask(input: TablesInsert<"tasks">): Promise<Task> {
-  const { data, error } = await supabase.from("tasks").insert(input).select("*").single();
+export async function createTask(input: TablesInsert<"tasks"> & { cost_minor?: number | null }): Promise<Task> {
+  const { cost_minor, project_id, ...fields } = input;
+  const { data, error } = await supabase.rpc("create_task_with_cost", { p_project: project_id, p_fields: fields, p_cost: cost_minor ?? null });
   if (error) throw toAppError(error);
   trackProductEvent("task_created");
   return data;
@@ -76,4 +78,9 @@ export async function softDeleteTask(id: string): Promise<void> {
   const { data, error } = await supabase.rpc("soft_delete_task", { p_task: id });
   if (error) throw toAppError(error);
   if (data !== id) throw new AppError("not_found", "Not found or cannot be deleted.");
+}
+
+export async function completeAssignedTask(id: string, occurrenceDate?: string): Promise<void> {
+  const { error } = await supabase.rpc("complete_assigned_task", { p_task: id, p_occurrence_date: occurrenceDate ?? null });
+  if (error) throw toAppError(error);
 }

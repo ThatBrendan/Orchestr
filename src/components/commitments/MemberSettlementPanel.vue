@@ -77,7 +77,7 @@ async function save() {
           :class="{
             'text-danger': getSettlementPresentation(row.paid_minor, row.remaining_minor).tone === 'danger',
             'text-amber': getSettlementPresentation(row.paid_minor, row.remaining_minor).tone === 'amber',
-            'text-accent': getSettlementPresentation(row.paid_minor, row.remaining_minor).tone === 'accent',
+            'text-success': getSettlementPresentation(row.paid_minor, row.remaining_minor).tone === 'accent',
           }"
         >
           {{ getSettlementPresentation(row.paid_minor, row.remaining_minor).label }}<template v-if="row.remaining_minor > 0"> · {{ format(row.remaining_minor,currency) }} remaining</template><template v-else-if="row.remaining_minor < 0"> · {{ format(Math.abs(row.remaining_minor),currency) }} credit</template>

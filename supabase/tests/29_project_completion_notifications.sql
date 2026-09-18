@@ -13,7 +13,7 @@ select '00000000-0000-0000-0000-000000000000',('29000000-0000-0000-0000-' || lpa
   'authenticated','authenticated','milestone-' || i || '@example.test','{}','{}',now(),now(),'','','',''
 from generate_series(1,8) i;
 select pg_temp.login(1);
-create temporary table ctx as select public.create_project('Beta Trip','UTC','GBP',null,null,'group_trip') as id;
+create temporary table ctx as select public.create_project('Beta Trip','UTC','GBP','2026-01-01',null,'group_trip') as id;
 set local role postgres;
 insert into public.project_members(project_id,user_id,display_name,role,status,removed_at,deleted_at)
 select ctx.id,('29000000-0000-0000-0000-' || lpad(i::text,12,'0'))::uuid,'Collaborator ' || i,
@@ -22,7 +22,7 @@ select ctx.id,('29000000-0000-0000-0000-' || lpad(i::text,12,'0'))::uuid,'Collab
   case when i=5 then now() end, case when i=6 then now() end
 from ctx cross join generate_series(2,6) i;
 select pg_temp.login(7);
-create temporary table other_project as select public.create_project('Unrelated','UTC','GBP') as id;
+create temporary table other_project as select public.create_project('Unrelated','UTC','GBP','2026-01-01') as id;
 select pg_temp.login(1);
 create temporary table created_activity as
 select (public.save_activity_with_split((select id from ctx),null,

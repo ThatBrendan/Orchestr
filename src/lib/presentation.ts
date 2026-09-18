@@ -26,7 +26,7 @@ const LABELS: Record<string, string> = {
 };
 
 const ENTITY_LABELS: Record<string, string> = {
-  commitment_participants: "Activity participants",
+  commitment_participants: "Activity cost participants",
   cost_shares: "Cost shares",
   payments: "Payments",
   project_members: "Project members",

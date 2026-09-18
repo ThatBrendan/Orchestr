@@ -1,17 +1,15 @@
 <script setup lang="ts">
-import MemberSettlementPanel from "./MemberSettlementPanel.vue";
+import MemberBalances from '@/components/budget/MemberBalances.vue';
+import {useProjectContext} from '@/composables/useProjectContext';
+import {useQueryClient} from '@tanstack/vue-query';
+import {completeAssignedItem} from '@/services/items';
+import {invalidatePlanning} from '@/composables/invalidation';
 import CostSplitEditor from "./CostSplitEditor.vue";
-import ActualCostDialog from "./ActualCostDialog.vue";
-import { useProjectContext } from "@/composables/useProjectContext";
+import { useCostShares } from "@/composables/useCostShares";
+import { usePayments } from "@/composables/usePayments";
 import { computed, ref } from "vue";
 import { DateTime } from "luxon";
-import {
-  useSetCommitmentStatus,
-  useDeleteCommitment,
-  useParticipants,
-  useAddParticipant,
-  useRemoveParticipant,
-} from "@/composables/useCommitments";
+import { useSetCommitmentStatus, useCommitmentFinancials, useDeleteCommitment } from "@/composables/useCommitments";
 import { useMoney } from "@/composables/useMoney";
 import { useProjectTime } from "@/composables/useProjectTime";
 import { useToast } from "@/composables/useToast";
@@ -26,7 +24,6 @@ import AppModal from "@/components/ui/AppModal.vue";
 import AppButton from "@/components/ui/AppButton.vue";
 import AppConfirmDialog from "@/components/ui/AppConfirmDialog.vue";
 import StatusBadge from "@/components/ui/StatusBadge.vue";
-import AppAvatar from "@/components/ui/AppAvatar.vue";
 import OccurrencePanel from "./OccurrencePanel.vue";
 import PaymentsPanel from "./PaymentsPanel.vue";
 
@@ -47,34 +44,41 @@ const emit = defineEmits<{ close: []; edit: [] }>();
 const { format } = useMoney();
 const time = useProjectTime(props.timezone);
 const toast = useToast();
+const {context,project}=useProjectContext(),client=useQueryClient();
+const viewerCanComplete=computed(()=>context.value?.role==='viewer'&&context.value.memberId===props.commitment.owner_member_id&&project.value?.status!=='archived'&&!['completed','cancelled'].includes(props.commitment.status));
+const viewerBusy=ref(false);
+async function viewerComplete(){viewerBusy.value=true;try{await completeAssignedItem(props.commitment.id);await invalidatePlanning(client,props.projectId,[['project',props.projectId,'commitments']]);}catch(e){toast.error(toAppError(e).message);}finally{viewerBusy.value=false;}}
 
 const setStatus = useSetCommitmentStatus(props.projectId);
 const del = useDeleteCommitment(props.projectId);
-const { participants, isPending: partPending } = useParticipants(computed(() => props.commitment.id));
-const addParticipant = useAddParticipant(props.projectId, props.commitment.id);
-const removeParticipant = useRemoveParticipant(props.projectId, props.commitment.id);
 const workflow = computed(() => activityWorkflow(props.commitment.activity_type));
 const nextTransitions = computed(() => commitmentStatusActions(props.commitment.activity_type, props.commitment.status));
 const bookingActions = computed(() => bookingStatusActions(props.commitment.status));
 const secondaryActions = computed(() => secondaryActivityActions(props.commitment.activity_type, props.commitment.status));
-const statusTone = (s: string) => (s === "cancelled" ? "neutral" : s === "completed" ? "accent" : "amber");
+const statusTone = (s: string) => (s === "cancelled" ? "neutral" : s === "completed" ? "success" : "amber");
 
-const { context, isOrganizer } = useProjectContext();
-const costOpen = ref(false);
-const completingWithCost = ref(false);
-const costBearing = computed(() => props.commitment.estimated_cost_minor != null || props.commitment.confirmed_cost_minor != null || props.commitment.actual_cost_minor != null);
-const canSetActual = computed(() => props.canEdit && (isOrganizer.value || (context.value?.memberId === props.commitment.owner_member_id && !['completed', 'cancelled'].includes(props.commitment.status))));
-const costVariance = computed(() => props.commitment.actual_cost_minor != null && props.commitment.estimated_cost_minor != null ? props.commitment.actual_cost_minor - props.commitment.estimated_cost_minor : null);
+const { financials, refetch: refetchFinancials } = useCommitmentFinancials(computed(() => props.commitment.id));
+const shares = useCostShares(() => props.commitment.id);
+const { payments } = usePayments(props.commitment.id);
+const paymentsPanel = ref<InstanceType<typeof PaymentsPanel>>();
+const outstandingOpen = ref(false);
+const costBearing = computed(() => props.commitment.estimated_cost_minor != null || props.commitment.confirmed_cost_minor != null || props.commitment.actual_cost_minor != null || payments.value.length > 0);
+const sharingConfigured = computed(() => ['even', 'custom'].includes(props.commitment.cost_split_mode ?? '') || (shares.data.value?.length ?? 0) > 0);
+const cost = computed(() => props.commitment.actual_cost_minor ?? props.commitment.confirmed_cost_minor ?? props.commitment.estimated_cost_minor);
+function recordOutstanding() {
+  outstandingOpen.value = false;
+  paymentsPanel.value?.openAdd();
+}
 async function transition(to: CommitmentStatus) {
   if (setStatus.isPending.value || !props.canEdit || isRecurring.value) return;
-  if (to === "completed" && costBearing.value && canSetActual.value) {
-    completingWithCost.value = true; costOpen.value = true; return;
-  }
   try {
     await setStatus.mutateAsync({ id: props.commitment.id, status: to });
     toast.success("Status updated.");
   } catch (e) {
-    toast.error(toAppError(e).message);
+    if (toAppError(e).code === "financial_unsettled") {
+      await refetchFinancials();
+      outstandingOpen.value = true;
+    } else toast.error(toAppError(e).message);
   }
 }
 
@@ -86,30 +90,6 @@ async function doDelete() {
     toast.success("Activity deleted.");
     confirmDelete.value = false;
     emit("close");
-  } catch (e) {
-    toast.error(toAppError(e).message);
-  }
-}
-
-const participantIds = computed(() => new Set(participants.value.map((p) => p.member_id)));
-const addableMembers = computed(() => props.members.filter((m) => m.status === "active" && !participantIds.value.has(m.member_id)));
-const selectedNewParticipant = ref("");
-async function submitAddParticipant() {
-  if (!selectedNewParticipant.value) return;
-  try {
-    await addParticipant.mutateAsync({
-      project_id: props.projectId,
-      commitment_id: props.commitment.id,
-      member_id: selectedNewParticipant.value,
-    });
-    selectedNewParticipant.value = "";
-  } catch (e) {
-    toast.error(toAppError(e).message);
-  }
-}
-async function doRemoveParticipant(id: string) {
-  try {
-    await removeParticipant.mutateAsync(id);
   } catch (e) {
     toast.error(toAppError(e).message);
   }
@@ -129,7 +109,7 @@ const hasSupplierBooking = computed(
       props.commitment.booking_confirmed
     ),
 );
-const showPayments = computed(() => workflow.value.preferredFields.payments || props.commitment.estimated_cost_minor != null);
+const showPayments = computed(() => costBearing.value);
 const dateStartLabel = computed(() => (props.commitment.activity_type === "task" || props.commitment.activity_type === "purchase" ? "Due" : "Starts"));
 const supplierLabel = computed(() => (workflow.value.preferredFields.booking ? "Supplier / booking" : "Supplier"));
 const isRecurring = computed(() => props.commitment.recurrence_frequency != null);
@@ -156,6 +136,13 @@ const repeatLabel = computed(() =>
           <span class="text-13 text-muted">{{ activityTypeLabel(props.commitment.activity_type) }}</span>
           <span class="text-13 text-muted">Category: {{ categoryLabel(props.commitment.kind) }}</span>
         </div>
+        <AppButton
+          v-if="viewerCanComplete && !isRecurring && nextTransitions.some(t=>t.to==='completed')"
+          :loading="viewerBusy"
+          @click="viewerComplete"
+        >
+          Complete
+        </AppButton>
         <div
           v-if="props.canEdit && !isRecurring"
           class="flex flex-wrap items-center gap-2"
@@ -171,9 +158,18 @@ const repeatLabel = computed(() =>
           </AppButton>
           <details class="text-13">
             <summary class="cursor-pointer focus-ring rounded px-2 py-1 text-muted">
-              More actions
+              More
             </summary>
             <div class="flex flex-wrap gap-2 mt-2">
+              <AppButton
+                v-if="props.canDelete"
+                variant="ghost"
+                size="sm"
+                class="!text-danger"
+                @click="confirmDelete = true"
+              >
+                Delete activity
+              </AppButton>
               <AppButton
                 v-for="t in secondaryActions"
                 :key="t.to"
@@ -255,7 +251,7 @@ const repeatLabel = computed(() =>
         </div>
         <div v-if="props.commitment.owner_member_id">
           <div class="text-13 text-muted">
-            Owner
+            Assigned to
           </div>
           <div>{{ memberName(props.commitment.owner_member_id) }}</div>
         </div>
@@ -279,12 +275,6 @@ const repeatLabel = computed(() =>
             {{ props.commitment.booking_reference }}
           </div>
         </div>
-        <div v-if="props.commitment.estimated_cost_minor != null">
-          <div class="text-13 text-muted">
-            Estimated cost
-          </div>
-          <div>{{ format(props.commitment.estimated_cost_minor, props.currency) }}</div>
-        </div>
         <div v-if="isRecurring">
           <div class="text-13 text-muted">
             Repeats
@@ -299,25 +289,24 @@ const repeatLabel = computed(() =>
         </div>
       </div>
       <section
-        v-if="costBearing || canSetActual"
-        class="rounded-xl border border-line p-4 space-y-2 text-14"
+        v-if="costBearing"
+        class="grid grid-cols-1 sm:grid-cols-3 gap-3 rounded-xl border border-line p-4 text-14"
       >
-        <p>Estimated: {{ format(props.commitment.estimated_cost_minor, props.currency) }}</p>
-        <p v-if="props.commitment.confirmed_cost_minor != null">
-          Agreed price: {{ format(props.commitment.confirmed_cost_minor, props.currency) }}
-        </p>
-        <p>Actual / final: {{ format(props.commitment.actual_cost_minor, props.currency) }}</p>
-        <p v-if="costVariance != null">
-          Variance: {{ format(Math.abs(costVariance), props.currency) }} {{ costVariance < 0 ? 'under estimate' : costVariance > 0 ? 'over estimate' : 'difference' }}
-        </p>
-        <AppButton
-          v-if="canSetActual"
-          size="sm"
-          variant="secondary"
-          @click="completingWithCost = false; costOpen = true"
-        >
-          {{ props.commitment.actual_cost_minor == null ? 'Set final cost' : 'Edit final cost' }}
-        </AppButton>
+        <div>
+          <p class="text-muted text-13">
+            Cost
+          </p>{{ format(cost, props.currency) }}
+        </div>
+        <div>
+          <p class="text-muted text-13">
+            Paid
+          </p>{{ format(financials?.net_paid_minor, props.currency) }}
+        </div>
+        <div>
+          <p class="text-muted text-13">
+            Remaining
+          </p>{{ format(financials?.outstanding_minor, props.currency) }}
+        </div>
       </section>
       <div v-if="props.commitment.notes">
         <h3 class="text-13 font-medium mb-2">
@@ -334,78 +323,13 @@ const repeatLabel = computed(() =>
         :timezone="props.timezone"
         :occurrence-date="props.occurrenceDate"
         :can-edit="props.canEdit"
+        :can-complete-assigned="viewerCanComplete"
         :recurrence-active="props.commitment.recurrence_active"
       />
 
-      <div>
-        <h3 class="text-13 font-semibold text-ink-soft uppercase tracking-wide mb-2">
-          Participants
-        </h3>
-        <div
-          v-if="partPending"
-          class="text-13 text-muted"
-        >
-          Loading…
-        </div>
-        <div
-          v-else
-          class="flex flex-wrap gap-2 mb-2.5"
-        >
-          <span
-            v-if="participants.length === 0"
-            class="text-13 text-muted"
-          >No one added yet.</span>
-          <span
-            v-for="p in participants"
-            :key="p.id"
-            class="inline-flex items-center gap-2 pl-1 pr-2 py-1 rounded-full border border-line bg-surface text-13"
-          >
-            <AppAvatar
-              :name="memberName(p.member_id)"
-              :size="20"
-            />
-            {{ memberName(p.member_id) }}
-            <button
-              v-if="props.canEdit"
-              class="text-muted hover:text-danger"
-              :disabled="removeParticipant.isPending.value"
-              @click="doRemoveParticipant(p.id)"
-            >×</button>
-          </span>
-        </div>
-        <div
-          v-if="props.canEdit && addableMembers.length > 0"
-          class="flex gap-2"
-        >
-          <select
-            v-model="selectedNewParticipant"
-            class="border rounded-lg px-2.5 py-2 text-13.5 focus-ring border-line bg-surface"
-          >
-            <option value="">
-              Add a participant…
-            </option>
-            <option
-              v-for="m in addableMembers"
-              :key="m.member_id"
-              :value="m.member_id"
-            >
-              {{ m.display_name }}
-            </option>
-          </select>
-          <AppButton
-            size="sm"
-            variant="secondary"
-            :disabled="!selectedNewParticipant"
-            :loading="addParticipant.isPending.value"
-            @click="submitAddParticipant"
-          >
-            Add
-          </AppButton>
-        </div>
-      </div>
-
       <PaymentsPanel
         v-if="showPayments"
+        ref="paymentsPanel"
         :project-id="props.projectId"
         :commitment-id="props.commitment.id"
         :currency="props.currency"
@@ -416,7 +340,7 @@ const repeatLabel = computed(() =>
     </div>
 
     <CostSplitEditor
-      v-if="open && costBearing"
+      v-if="open && costBearing && sharingConfigured && members.filter(m=>m.status==='active').length > 1"
       :key="props.commitment.id + String(props.commitment.cost_split_mode)"
       :commitment="props.commitment"
       :cost="props.commitment.actual_cost_minor ?? props.commitment.confirmed_cost_minor ?? props.commitment.estimated_cost_minor"
@@ -424,22 +348,22 @@ const repeatLabel = computed(() =>
       :members="props.members"
       readonly
     />
-    <MemberSettlementPanel
-      :id="props.commitment.id"
+    <MemberBalances
+      v-if="costBearing && sharingConfigured && members.filter(m=>m.status==='active').length > 1"
       :key="props.commitment.id"
+      :item-id="props.commitment.id"
       :project-id="props.projectId"
       :currency="props.currency"
       :timezone="props.timezone"
       :can-edit="props.canEditPayments"
     />
-    <ActualCostDialog
-      :open="costOpen"
-      :project-id="props.projectId"
-      :currency="props.currency"
-      :commitment="props.commitment"
-      :complete="completingWithCost"
-      :members="props.members"
-      @close="costOpen = false"
+    <AppConfirmDialog
+      :open="outstandingOpen"
+      title="Payment outstanding"
+      :message="financials && financials.outstanding_minor > 0 ? format(financials.outstanding_minor, currency) + ' is still outstanding. This activity can’t be completed until the outstanding payment is recorded.' : 'This activity still has scheduled payments or member shares to settle. Review its payments before completing it.'"
+      :confirm-label="canEditPayments ? 'Record payment' : 'Close'"
+      @close="outstandingOpen = false"
+      @confirm="canEditPayments ? recordOutstanding() : outstandingOpen = false"
     />
     <!-- Keep confirmation inside the Dialog tree so Headless UI treats it as
          the active nested dialog (focus, inert handling and outside clicks). -->
@@ -455,15 +379,6 @@ const repeatLabel = computed(() =>
     />
 
     <template #footer>
-      <AppButton
-        v-if="props.canDelete"
-        variant="ghost"
-        size="sm"
-        class="!text-danger mr-auto"
-        @click="confirmDelete = true"
-      >
-        Delete
-      </AppButton>
       <AppButton
         variant="secondary"
         size="sm"

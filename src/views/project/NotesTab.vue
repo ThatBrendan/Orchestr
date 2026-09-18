@@ -160,7 +160,7 @@ const date = (value: string) => new Date(value).toLocaleDateString(undefined, { 
           </p>
           <button
             v-if="note.body.length > 240 || note.body.split('\n').length > 6"
-            class="mt-2 text-13 text-accent focus-ring"
+            class="mt-2 text-13 text-brand-dark focus-ring"
             :aria-expanded="expanded.has(note.id)"
             :aria-controls="`note-body-${note.id}`"
             @click="toggle(note.id)"

@@ -107,6 +107,8 @@ export interface Database {
           notes?: string | null;
         };
         Update: {
+          timezone?:string;
+          currency?:string;
           name?: string;
           description?: string | null;
           status?: Database["public"]["Enums"]["project_status"];
@@ -184,10 +186,17 @@ export interface Database {
         };
         Relationships: [];
       };
+      project_areas: {
+        Row: {id:string;project_id:string;title:string;notes:string|null;created_at:string};
+        Insert: {project_id:string;title:string;notes?:string|null};
+        Update: {title?:string;notes?:string|null};
+        Relationships: [];
+      };
       commitments: {
         Row: {
           id: string;
           project_id: string;
+          area_id: string | null;
           title: string;
           kind: Database["public"]["Enums"]["commitment_kind"];
           activity_type: Database["public"]["Enums"]["activity_type"];
@@ -222,6 +231,7 @@ export interface Database {
           deleted_at: string | null;
         };
         Insert: {
+          area_id?: string | null;
           project_id: string;
           title: string;
           kind: Database["public"]["Enums"]["commitment_kind"];
@@ -307,6 +317,7 @@ export interface Database {
       payments: {
         Row: {
           id: string;
+          settlement_group_id: string | null;
           project_id: string;
           commitment_id: string;
           type: Database["public"]["Enums"]["payment_type"];
@@ -348,8 +359,10 @@ export interface Database {
         Row: {
           id: string;
           project_id: string;
+          area_id: string | null;
           commitment_id: string | null;
           title: string;
+          item_type: string;
           status: Database["public"]["Enums"]["task_status"];
           assignee_member_id: string | null;
           due_on: string | null;
@@ -366,8 +379,10 @@ export interface Database {
           deleted_at: string | null;
         };
         Insert: {
+          area_id?: string | null;
           project_id: string;
           title: string;
+          item_type?: string;
           commitment_id?: string | null;
           status?: Database["public"]["Enums"]["task_status"];
           assignee_member_id?: string | null;
@@ -542,6 +557,9 @@ export interface Database {
       };
     };
     Views: {
+      v_project_items: { Row: {id:string;project_id:string;area_id:string|null;source:string;financial_id:string|null;title:string;item_type:string;status:string;assignee_member_id:string|null;item_date:string|null;notes:string|null;recurrence_frequency:string|null;cost_minor:number|null;paid_minor:number;outstanding_minor:number;created_at:string}; Relationships: [] };
+      v_area_totals: { Row: {project_id:string;area_id:string|null;item_count:number;cost_minor:number;spent_minor:number}; Relationships: [] };
+      v_item_member_balances: { Row: Database['public']['Views']['v_activity_member_settlements']['Row'] & {item_id:string;item_title:string;area_id:string|null;area_title:string|null}; Relationships: [] };
       v_my_activity_notifications: {
         Row: { id: string; project_id: string; commitment_id: string; created_at: string; read_at: string | null; activity_title: string; project_name: string };
         Relationships: [];
@@ -854,7 +872,14 @@ export interface Database {
         Relationships: [];
       };
     };
-    Functions: {
+        Functions: {
+          delete_project_category: { Args: { p_category: string }; Returns: string };
+          create_activity_in_category: { Args: { p_project: string; p_category: string; p_fields: Json; p_split: Json | null }; Returns: Database["public"]["Tables"]["commitments"]["Row"] };
+      complete_assigned_item: { Args: {p_item:string;p_occurrence_date?:string|null}; Returns: undefined };
+      record_item_settlement: { Args: {p_item:string;p_from:string;p_to:string;p_amount:number;p_date:string}; Returns: string };
+      cancel_item_settlement: { Args: {p_group:string}; Returns: undefined };
+      complete_assigned_task: { Args: { p_task: string; p_occurrence_date?: string | null }; Returns: undefined };
+      create_task_with_cost: { Args: { p_project: string; p_fields: Json; p_cost?: number | null }; Returns: Database["public"]["Tables"]["tasks"]["Row"] };
       mark_notification_read: { Args: { p_notification: string }; Returns: string | null };
       record_member_payment: { Args: { p_commitment: string; p_member: string; p_amount: number; p_type: Database["public"]["Enums"]["payment_type"]; p_paid_now: boolean; p_date: string }; Returns: string };
       set_activity_cost_split: { Args: { p_commitment: string; p_split: Json }; Returns: undefined };

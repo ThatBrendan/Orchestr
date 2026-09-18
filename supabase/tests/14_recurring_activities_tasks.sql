@@ -90,7 +90,7 @@ select is(
     '2026-09-09',
     '2026-09-16'
   ) where occurrence_date = '2026-09-16'),
-  'upcoming',
+  case when '2026-09-16'::date < (now() at time zone 'UTC')::date then 'overdue' else 'upcoming' end,
   'completing one occurrence does not complete the next'
 );
 

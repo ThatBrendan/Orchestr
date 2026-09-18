@@ -29,7 +29,7 @@ Orchestrio is designed for plans involving multiple people, moving parts, costs,
 
 **People** — See who is involved and what they are responsible for.
 
-**Planning Health** — Surface issues such as missing owners, overdue payments, incomplete bookings, overdue tasks, and budget risks.
+**Planning Health** — Surface issues such as overdue payments, incomplete bookings, overdue tasks, and budget risks.
 
 ## Tech stack
 

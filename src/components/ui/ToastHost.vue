@@ -16,7 +16,7 @@ const { toasts } = storeToRefs(ui);
         class="rounded-lg border shadow-sm px-4 py-3 text-14 flex items-start gap-2 bg-surface"
         :class="{
           'border-danger-soft': t.kind === 'error',
-          'border-accent-soft': t.kind === 'success',
+          'border-success-soft': t.kind === 'success',
           'border-line': t.kind === 'info',
         }"
       >
@@ -24,7 +24,7 @@ const { toasts } = storeToRefs(ui);
           class="mt-0.5"
           :class="{
             'text-danger': t.kind === 'error',
-            'text-accent': t.kind === 'success',
+            'text-success': t.kind === 'success',
             'text-muted': t.kind === 'info',
           }"
         >

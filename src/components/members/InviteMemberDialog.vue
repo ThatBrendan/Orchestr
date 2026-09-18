@@ -63,11 +63,11 @@ async function submit() {
           class="w-full border rounded-lg px-3 py-2.5 text-14 focus-ring border-line bg-surface"
         >
           <option value="member">Member</option>
-          <option value="viewer">Viewer</option>
+          <option value="viewer">Viewer — can complete assigned Activities</option>
         </select>
       </label>
       <p class="text-13 text-muted">
-        {{ form.role === 'member' ? 'Can edit activities, tasks and supported payments, subject to project permissions.' : 'Can view the project but cannot make changes.' }}
+        {{ form.role === 'member' ? 'Can edit Categories, Activities and supported payments, subject to project permissions.' : 'Can view the project but cannot make changes.' }}
       </p>
       <p
         v-if="fieldError"

@@ -20,7 +20,7 @@ values
 
 select pg_temp.login('aa220000-0000-0000-0000-000000000022','category-a@t.co');
 create temporary table pg_temp.ctx as
-select public.create_project('Category actual cost','UTC','GBP',null,null,'team_project') as project_id;
+select public.create_project('Category actual cost','UTC','GBP','2026-01-01',null,'team_project') as project_id;
 
 insert into public.project_members (project_id, user_id, display_name, role)
 select project_id, 'bb220000-0000-0000-0000-000000000022', 'Category B', 'member' from pg_temp.ctx;

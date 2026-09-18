@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { RouterLink } from "vue-router";
 import { computed, reactive, ref } from "vue";
 import { DateTime } from "luxon";
 import { useQueryClient } from "@tanstack/vue-query";
@@ -6,6 +7,8 @@ import { useTasks, useCreateTask, useUpdateTask, useSetTaskStatus, useDeleteTask
 import { useProjectContext } from "@/composables/useProjectContext";
 import { useProjectTime } from "@/composables/useProjectTime";
 import { useToast } from "@/composables/useToast";
+import { useMoney } from "@/composables/useMoney";
+import { canCompleteAssignedTask } from "@/lib/permissions";
 import { toAppError } from "@/lib/errors";
 import { invalidatePlanning } from "@/composables/invalidation";
 import { qk } from "@/composables/keys";
@@ -22,6 +25,8 @@ import { presentLabel } from "@/lib/presentation";
 import AppConfirmDialog from "@/components/ui/AppConfirmDialog.vue";
 
 const props = defineProps<{
+  onlyId?:string;
+  financialId?:string|null;
   projectId: string;
   timezone: string;
   canEdit: boolean;
@@ -30,8 +35,13 @@ const props = defineProps<{
 }>();
 
 const { tasks, isPending, isError, error, refetch } = useTasks(props.projectId);
-const { context } = useProjectContext();
+const { context, project } = useProjectContext();
 const time = useProjectTime(props.timezone);
+const { format, toMinor } = useMoney();
+const currency = computed(() => project.value?.currency ?? "GBP");
+const linkedActivity = computed(() => props.commitments.find(c => c.id === addForm.commitment_id));
+const activityCost = (c: Commitment | undefined) => c?.actual_cost_minor ?? c?.confirmed_cost_minor ?? c?.estimated_cost_minor ?? null;
+function viewerCanComplete(t: Task) { return canCompleteAssignedTask(context.value?.role, context.value?.memberId, t.assignee_member_id, t.status, project.value?.status === "archived"); }
 const toast = useToast();
 const client = useQueryClient();
 
@@ -40,7 +50,7 @@ const update = useUpdateTask(props.projectId);
 const setStatus = useSetTaskStatus(props.projectId);
 const del = useDeleteTask(props.projectId);
 
-const assigneeCandidates = computed(() => props.members.filter((m) => m.role !== "viewer" && m.status === "active"));
+const assigneeCandidates = computed(() => props.members.filter((m) => m.status === "active"));
 
 const NEXT: Record<TaskStatus, TaskStatus[]> = {
   open: ["in_progress", "done", "cancelled"],
@@ -52,6 +62,8 @@ const NEXT: Record<TaskStatus, TaskStatus[]> = {
 const showAddForm = ref(false);
 const addForm = reactive({
   title: "",
+  item_type: "task",
+  cost: "",
   assignee_member_id: "",
   due_on: "",
   commitment_id: "",
@@ -63,18 +75,20 @@ async function submitAdd() {
   if (create.isPending.value || !props.canEdit) return;
   addError.value = null;
   if (!addForm.title.trim()) {
-    addError.value = "Give the task a title.";
+    addError.value = "Give the activity a title.";
     return;
   }
   const repeat = repeatOption(addForm.repeat);
   if (repeat.value !== "none" && !addForm.due_on) {
-    addError.value = "Choose a due date before making this task repeat.";
+    addError.value = "Choose a due date before making this activity repeat.";
     return;
   }
   try {
     await create.mutateAsync({
       project_id: props.projectId,
       title: addForm.title.trim(),
+      item_type: addForm.item_type,
+      cost_minor: addForm.commitment_id ? activityCost(linkedActivity.value) : toMinor(addForm.cost, currency.value),
       assignee_member_id: addForm.assignee_member_id || null,
       due_on: addForm.due_on || null,
       commitment_id: addForm.commitment_id || null,
@@ -82,8 +96,10 @@ async function submitAdd() {
       recurrence_interval: repeat.interval,
       recurrence_start_date: repeat.value === "none" ? null : addForm.due_on,
     });
-    toast.success("Task added.");
+    toast.success("Activity added.");
     addForm.title = "";
+    addForm.item_type = "task";
+    addForm.cost = "";
     addForm.assignee_member_id = "";
     addForm.due_on = "";
     addForm.commitment_id = "";
@@ -110,7 +126,8 @@ async function completeNextTaskOccurrence(id: string) {
     toast.info("No upcoming occurrence found.");
     return;
   }
-  await tasksService.completeTaskOccurrence(id, next.occurrence_date);
+  if (context.value?.role === "viewer") await tasksService.completeAssignedTask(id, next.occurrence_date);
+  else await tasksService.completeTaskOccurrence(id, next.occurrence_date);
   await invalidateTaskDerived(id);
   return true;
 }
@@ -137,10 +154,13 @@ async function toggleDone(id: string, current: TaskStatus, recurring: boolean) {
   occurrencePending.value = true;
   try {
     if (recurring && current !== "done") {
-      if (await completeNextTaskOccurrence(id)) toast.success("Task occurrence completed.");
+      if (await completeNextTaskOccurrence(id)) toast.success("Activity occurrence completed.");
       return;
     }
-    await setStatus.mutateAsync({ id, status: current === "done" ? "open" : "done" });
+    if (context.value?.role === "viewer") {
+      await tasksService.completeAssignedTask(id);
+      await invalidateTaskDerived(id);
+    } else await setStatus.mutateAsync({ id, status: current === "done" ? "open" : "done" });
   } catch (e) {
     toast.error(toAppError(e).message);
   } finally {
@@ -152,7 +172,7 @@ async function skipRecurringTask(id: string) {
   if (busy.value) return;
   occurrencePending.value = true;
   try {
-    if (await skipNextTaskOccurrence(id)) toast.success("Task occurrence skipped.");
+    if (await skipNextTaskOccurrence(id)) toast.success("Activity occurrence skipped.");
   } catch (e) {
     toast.error(toAppError(e).message);
   } finally {
@@ -192,7 +212,7 @@ async function doDelete() {
   if (!confirmDeleteId.value || del.isPending.value) return;
   try {
     await del.mutateAsync(confirmDeleteId.value);
-    toast.success("Task deleted.");
+    toast.success("Activity deleted.");
     confirmDeleteId.value = null;
   } catch (e) {
     toast.error(toAppError(e).message);
@@ -215,15 +235,15 @@ function canDeleteTask(task: Task): boolean {
   <div class="mt-9">
     <div class="flex items-center justify-between mb-3">
       <h2 class="font-display text-[17px] font-semibold">
-        Tasks
+        Activities
       </h2>
       <AppButton
-        v-if="props.canEdit"
+        v-if="props.canEdit && !onlyId"
         variant="secondary"
         size="sm"
         @click="showAddForm = !showAddForm"
       >
-        {{ showAddForm ? "Cancel" : "Add task" }}
+        {{ showAddForm ? "Cancel" : "Add activity" }}
       </AppButton>
     </div>
 
@@ -234,12 +254,35 @@ function canDeleteTask(task: Task): boolean {
     >
       <input
         v-model="addForm.title"
-        placeholder="Task title"
+        aria-label="Activity title"
+        placeholder="Activity title"
         class="w-full border rounded-lg px-3 py-2 text-14 focus-ring border-line"
       >
       <div class="grid sm:grid-cols-4 gap-2">
         <select
+          v-model="addForm.item_type"
+          aria-label="Activity type"
+          class="border rounded-lg px-2.5 py-2 text-13.5 focus-ring border-line bg-surface"
+        >
+          <option value="task">
+            Task
+          </option>
+          <option value="event">
+            Event
+          </option>
+          <option value="booking">
+            Booking
+          </option>
+          <option value="purchase">
+            Purchase
+          </option>
+          <option value="other">
+            Other
+          </option>
+        </select>
+        <select
           v-model="addForm.assignee_member_id"
+          aria-label="Assigned to"
           class="border rounded-lg px-2.5 py-2 text-13.5 focus-ring border-line bg-surface"
         >
           <option value="">
@@ -255,11 +298,13 @@ function canDeleteTask(task: Task): boolean {
         </select>
         <input
           v-model="addForm.due_on"
+          aria-label="Activity due date"
           type="date"
           class="border rounded-lg px-2.5 py-2 text-13.5 focus-ring border-line"
         >
         <select
           v-model="addForm.repeat"
+          aria-label="Activity repeat"
           class="border rounded-lg px-2.5 py-2 text-13.5 focus-ring border-line bg-surface"
         >
           <option
@@ -272,6 +317,7 @@ function canDeleteTask(task: Task): boolean {
         </select>
         <select
           v-model="addForm.commitment_id"
+          aria-label="Linked activity"
           class="border rounded-lg px-2.5 py-2 text-13.5 focus-ring border-line bg-surface"
         >
           <option value="">
@@ -286,6 +332,31 @@ function canDeleteTask(task: Task): boolean {
           </option>
         </select>
       </div>
+      <label
+        v-if="!addForm.commitment_id"
+        class="block text-13"
+      >
+        Cost ({{ currency }}, optional)
+        <input
+          v-model="addForm.cost"
+          aria-label="Activity cost"
+          type="text"
+          inputmode="decimal"
+          class="mt-1 w-full border rounded-lg px-3 py-2 focus-ring border-line"
+        >
+      </label>
+      <p
+        v-else
+        class="text-13 text-muted"
+      >
+        Cost: {{ format(activityCost(linkedActivity), currency) }} — shared with the linked activity, counted once. Edit that activity to change its cost.
+      </p>
+      <p
+        v-if="!addForm.commitment_id && addForm.cost"
+        class="text-13 text-muted"
+      >
+        The linked activity will hold this cost and its payments.
+      </p>
       <p
         v-if="addError"
         class="text-13 text-danger"
@@ -297,7 +368,7 @@ function canDeleteTask(task: Task): boolean {
         :loading="create.isPending.value"
         @click="submitAdd"
       >
-        Add task
+        Add activity
       </AppButton>
     </form>
 
@@ -319,14 +390,14 @@ function canDeleteTask(task: Task): boolean {
     />
     <EmptyState
       v-else-if="tasks.length === 0"
-      message="No tasks yet."
+      message="No activities yet."
     />
     <div
       v-else
       class="border rounded-xl divide-y border-line bg-surface"
     >
       <div
-        v-for="t in tasks"
+        v-for="t in tasks.filter(row=>!onlyId||row.id===onlyId)"
         :key="t.id"
         class="flex flex-wrap items-start gap-3 px-4 py-3 sm:flex-nowrap sm:items-center"
       >
@@ -334,7 +405,8 @@ function canDeleteTask(task: Task): boolean {
           type="checkbox"
           class="mt-1 shrink-0 rounded border-line sm:mt-0"
           :checked="t.status === 'done'"
-          :disabled="!props.canEdit || busy"
+          :disabled="(!props.canEdit && !viewerCanComplete(t)) || busy"
+          :aria-label="`Complete ${t.title}`"
           @change="toggleDone(t.id, t.status, !!t.recurrence_frequency)"
         >
         <div class="min-w-0 flex-1 basis-[calc(100%-2rem)] sm:basis-auto">
@@ -345,8 +417,15 @@ function canDeleteTask(task: Task): boolean {
             {{ t.title }}
           </div>
           <div class="mt-1 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-13 text-muted">
-            <span>{{ presentLabel(t.status) }}</span>
+            <span>{{ t.item_type === "task" ? "Task" : presentLabel(t.item_type) }}</span>
             <span class="min-w-0 max-w-full [overflow-wrap:anywhere]">{{ memberName(t.assignee_member_id) }}</span>
+            <RouterLink
+              v-if="t.commitment_id && (!onlyId || financialId)"
+              :to="{ name: 'project.commitments', params: { projectId }, query: { commitment: t.commitment_id } }"
+              class="text-brand-dark focus-ring"
+            >
+              Cost {{ format(activityCost(props.commitments.find(c => c.id === t.commitment_id)), currency) }} · Payments and details
+            </RouterLink>
             <span v-if="t.due_on">Due {{ time.dateOnly(t.due_on) }}</span>
             <span v-if="t.recurrence_frequency">{{ recurrenceLabel(t.recurrence_frequency, t.recurrence_interval) }}</span>
           </div>
@@ -368,6 +447,7 @@ function canDeleteTask(task: Task): boolean {
             class="min-w-0 max-w-full border rounded-lg px-2 py-1.5 text-13 focus-ring border-line bg-surface"
             :disabled="busy"
             :value="t.status"
+            :aria-label="`Status of ${t.title}`"
             @change="changeStatus(t.id, $event)"
           >
             <option :value="t.status">
@@ -385,6 +465,7 @@ function canDeleteTask(task: Task): boolean {
             class="min-w-0 max-w-full border rounded-lg px-2 py-1.5 text-13 focus-ring border-line bg-surface"
             :disabled="busy"
             :value="t.assignee_member_id ?? ''"
+            :aria-label="`Assigned to for ${t.title}`"
             @change="changeAssignee(t.id, $event)"
           >
             <option value="">

@@ -36,3 +36,8 @@ const MATRIX: Record<PermissionKey, MemberRole[]> = {
 export function can(role: MemberRole | null | undefined, key: PermissionKey): boolean {
   return !!role && MATRIX[key].includes(role);
 }
+
+/** Narrow completion affordance; identity and active membership are rechecked by RPC. */
+export function canCompleteAssignedTask(role: MemberRole | null | undefined, memberId: string | null | undefined, assigneeId: string | null, status: string, archived: boolean): boolean {
+  return !archived && role === "viewer" && !!memberId && memberId === assigneeId && ["open", "in_progress"].includes(status);
+}

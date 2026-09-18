@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import {completeAssignedItem} from '@/services/items';
+import {useQueryClient} from '@tanstack/vue-query';
+import {invalidatePlanning} from '@/composables/invalidation';
 import { computed, ref, watch } from "vue";
 import { DateTime } from "luxon";
 import { useCommitmentOccurrences, useCompleteCommitmentOccurrence, useSkipCommitmentOccurrence, useSaveCommitmentOccurrenceNote, useStopCommitmentRecurrence } from "@/composables/useCommitments";
@@ -9,7 +12,9 @@ import { presentLabel } from "@/lib/presentation";
 import AppModal from "@/components/ui/AppModal.vue";
 import ErrorState from "@/components/ui/ErrorState.vue";
 
-const props = defineProps<{ projectId: string; commitmentId: string; timezone: string; occurrenceDate?: string; canEdit: boolean; recurrenceActive: boolean }>();
+const props = defineProps<{ projectId: string; commitmentId: string; timezone: string; occurrenceDate?: string; canEdit: boolean; canCompleteAssigned?: boolean; recurrenceActive: boolean }>();
+const client=useQueryClient();
+const assignedBusy=ref(false);
 const pid = computed(() => props.projectId);
 const cid = computed(() => props.commitmentId);
 const selectedDate = ref(props.occurrenceDate ?? "");
@@ -33,7 +38,7 @@ const editing = ref(false);
 const reason = ref("");
 const skipOpen = ref(false);
 const stopAfter = ref(today());
-const busy = computed(() => complete.isPending.value || skip.isPending.value || save.isPending.value || stop.isPending.value);
+const busy = computed(() => assignedBusy.value || complete.isPending.value || skip.isPending.value || save.isPending.value || stop.isPending.value);
 const noteLength = computed(() => Array.from(draft.value).length);
 const reasonLength = computed(() => Array.from(reason.value.trim()).length);
 watch(selectedDate, () => { editing.value = false; skipOpen.value = false; });
@@ -48,8 +53,8 @@ async function saveNote(clear = false) {
 }
 async function markComplete() {
   if (!selected.value || busy.value) return;
-  try { await complete.mutateAsync(selected.value.occurrence_date); toast.success("Occurrence completed."); }
-  catch (e) { toast.error(toAppError(e).message); }
+  try { if(props.canCompleteAssigned){assignedBusy.value=true;await completeAssignedItem(props.commitmentId,selected.value.occurrence_date);await invalidatePlanning(client,props.projectId);await refetch();}else await complete.mutateAsync(selected.value.occurrence_date); toast.success("Occurrence completed."); }
+  catch (e) { toast.error(toAppError(e).message); } finally {assignedBusy.value=false;}
 }
 async function confirmSkip() {
   if (!selected.value || busy.value || !reasonLength.value || reasonLength.value > 500) return;
@@ -170,11 +175,11 @@ async function stopSeries() {
         </div>
       </template>
       <div
-        v-if="canEdit"
+        v-if="canEdit || canCompleteAssigned"
         class="flex flex-wrap gap-2"
       >
         <AppButton
-          v-if="selected.status !== 'completed'"
+          v-if="selected.status !== 'completed' && (canEdit || selected.status !== 'skipped')"
           size="sm"
           :disabled="busy || editing"
           @click="markComplete"
@@ -182,7 +187,7 @@ async function stopSeries() {
           Complete occurrence
         </AppButton>
         <AppButton
-          v-if="selected.status !== 'skipped'"
+          v-if="canEdit && selected.status !== 'skipped'"
           size="sm"
           variant="secondary"
           :disabled="busy || editing"

@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, reactive, ref } from "vue";
+import {useProjectContext} from '@/composables/useProjectContext';
+import { computed, reactive, ref, watch } from "vue";
 import { DateTime } from "luxon";
 import { usePayments, useCreatePayment, useMarkPaymentPaid, useSetPaymentStatus } from "@/composables/usePayments";
 import { useCommitmentFinancials } from "@/composables/useCommitments";
@@ -25,9 +26,12 @@ const props = defineProps<{
   members: MemberDirectoryEntry[];
 }>();
 
-const { payments, isPending, isError, error, refetch } = usePayments(props.commitmentId);
+const { payments: allPayments, isPending, isError, error, refetch } = usePayments(props.commitmentId);
+const payments=computed(()=>allPayments.value.filter(p=>!p.settlement_group_id));
+const {context,isOrganizer}=useProjectContext();
+const payers=computed(()=>props.members.filter(m=>m.status==='active'&&(isOrganizer.value||m.member_id===context.value?.memberId)));
 const { financials } = useCommitmentFinancials(props.commitmentId);
-const { format, toMinor } = useMoney();
+const { format, toMinor, toMajor } = useMoney();
 const time = useProjectTime(props.timezone);
 const toast = useToast();
 
@@ -35,20 +39,42 @@ const createPayment = useCreatePayment(props.projectId, props.commitmentId);
 const markPaid = useMarkPaymentPaid(props.projectId, props.commitmentId);
 const setStatus = useSetPaymentStatus(props.projectId, props.commitmentId);
 
-const TYPES: Enums<"payment_type">[] = ["deposit", "balance", "installment", "full", "refund"];
+const TYPES: Enums<"payment_type">[] = ["deposit", "full", "balance"];
+const mode = ref<"paid" | "refund" | "scheduled">("paid");
+const today = () => DateTime.now().setZone(props.timezone).toISODate() ?? "";
 
 const showAddForm = ref(false);
 const addForm = reactive({
+  paid_by_member_id: "",
   type: "deposit" as Enums<"payment_type">,
-  direction: "outgoing" as Enums<"payment_direction">,
   amount_major: "",
-  due_on: "",
+  due_on: today(),
 });
 const addError = ref<string | null>(null);
+function openAdd(nextMode: "paid" | "refund" | "scheduled" = "paid") {
+  mode.value = nextMode;
+  addForm.paid_by_member_id=context.value?.memberId??"";
+  addForm.type = "deposit";
+  addForm.amount_major = "";
+  addForm.due_on = today();
+  addError.value = null;
+  showAddForm.value = true;
+}
+defineExpose({ openAdd });
+watch(() => addForm.type, type => {
+  if (mode.value !== "refund" && (type === "full" || type === "balance") && financials.value) {
+    addForm.amount_major = String(toMajor(financials.value.outstanding_minor, props.currency) ?? "");
+  }
+});
+const addLabel = computed(() => mode.value === "refund" ? "Record refund" : mode.value === "scheduled" ? "Schedule payment" : "Add payment");
 
 async function submitAdd() {
   if (createPayment.isPending.value || !props.canEdit) return;
   addError.value = null;
+  if (!addForm.due_on || (mode.value !== "scheduled" && addForm.due_on > today())) {
+    addError.value = "Choose the date this payment happened, today or earlier.";
+    return;
+  }
   let amountMinor: number | null;
   try { amountMinor = toMinor(addForm.amount_major, props.currency); }
   catch (error) { addError.value = toAppError(error).message; return; }
@@ -60,12 +86,15 @@ async function submitAdd() {
     await createPayment.mutateAsync({
       project_id: props.projectId,
       commitment_id: props.commitmentId,
-      type: addForm.type,
-      direction: addForm.type === "refund" ? "incoming" : addForm.direction,
+      type: mode.value === "refund" ? "refund" : addForm.type,
+      direction: mode.value === "refund" ? "incoming" : "outgoing",
+      status: mode.value === "scheduled" ? "scheduled" : "paid",
+      paid_on: mode.value === "scheduled" ? null : addForm.due_on,
       amount_minor: amountMinor,
-      due_on: addForm.due_on || null,
+      paid_by_member_id:addForm.paid_by_member_id||null,
+      due_on: mode.value === "scheduled" ? addForm.due_on : null,
     });
-    toast.success("Payment scheduled.");
+    toast.success(mode.value === "scheduled" ? "Payment scheduled." : "Payment recorded.");
     addForm.amount_major = "";
     addForm.due_on = "";
     showAddForm.value = false;
@@ -115,8 +144,8 @@ async function cancelPayment(id: string) {
   }
 }
 
-const statusTone = (s: string) => (s === "paid" ? "accent" : s === "cancelled" ? "neutral" : s === "waived" ? "neutral" : "amber");
-const outstanding = computed(() => financials.value?.outstanding_minor ?? null);
+const statusTone = (s: string) => (s === "paid" ? "success" : s === "cancelled" ? "neutral" : s === "waived" ? "neutral" : "amber");
+
 </script>
 
 <template>
@@ -126,28 +155,62 @@ const outstanding = computed(() => financials.value?.outstanding_minor ?? null);
         <h3 class="text-13 font-semibold text-ink-soft uppercase tracking-wide">
           Payments
         </h3>
-        <p class="text-13 text-muted mt-0.5">
-          Outstanding: <span class="font-medium text-ink">{{ outstanding != null ? format(outstanding, props.currency) : "—" }}</span>
-        </p>
       </div>
       <AppButton
         v-if="props.canEdit"
         variant="secondary"
         size="sm"
-        @click="showAddForm = !showAddForm"
+        @click="showAddForm ? showAddForm = false : openAdd()"
       >
         {{ showAddForm ? "Cancel" : "Add payment" }}
       </AppButton>
     </div>
 
+    <details
+      v-if="props.canEdit"
+      class="mb-3 text-13"
+    >
+      <summary class="cursor-pointer focus-ring">
+        More payment options
+      </summary>
+      <div class="flex flex-wrap gap-2 mt-2">
+        <AppButton
+          variant="ghost"
+          size="sm"
+          @click="openAdd('refund')"
+        >
+          Record refund
+        </AppButton>
+        <AppButton
+          variant="ghost"
+          size="sm"
+          @click="openAdd('scheduled')"
+        >
+          Schedule payment
+        </AppButton>
+      </div>
+    </details>
     <form
       v-if="showAddForm"
       class="border rounded-lg p-3.5 mb-3 space-y-3 border-line bg-[#FBFBFA]"
       @submit.prevent="submitAdd"
     >
-      <div class="grid grid-cols-3 gap-2">
+      <label
+        v-if="payers.length"
+        class="block text-13"
+      >{{ mode==='refund'?'Refund received by':'Paid by' }}<select
+        v-model="addForm.paid_by_member_id"
+        class="block w-full mt-1 border border-line rounded-lg p-2 bg-surface"
+      ><option value="">Unattributed</option><option
+        v-for="member in payers"
+        :key="member.member_id"
+        :value="member.member_id"
+      >{{ member.display_name }}</option></select></label>
+      <div class="grid sm:grid-cols-2 gap-2">
         <select
+          v-if="mode !== 'refund'"
           v-model="addForm.type"
+          aria-label="Payment type"
           class="border rounded-lg px-2.5 py-2 text-13.5 focus-ring border-line bg-surface"
         >
           <option
@@ -155,28 +218,21 @@ const outstanding = computed(() => financials.value?.outstanding_minor ?? null);
             :key="t"
             :value="t"
           >
-            {{ t }}
-          </option>
-        </select>
-        <select
-          v-model="addForm.direction"
-          class="border rounded-lg px-2.5 py-2 text-13.5 focus-ring border-line bg-surface"
-        >
-          <option value="outgoing">
-            Outgoing
-          </option>
-          <option value="incoming">
-            Incoming
+            {{ t === "full" ? "Full payment" : presentLabel(t) }}
           </option>
         </select>
         <input
           v-model="addForm.due_on"
+          aria-label="Date"
+          :max="mode === 'scheduled' ? undefined : today()"
+          required
           type="date"
           class="border rounded-lg px-2.5 py-2 text-13.5 focus-ring border-line"
         >
       </div>
       <input
         v-model="addForm.amount_major"
+        aria-label="Amount"
         type="text"
         inputmode="decimal"
         :placeholder="`Amount (${props.currency})`"
@@ -193,7 +249,7 @@ const outstanding = computed(() => financials.value?.outstanding_minor ?? null);
         :loading="createPayment.isPending.value"
         @click="submitAdd"
       >
-        Schedule payment
+        {{ addLabel }}
       </AppButton>
     </form>
 

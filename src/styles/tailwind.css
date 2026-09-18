@@ -60,7 +60,7 @@
     transition: background-color 0.12s ease;
   }
   .focus-ring:focus-visible {
-    outline: 2px solid theme("colors.accent.DEFAULT");
+    outline: 2px solid theme("colors.brand.DEFAULT");
     outline-offset: 2px;
     border-radius: 6px;
   }

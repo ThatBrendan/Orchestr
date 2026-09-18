@@ -18,6 +18,7 @@ import AppButton from "@/components/ui/AppButton.vue";
 
 const props = defineProps<{
   open: boolean;
+  defaultAreaId?: string;
   projectId: string;
   currency: string;
   timezone: string;
@@ -33,7 +34,7 @@ const update = useUpdateCommitment(props.projectId);
 const toast = useToast();
 const { toMinor, toMajor } = useMoney();
 
-const ownerCandidates = computed(() => props.memberOptions.filter((m) => m.role !== "viewer" && m.status === "active"));
+const ownerCandidates = computed(() => props.memberOptions.filter((m) => m.status === "active"));
 const defaultActivityType = computed(() => defaultActivityTypeForProjectProfile(props.projectProfile));
 
 function localDateInput(iso: string | null): string {
@@ -43,6 +44,7 @@ function localDateInput(iso: string | null): string {
 }
 
 const form = reactive({
+  area_id: "",
   title: "",
   activity_type: defaultActivityType.value as ActivityType,
   kind: DEFAULT_COMMITMENT_KIND as CommitmentKind,
@@ -61,14 +63,14 @@ const form = reactive({
 });
 const splitEditor = ref<InstanceType<typeof CostSplitEditor>>();
 const splitCost = computed(() => {
-  try { return props.commitment?.actual_cost_minor ?? props.commitment?.confirmed_cost_minor ?? toMinor(form.estimated_cost_major, props.currency); }
+  try { return toMinor(form.estimated_cost_major, props.currency); }
   catch { return null; }
 });
 const fieldError = ref<string | null>(null);
 const showEndDate = ref(false);
 const showLocation = ref(false);
 const showSupplier = ref(false);
-const showCost = ref(false);
+const showSplit = ref(false);
 const selectedWorkflow = computed(() => activityWorkflow(form.activity_type));
 const dateLabel = computed(() => (form.activity_type === "task" || form.activity_type === "purchase" ? "Due date" : "Date"));
 
@@ -77,7 +79,6 @@ function syncDisclosureFromWorkflow() {
   showEndDate.value = fields.endDate || !!form.ends_at;
   showLocation.value = fields.location || !!(form.location_label || form.location_address);
   showSupplier.value = fields.supplier || fields.booking || !!(form.supplier_name || form.supplier_contact || form.booking_reference || form.booking_confirmed);
-  showCost.value = fields.cost || !!form.estimated_cost_major;
 }
 
 function hasLocation(c: Commitment): boolean {
@@ -88,12 +89,9 @@ function hasSupplierBooking(c: Commitment): boolean {
   return !!(c.supplier_name || c.supplier_contact || c.booking_reference || c.booking_confirmed);
 }
 
-function hasCost(c: Commitment): boolean {
-  return c.estimated_cost_minor != null;
-}
-
 function resetFromCommitment() {
   const c = props.commitment;
+  showSplit.value = !!c && c.cost_split_mode !== "none";
   if (!c) {
     Object.assign(form, {
       title: "",
@@ -112,9 +110,11 @@ function resetFromCommitment() {
       repeat: "none",
       notes: "",
     });
+    form.area_id=props.defaultAreaId??"";
     syncDisclosureFromWorkflow();
     return;
   }
+  form.area_id=c.area_id??"";
   form.title = c.title;
   form.activity_type = c.activity_type;
   form.kind = c.kind;
@@ -127,14 +127,13 @@ function resetFromCommitment() {
   form.supplier_contact = c.supplier_contact ?? "";
   form.booking_reference = c.booking_reference ?? "";
   form.booking_confirmed = c.booking_confirmed;
-  const major = toMajor(c.estimated_cost_minor, props.currency);
+  const major = toMajor(c.actual_cost_minor ?? c.confirmed_cost_minor ?? c.estimated_cost_minor, props.currency);
   form.estimated_cost_major = major != null ? String(major) : "";
   form.repeat = repeatOptionFromParts(c.recurrence_frequency, c.recurrence_interval);
   form.notes = c.notes ?? "";
   showEndDate.value = !!c.ends_at;
   showLocation.value = hasLocation(c);
   showSupplier.value = hasSupplierBooking(c);
-  showCost.value = hasCost(c);
 }
 watch(() => [props.open, props.commitment], resetFromCommitment, { immediate: true });
 
@@ -171,6 +170,7 @@ async function submit() {
   catch (error) { fieldError.value = toAppError(error).message; return; }
 
   const payload = {
+    area_id:form.area_id||null,
     title: form.title.trim(),
     activity_type: form.activity_type,
     kind: form.kind,
@@ -184,7 +184,7 @@ async function submit() {
     supplier_contact: form.supplier_contact.trim() || null,
     booking_reference: form.booking_reference.trim() || null,
     booking_confirmed: form.booking_confirmed,
-    estimated_cost_minor: estimatedCost,
+    ...(props.commitment?.actual_cost_minor != null ? { actual_cost_minor: estimatedCost } : props.commitment?.confirmed_cost_minor != null ? { confirmed_cost_minor: estimatedCost } : { estimated_cost_minor: estimatedCost }),
     recurrence_frequency: repeat.frequency,
     recurrence_interval: repeat.interval,
     recurrence_start_date: repeat.value === "none" ? null : form.starts_at,
@@ -223,7 +223,7 @@ const isPending = computed(() => create.isPending.value || update.isPending.valu
       @submit.prevent="submit"
     >
       <label class="block">
-        <span class="text-13 font-medium block mb-1.5 text-ink-soft">Title *</span>
+        <span class="text-13 font-medium block mb-1.5 text-ink-soft">Activity title *</span>
         <input
           v-model="form.title"
           required
@@ -234,7 +234,7 @@ const isPending = computed(() => create.isPending.value || update.isPending.valu
 
       <div class="grid gap-3 sm:grid-cols-2">
         <label class="block">
-          <span class="text-13 font-medium block mb-1.5 text-ink-soft">Activity Type</span>
+          <span class="text-13 font-medium block mb-1.5 text-ink-soft">Activity type</span>
           <select
             v-model="form.activity_type"
             class="w-full border rounded-lg px-3 py-2.5 text-14 focus-ring border-line bg-surface"
@@ -246,10 +246,13 @@ const isPending = computed(() => create.isPending.value || update.isPending.valu
               :value="type.value"
             >{{ type.label }}</option>
           </select>
-          <span class="text-12 text-muted mt-1 block">Controls how this activity behaves.</span>
+
         </label>
-        <label class="block">
-          <span class="text-13 font-medium block mb-1.5 text-ink-soft">Category</span>
+        <label
+          v-if="props.commitment"
+          class="block"
+        >
+          <span class="text-13 font-medium block mb-1.5 text-ink-soft">Cost category</span>
           <select
             v-model="form.kind"
             class="w-full border rounded-lg px-3 py-2.5 text-14 focus-ring border-line bg-surface"
@@ -260,13 +263,15 @@ const isPending = computed(() => create.isPending.value || update.isPending.valu
               :value="k.value"
             >{{ k.label }}</option>
           </select>
-          <span class="text-12 text-muted mt-1 block">Groups this activity within the project.</span>
+
         </label>
       </div>
 
-      <div class="grid gap-3 sm:grid-cols-2">
+      <div
+        class="grid gap-3 sm:grid-cols-2"
+      >
         <label class="block">
-          <span class="text-13 font-medium block mb-1.5 text-ink-soft">Owner</span>
+          <span class="text-13 font-medium block mb-1.5 text-ink-soft">Assigned to</span>
           <select
             v-model="form.owner_member_id"
             class="w-full border rounded-lg px-3 py-2.5 text-14 focus-ring border-line bg-surface"
@@ -316,7 +321,20 @@ const isPending = computed(() => create.isPending.value || update.isPending.valu
         />
       </label>
 
-      <div class="border-t border-line pt-4">
+      <label class="block">
+        <span class="text-13 font-medium block mb-1.5 text-ink-soft">Cost ({{ props.currency }}, optional)</span>
+        <input
+          v-model="form.estimated_cost_major"
+          type="text"
+          inputmode="decimal"
+          class="w-full border rounded-lg px-3.5 py-2.5 text-14 focus-ring border-line"
+        >
+      </label>
+
+      <div
+        v-if="props.commitment"
+        class="border-t border-line pt-4"
+      >
         <h3 class="text-13 font-semibold text-ink-soft uppercase tracking-wide">
           Additional details
         </h3>
@@ -324,7 +342,7 @@ const isPending = computed(() => create.isPending.value || update.isPending.valu
           <section>
             <button
               type="button"
-              class="text-14 font-medium text-accent focus-ring"
+              class="text-14 font-medium text-brand-dark focus-ring"
               :aria-expanded="showEndDate"
               @click="showEndDate = !showEndDate"
             >
@@ -343,10 +361,10 @@ const isPending = computed(() => create.isPending.value || update.isPending.valu
             </label>
           </section>
 
-          <section>
+          <section v-if="props.commitment">
             <button
               type="button"
-              class="text-14 font-medium text-accent focus-ring"
+              class="text-14 font-medium text-brand-dark focus-ring"
               :aria-expanded="showLocation"
               @click="showLocation = !showLocation"
             >
@@ -376,7 +394,7 @@ const isPending = computed(() => create.isPending.value || update.isPending.valu
           <section>
             <button
               type="button"
-              class="text-14 font-medium text-accent focus-ring"
+              class="text-14 font-medium text-brand-dark focus-ring"
               :aria-expanded="showSupplier"
               @click="showSupplier = !showSupplier"
             >
@@ -424,29 +442,6 @@ const isPending = computed(() => create.isPending.value || update.isPending.valu
               </label>
             </div>
           </section>
-
-          <section>
-            <button
-              type="button"
-              class="text-14 font-medium text-accent focus-ring"
-              :aria-expanded="showCost"
-              @click="showCost = !showCost"
-            >
-              {{ showCost ? "− Hide estimated cost" : "+ Add estimated cost" }}
-            </button>
-            <label
-              v-if="showCost"
-              class="block mt-2"
-            >
-              <span class="text-13 font-medium block mb-1.5 text-ink-soft">Estimated cost ({{ props.currency }})</span>
-              <input
-                v-model="form.estimated_cost_major"
-                type="text"
-                inputmode="decimal"
-                class="w-full border rounded-lg px-3.5 py-2.5 text-14 focus-ring border-line"
-              >
-            </label>
-          </section>
         </div>
       </div>
 
@@ -458,8 +453,16 @@ const isPending = computed(() => create.isPending.value || update.isPending.valu
       </p>
     </form>
 
+    <button
+      v-if="!showSplit && splitCost != null && splitCost > 0 && memberOptions.filter(m=>m.status==='active').length > 1"
+      type="button"
+      class="text-14 text-brand-dark focus-ring mt-3"
+      @click="showSplit = true"
+    >
+      Manage cost sharing
+    </button>
     <CostSplitEditor
-      v-if="open && (splitCost != null || commitment)"
+      v-if="open && showSplit && (splitCost ?? 0) > 0 && memberOptions.filter(m=>m.status==='active').length > 1"
       ref="splitEditor"
       :key="commitment?.id ?? 'new'"
       :commitment="commitment"
@@ -481,7 +484,7 @@ const isPending = computed(() => create.isPending.value || update.isPending.valu
         :loading="isPending"
         @click="submit"
       >
-        {{ props.commitment ? "Save" : "Create activity" }}
+        {{ props.commitment ? "Save activity" : "Create activity" }}
       </AppButton>
     </template>
   </AppModal>

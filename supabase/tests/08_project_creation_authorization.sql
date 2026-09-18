@@ -26,7 +26,7 @@ values
 -- Anonymous callers cannot create projects.
 select set_config('role','anon', true);
 select set_config('request.jwt.claims','', true);
-select throws_ok($$select public.create_project('Anonymous project','UTC','GBP',null,null)$$,
+select throws_ok($$select public.create_project('Anonymous project','UTC','GBP','2026-01-01',null)$$,
   '42501', null, 'anonymous cannot create a project');
 select pg_temp.logout();
 
@@ -70,7 +70,7 @@ select pg_temp.logout();
 
 -- B has no membership and cannot create for, read, update, or delete A's project.
 select pg_temp.login('b8000000-0000-0000-0000-000000000008','b8@t.co');
-select ok(public.create_project('B project','UTC','GBP',null,null) is not null,
+select ok(public.create_project('B project','UTC','GBP','2026-01-01',null) is not null,
   'another authenticated user can create only their own project through the RPC');
 select is((select count(*)::int from public.projects
            where id = '88000000-0000-0000-0000-000000000008'), 0,

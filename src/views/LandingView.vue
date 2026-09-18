@@ -2,11 +2,9 @@
 import MarketingHeader from "@/components/marketing/MarketingHeader.vue";
 import MarketingFooter from "@/components/marketing/MarketingFooter.vue";
 import HeroSection from "@/components/marketing/HeroSection.vue";
-import ProblemSection from "@/components/marketing/ProblemSection.vue";
 import PillarsSection from "@/components/marketing/PillarsSection.vue";
 import HowItWorksSection from "@/components/marketing/HowItWorksSection.vue";
 import UseCasesSection from "@/components/marketing/UseCasesSection.vue";
-import PlanningHealthSection from "@/components/marketing/PlanningHealthSection.vue";
 import FinalCtaSection from "@/components/marketing/FinalCtaSection.vue";
 
 
@@ -25,11 +23,9 @@ import FinalCtaSection from "@/components/marketing/FinalCtaSection.vue";
 
     <main id="main">
       <HeroSection />
-      <ProblemSection />
       <PillarsSection />
       <HowItWorksSection />
       <UseCasesSection />
-      <PlanningHealthSection />
       <FinalCtaSection />
     </main>
 

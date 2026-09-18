@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import MemberBalances from "@/components/budget/MemberBalances.vue";
-import BudgetVisual from "@/components/budget/BudgetVisual.vue";
 import BudgetTargetDialog from "@/components/budget/BudgetTargetDialog.vue";
 import AppButton from "@/components/ui/AppButton.vue";
 import { computed, ref } from "vue";
@@ -28,12 +27,6 @@ const budgetOpen = ref(false);
 const canEditBudget = computed(() => allowed("budget.edit") && project.value?.status !== "archived");
 const hasTarget = computed(() => financials.value?.total_target_minor != null);
 
-function varianceLabel(minor: number | null | undefined): string {
-  if (minor == null) return "—";
-  if (minor === 0) return "On budget";
-  if (minor < 0) return `${format(Math.abs(minor), currency.value)} over`;
-  return `${format(minor, currency.value)} under`;
-}
 
 const categoriesWithData = computed(() => categories.value.filter((c) => c.target_minor != null || c.actual_minor > 0 || c.net_paid_minor !== 0));
 
@@ -67,7 +60,7 @@ const categoriesWithData = computed(() => categories.value.filter((c) => c.targe
           {{ hasTarget ? 'Edit budget' : 'Set budget' }}
         </AppButton>
       </div>
-      <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div class="grid gap-4 sm:grid-cols-3">
         <div class="border border-line rounded-xl bg-surface p-5">
           <StatTile
             :value="hasTarget ? format(financials.total_target_minor, currency) : 'Not set'"
@@ -76,21 +69,16 @@ const categoriesWithData = computed(() => categories.value.filter((c) => c.targe
         </div>
         <div class="border border-line rounded-xl bg-surface p-5">
           <StatTile
-            :value="format(financials.total_cost_minor, currency)"
-            label="Planned spend"
-          />
-        </div>
-        <div class="border border-line rounded-xl bg-surface p-5">
-          <StatTile
             :value="format(financials.net_actual_spend_minor, currency)"
-            label="Paid so far"
+            label="Spent so far"
           />
         </div>
+
         <div class="border border-line rounded-xl bg-surface p-5">
           <StatTile
-            :value="hasTarget ? format(Math.abs(financials.remaining_budget_minor ?? 0), currency) : '—'"
-            :label="(financials.remaining_budget_minor ?? 0) < 0 ? 'Over budget' : 'Remaining budget'"
-            :tone="(financials.remaining_budget_minor ?? 0) < 0 ? 'amber' : 'default'"
+            :value="hasTarget ? format(Math.abs(financials.settled_variance_minor ?? 0), currency) : '—'"
+            :label="(financials.settled_variance_minor ?? 0) < 0 ? 'Over budget' : 'Remaining budget'"
+            :tone="(financials.settled_variance_minor ?? 0) < 0 ? 'amber' : 'default'"
           />
         </div>
       </div>
@@ -100,13 +88,6 @@ const categoriesWithData = computed(() => categories.value.filter((c) => c.targe
       >
         Set an approximate project budget to track spending against a target.
       </p>
-      <BudgetVisual
-        class="mt-5"
-        :target="financials.total_target_minor"
-        :planned="financials.total_cost_minor"
-        :paid="financials.net_actual_spend_minor"
-        :currency="currency"
-      />
       <MemberBalances
         :project-id="projectId"
         :currency="currency"
@@ -127,7 +108,7 @@ const categoriesWithData = computed(() => categories.value.filter((c) => c.targe
         <EmptyState
           v-else-if="categoriesWithData.length === 0"
           class="mt-3"
-          message="No planned spending yet. Add estimated costs to Activities to see a category breakdown."
+          message="No spending recorded yet. Add costs to Activities to see a category breakdown."
         />
         <div
           v-else
@@ -138,12 +119,12 @@ const categoriesWithData = computed(() => categories.value.filter((c) => c.targe
         >
           <table class="w-full text-14 whitespace-nowrap">
             <caption class="sr-only">
-              Category targets, planned costs and payment settlement
+              Category targets and recorded expenses
             </caption>
             <thead class="bg-surface text-muted">
               <tr>
                 <th
-                  v-for="heading in ['Category', 'Target', 'Planned', 'Paid', 'Variance', 'Status']"
+                  v-for="heading in ['Category', 'Target', 'Spent so far']"
                   :key="heading"
                   scope="col"
                   class="px-4 py-3 text-left"
@@ -166,20 +147,9 @@ const categoriesWithData = computed(() => categories.value.filter((c) => c.targe
                 <td class="px-4 py-3 text-right">
                   {{ c.target_minor == null ? '—' : format(c.target_minor, currency) }}
                 </td>
-                <td class="px-4 py-3 text-right">
-                  {{ format(c.actual_minor, currency) }}
-                </td>
+
                 <td class="px-4 py-3 text-right">
                   {{ format(c.net_paid_minor, currency) }}
-                </td>
-                <td class="px-4 py-3 text-right">
-                  {{ varianceLabel(c.variance_minor) }}
-                </td>
-                <td
-                  class="px-4 py-3"
-                  :class="c.variance_minor != null && c.variance_minor < 0 ? 'text-amber' : 'text-muted'"
-                >
-                  {{ c.variance_minor == null ? 'No target' : c.variance_minor < 0 ? 'Over budget' : c.variance_minor === 0 ? 'On budget' : 'On track' }}
                 </td>
               </tr>
             </tbody>

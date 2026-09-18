@@ -97,7 +97,7 @@ function eventRoute(event: GlobalTimelineEvent) {
     };
   }
   if (event.subject_type === "payment") return { name: "project.budget", params: { projectId: event.project_id } };
-  if (event.subject_type === "task") return { name: "project.commitments", params: { projectId: event.project_id } };
+  if (event.subject_type === "task") return { name: "project.commitments", params: { projectId: event.project_id }, query: {item:event.subject_id} };
   if (event.subject_type === "milestone") return { name: "project.timeline", params: { projectId: event.project_id } };
   return { name: "project.overview", params: { projectId: event.project_id } };
 }

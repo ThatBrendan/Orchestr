@@ -16,13 +16,13 @@ export const HEALTH_CODE_TITLES: Record<string, string> = {
   category_over_target: "Category over target",
   schedule_conflict: "Scheduling conflict",
   tight_connection: "Tight connection",
-  task_overdue: "Overdue task",
-  task_unassigned_due_soon: "Unassigned task due soon",
+  task_overdue: "Overdue activity",
+  task_unassigned_due_soon: "Unassigned activity due soon",
   outside_project_dates: "Outside project dates",
   unallocated_cost: "Cost not split",
   on_budget: "On budget",
   activity_occurrence_overdue: "Overdue occurrence",
-  task_occurrence_overdue: "Overdue task occurrence",
+  task_occurrence_overdue: "Overdue activity occurrence",
 };
 
 export function healthCodeTitle(code: string): string {

@@ -50,7 +50,7 @@ async function openActivity(item: ActivityNotification) {
     <span class="hidden sm:inline">Notifications</span>
     <span
       v-if="unreadCount"
-      class="rounded-full bg-accent px-2 text-white"
+      class="rounded-full bg-brand px-2 text-white"
     >{{ unreadCount }}</span>
   </button>
   <AppModal

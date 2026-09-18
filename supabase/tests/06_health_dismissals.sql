@@ -18,6 +18,7 @@ create function pg_temp.wc(sql text) returns int language plpgsql as $$
 declare n int; begin execute sql; get diagnostics n = row_count; return n; end $$;
 -- stash a named integer across statements without relying on psql's \gset
 create table pg_temp.stash (k text primary key, v int);
+grant select,insert,update on pg_temp.stash to authenticated;
 create function pg_temp.stash_set(p_k text, p_v int) returns void language plpgsql as $$
 begin insert into pg_temp.stash values (p_k, p_v) on conflict (k) do update set v = excluded.v; end $$;
 create function pg_temp.stash_get(p_k text) returns int language sql as $$
@@ -38,9 +39,9 @@ values
  ('6b000000-0000-0000-0000-00000000006b','66660000-0000-0000-0000-000000000001','b6000000-0000-0000-0000-00000000006b','Member B6','b6@t.co','member','active');
 update public.projects set created_by='6a000000-0000-0000-0000-00000000006a' where id='66660000-0000-0000-0000-000000000001';
 
--- Boat: researching, no owner -> HLT-1 missing_owner (warning, dismissible)
-insert into public.commitments (id,project_id,title,kind,status)
-values ('6c000000-0000-0000-0000-00000000006c','66660000-0000-0000-0000-000000000001','Boat','experience','researching');
+-- Overdue task-type Activity: warning, dismissible; ownership is optional.
+insert into public.commitments (id,project_id,title,kind,status,starts_at,activity_type)
+values ('6c000000-0000-0000-0000-00000000006c','66660000-0000-0000-0000-000000000001','Boat','experience','researching',now()-interval '2 days','task');
 
 -- Flights: booked, owned, booking confirmed -> avoids tripping HLT-1/HLT-5 itself
 insert into public.commitments (id,project_id,title,kind,status,owner_member_id,booking_reference,booking_confirmed,confirmed_cost_minor)
@@ -53,11 +54,11 @@ select pg_temp.login('b6000000-0000-0000-0000-00000000006b','b6@t.co');
 
 -- ===== findings are derived, present, and correctly classified =====
 select is(
-  (select dismissed from public.get_project_health('66660000-0000-0000-0000-000000000001') where code='missing_owner' and subject_id='6c000000-0000-0000-0000-00000000006c'),
-  false, 'HEALTH: missing_owner finding is present and not dismissed initially');
+  (select dismissed from public.get_project_health('66660000-0000-0000-0000-000000000001') where code='activity_overdue' and subject_id='6c000000-0000-0000-0000-00000000006c'),
+  false, 'HEALTH: activity_overdue finding is present and not dismissed initially');
 select is(
-  (select dismissible from public.get_project_health('66660000-0000-0000-0000-000000000001') where code='missing_owner' and subject_id='6c000000-0000-0000-0000-00000000006c'),
-  true, 'HEALTH: missing_owner is dismissible (warning)');
+  (select dismissible from public.get_project_health('66660000-0000-0000-0000-000000000001') where code='activity_overdue' and subject_id='6c000000-0000-0000-0000-00000000006c'),
+  true, 'HEALTH: activity_overdue is dismissible (warning)');
 select is(
   (select severity from public.get_project_health('66660000-0000-0000-0000-000000000001') where code='payment_overdue' and subject_id='6e000000-0000-0000-0000-00000000006e'),
   'blocker', 'HEALTH: overdue payment is a blocker');
@@ -70,10 +71,10 @@ select ok(pg_temp.stash_get('before_attention') >= 2, 'HEALTH: summary counts at
 
 -- ===== dismiss a warning =====
 select is(pg_temp.wc($$insert into public.finding_dismissals (project_id,code,subject_type,subject_id,state)
-  values ('66660000-0000-0000-0000-000000000001','missing_owner','commitment','6c000000-0000-0000-0000-00000000006c','dismissed')$$),
+  values ('66660000-0000-0000-0000-000000000001','activity_overdue','commitment','6c000000-0000-0000-0000-00000000006c','dismissed')$$),
   1, 'DISMISS: member can dismiss a warning finding');
 select is(
-  (select dismissed from public.get_project_health('66660000-0000-0000-0000-000000000001') where code='missing_owner' and subject_id='6c000000-0000-0000-0000-00000000006c'),
+  (select dismissed from public.get_project_health('66660000-0000-0000-0000-000000000001') where code='activity_overdue' and subject_id='6c000000-0000-0000-0000-00000000006c'),
   true, 'DISMISS: the finding now reads as dismissed');
 
 select pg_temp.stash_set('after_dismiss_attention', attention_count) from public.get_project_health_summary('66660000-0000-0000-0000-000000000001');
@@ -86,18 +87,18 @@ select throws_ok($$insert into public.finding_dismissals (project_id,code,subjec
 
 -- ===== snooze (upsert to snoozed with a future date) =====
 select is(pg_temp.wc($$update public.finding_dismissals set state='snoozed', snoozed_until=current_date+7
-  where project_id='66660000-0000-0000-0000-000000000001' and code='missing_owner' and subject_id='6c000000-0000-0000-0000-00000000006c'$$),
+  where project_id='66660000-0000-0000-0000-000000000001' and code='activity_overdue' and subject_id='6c000000-0000-0000-0000-00000000006c'$$),
   1, 'SNOOZE: member can convert a dismissal to a snooze');
 select is(
-  (select dismissed from public.get_project_health('66660000-0000-0000-0000-000000000001') where code='missing_owner' and subject_id='6c000000-0000-0000-0000-00000000006c'),
+  (select dismissed from public.get_project_health('66660000-0000-0000-0000-000000000001') where code='activity_overdue' and subject_id='6c000000-0000-0000-0000-00000000006c'),
   true, 'SNOOZE: still reads as dismissed while the snooze is in the future');
 
 -- ===== reactivate (delete the dismissal row) =====
 select is(pg_temp.wc($$delete from public.finding_dismissals
-  where project_id='66660000-0000-0000-0000-000000000001' and code='missing_owner' and subject_id='6c000000-0000-0000-0000-00000000006c'$$),
+  where project_id='66660000-0000-0000-0000-000000000001' and code='activity_overdue' and subject_id='6c000000-0000-0000-0000-00000000006c'$$),
   1, 'REACTIVATE: member can remove a dismissal');
 select is(
-  (select dismissed from public.get_project_health('66660000-0000-0000-0000-000000000001') where code='missing_owner' and subject_id='6c000000-0000-0000-0000-00000000006c'),
+  (select dismissed from public.get_project_health('66660000-0000-0000-0000-000000000001') where code='activity_overdue' and subject_id='6c000000-0000-0000-0000-00000000006c'),
   false, 'REACTIVATE: the finding is visible again (VAL-43)');
 
 select pg_temp.stash_set('after_reactivate_attention', attention_count) from public.get_project_health_summary('66660000-0000-0000-0000-000000000001');
@@ -110,7 +111,7 @@ insert into auth.users (instance_id,id,aud,role,email,raw_app_meta_data,raw_user
 values ('00000000-0000-0000-0000-000000000000','c6000000-0000-0000-0000-00000000006c','authenticated','authenticated','c6@t.co','{}','{"display_name":"Outsider C6"}',now(),now(),'','','','');
 select pg_temp.login('c6000000-0000-0000-0000-00000000006c','c6@t.co');
 select throws_ok($$insert into public.finding_dismissals (project_id,code,subject_type,subject_id,state)
-  values ('66660000-0000-0000-0000-000000000001','missing_owner','commitment','6c000000-0000-0000-0000-00000000006c','dismissed')$$,
+  values ('66660000-0000-0000-0000-000000000001','activity_overdue','commitment','6c000000-0000-0000-0000-00000000006c','dismissed')$$,
   '42501', null, 'ISOLATION: a non-member cannot dismiss a finding in this project');
 select pg_temp.logout();
 

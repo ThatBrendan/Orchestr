@@ -12,6 +12,7 @@ export async function listCommitments(projectId: string): Promise<Commitment[]> 
   const { data, error } = await supabase
     .from("commitments")
     .select("*")
+    .is("deleted_at", null)
     .eq("project_id", projectId)
     .order("starts_at", { ascending: true, nullsFirst: false })
     .order("created_at", { ascending: true });
@@ -21,7 +22,10 @@ export async function listCommitments(projectId: string): Promise<Commitment[]> 
 
 export async function createCommitment(input: TablesInsert<"commitments"> & { costSplit?: Json }): Promise<Commitment> {
   const { costSplit, project_id, ...fields } = input;
-  const { data, error } = await supabase.rpc("save_activity_with_split", { p_project: project_id, p_commitment: null, p_fields: fields, p_split: costSplit ?? null });
+  const categoryId = fields.area_id;
+  const { data, error } = categoryId
+    ? await supabase.rpc("create_activity_in_category", { p_project: project_id, p_category: categoryId, p_fields: fields, p_split: costSplit ?? null })
+    : { data: null, error: { message: "orchestr:category_required:Choose a Category before creating an activity." } };
   if (error) throw toAppError(error);
   if (costSplit != null) trackProductEvent("cost_split_saved");
   trackProductEvent("activity_created");

@@ -27,7 +27,7 @@ function isActive(match: readonly string[]) {
       :key="item.label"
       :to="item.to"
       class="flex-1 flex flex-col items-center justify-center gap-1"
-      :class="isActive(item.match) ? 'text-ink' : 'text-muted'"
+      :class="isActive(item.match) ? 'text-brand-dark' : 'text-muted'"
     >
       <AppIcon
         :name="item.icon"

@@ -20,7 +20,7 @@ const visual = computed(() => budgetVisual(props.target, props.planned, props.pa
         aria-hidden="true"
       >
         <span
-          class="bg-accent"
+          class="bg-brand"
           :style="{ width: visual.plannedWidth + '%' }"
         />
         <span

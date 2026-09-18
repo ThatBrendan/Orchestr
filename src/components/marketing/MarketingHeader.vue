@@ -42,6 +42,8 @@ onUnmounted(() => window.removeEventListener("scroll", onScroll));
           >
             <img
               :src="orchestrioIcon"
+              width="112"
+              height="48"
               :alt="APP_NAME"
               class="h-12 w-auto"
             >

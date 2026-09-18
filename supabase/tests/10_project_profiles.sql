@@ -23,7 +23,7 @@ values
 
 select set_config('role','anon', true); select set_config('request.jwt.claims','', true);
 select throws_ok(
-  $$select public.create_project('Anon profile project','UTC','GBP',null,null,'blank')$$,
+  $$select public.create_project('Anon profile project','UTC','GBP','2026-01-01',null,'blank')$$,
   '42501',
   null,
   'anon: cannot create project with profile'
@@ -34,7 +34,7 @@ select pg_temp.login('ab000000-0000-0000-0000-000000000010','profile-a@t.co');
 create temporary table pg_temp.profile_projects (id uuid, profile public.project_profile) on commit drop;
 
 insert into pg_temp.profile_projects (id, profile)
-select public.create_project('Profile ' || p::text, 'UTC', 'GBP', null, null, p), p
+select public.create_project('Profile ' || p::text, 'UTC', 'GBP', '2026-01-01', null, p), p
 from unnest(enum_range(null::public.project_profile)) p;
 
 select set_eq(
@@ -44,7 +44,7 @@ select set_eq(
 );
 
 select is(
-  (select profile::text from public.projects where id = public.create_project('Default profile','UTC','GBP',null,null)),
+  (select profile::text from public.projects where id = public.create_project('Default profile','UTC','GBP','2026-01-01',null)),
   'blank',
   'create_project defaults omitted profile to blank'
 );

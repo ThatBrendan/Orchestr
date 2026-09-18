@@ -23,8 +23,8 @@ export function useTasks(projectId: MaybeRefOrGetter<string>) {
 export function useCreateTask(projectId: string) {
   const client = useQueryClient();
   return useMutation({
-    mutationFn: (input: TablesInsert<"tasks">) => tasksService.createTask(input),
-    onSuccess: () => invalidatePlanning(client, projectId, [qk.project.tasks(projectId)]),
+    mutationFn: (input: TablesInsert<"tasks"> & { cost_minor?: number | null }) => tasksService.createTask(input),
+    onSuccess: () => invalidatePlanning(client, projectId, [qk.project.tasks(projectId), qk.project.commitments(projectId), qk.project.budgetCategories(projectId)]),
   });
 }
 

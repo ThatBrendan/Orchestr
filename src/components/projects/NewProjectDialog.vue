@@ -66,6 +66,10 @@ async function submit() {
     fieldError.value = "Give the project a name.";
     return;
   }
+  if (!form.starts_on) {
+    fieldError.value = "Choose a start date.";
+    return;
+  }
   if (form.starts_on && form.ends_on && form.ends_on < form.starts_on) {
     fieldError.value = "The end date must be on or after the start date.";
     return;
@@ -92,7 +96,7 @@ async function submit() {
   <AppModal
     :busy="create.isPending.value"
     :open="props.open"
-    :title="step === 'profile' ? 'What are you planning?' : 'New project'"
+    :title="step === 'profile' ? 'What are you planning?' : 'Project details'"
     size="lg"
     @close="emit('close')"
   >
@@ -143,15 +147,16 @@ async function submit() {
 
       <div class="grid gap-3 sm:grid-cols-2">
         <label class="block">
-          <span class="text-13 font-medium block mb-1.5 text-ink-soft">Start date</span>
+          <span class="text-13 font-medium block mb-1.5 text-ink-soft">Start date *</span>
           <input
             v-model="form.starts_on"
+            required
             type="date"
             class="w-full border rounded-lg px-3 py-2.5 text-14 focus-ring border-line"
           >
         </label>
         <label class="block">
-          <span class="text-13 font-medium block mb-1.5 text-ink-soft">End date</span>
+          <span class="text-13 font-medium block mb-1.5 text-ink-soft">End date (optional)</span>
           <input
             v-model="form.ends_on"
             type="date"
