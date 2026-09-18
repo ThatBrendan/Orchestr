@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import {computed} from 'vue';
+import {computed, ref, watch} from 'vue';
 import {useRoute} from 'vue-router';
 import {useProjectContext} from '@/composables/useProjectContext';
 import {useProjectHealth,useUpcoming,useProjectFinancials} from '@/composables/useProject';
 import {useMoney} from '@/composables/useMoney';
+import { paginateList } from '@/lib/pagination';
 import SectionHeading from '@/components/ui/SectionHeading.vue';
 import SkeletonBlock from '@/components/ui/SkeletonBlock.vue';
 import ErrorState from '@/components/ui/ErrorState.vue';
@@ -15,6 +16,17 @@ const route=useRoute(),projectId=computed(()=>String(route.params.projectId));
 const {project}=useProjectContext(),{format}=useMoney();
 const financials=useProjectFinancials(projectId),health=useProjectHealth(projectId),upcoming=useUpcoming(projectId);
 const currency=computed(()=>project.value?.currency??'GBP');
+const page = ref(1);
+const perPage = 5;
+const attentionPage = computed(() => {
+  const items = health.needsAttention.value ?? [];
+  return paginateList(items, page.value, perPage);
+});
+watch(() => health.needsAttention.value.length, () => {
+  const total = Math.max(1, Math.ceil((health.needsAttention.value?.length ?? 0) / perPage));
+  if (page.value > total) page.value = total;
+  if ((health.needsAttention.value?.length ?? 0) <= perPage) page.value = 1;
+});
 </script>
 <template>
   <div class="space-y-8 fade-in">
@@ -79,13 +91,41 @@ const currency=computed(()=>project.value?.currency??'GBP');
         />
         <div
           v-else
-          class="mt-3 border rounded-xl divide-y border-line bg-surface"
+          class="mt-3"
         >
-          <AttentionRow
-            v-for="(f, i) in health.needsAttention.value"
-            :key="f.code + (f.subject_id ?? '') + i"
-            :finding="f"
-          />
+          <div class="border rounded-xl divide-y border-line bg-surface">
+            <AttentionRow
+              v-for="(f, i) in attentionPage.items"
+              :key="f.code + (f.subject_id ?? '') + i"
+              :finding="f"
+            />
+          </div>
+          <div
+            v-if="health.needsAttention.value.length > perPage"
+            class="mt-3 flex items-center justify-between gap-3 text-13 text-muted"
+          >
+            <button
+              type="button"
+              class="rounded px-2 py-1 disabled:cursor-not-allowed disabled:opacity-40 hover:bg-[#F4F3F2]"
+              :disabled="!attentionPage.canGoPrevious"
+              aria-label="Previous needs attention page"
+              @click="page = Math.max(1, page - 1)"
+            >
+              Previous
+            </button>
+            <span aria-live="polite">
+              Page {{ attentionPage.page }} of {{ attentionPage.totalPages }}
+            </span>
+            <button
+              type="button"
+              class="rounded px-2 py-1 disabled:cursor-not-allowed disabled:opacity-40 hover:bg-[#F4F3F2]"
+              :disabled="!attentionPage.canGoNext"
+              aria-label="Next needs attention page"
+              @click="page = Math.min(attentionPage.totalPages, page + 1)"
+            >
+              Next
+            </button>
+          </div>
         </div>
       </div>
 

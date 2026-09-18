@@ -23,14 +23,14 @@ export interface ActivityWorkflow {
   };
 }
 
-// Execution presentation does not change the persisted status or its financial/Health meaning.
-// Confirmed/booked records represent progressed work, not completed work. Booking is shown separately.
+// User-facing activity status is intentionally simplified to Pending/Complete,
+// while the persisted backend lifecycle remains intact for compatibility.
 const EXECUTION_LABELS: Record<CommitmentStatus, string> = {
-  idea: "Not started", researching: "In progress", confirmed: "In progress",
-  booked: "In progress", completed: "Completed", cancelled: "Cancelled",
+  idea: "Pending", researching: "Pending", confirmed: "Pending",
+  booked: "Pending", completed: "Complete", cancelled: "Cancelled",
 };
 const EXECUTION_ACTIONS: Record<CommitmentStatus, ActivityWorkflowAction[]> = {
-  idea: [{ to: "researching", label: "Start" }, { to: "completed", label: "Complete" }],
+  idea: [{ to: "completed", label: "Complete" }],
   researching: [{ to: "completed", label: "Complete" }],
   confirmed: [{ to: "completed", label: "Complete" }],
   booked: [{ to: "completed", label: "Complete" }],
@@ -38,9 +38,11 @@ const EXECUTION_ACTIONS: Record<CommitmentStatus, ActivityWorkflowAction[]> = {
 };
 // Existing booking transition rules require booked before completed; never invent booking history.
 const BOOKING_EXECUTION_ACTIONS: Record<CommitmentStatus, ActivityWorkflowAction[]> = {
-  ...EXECUTION_ACTIONS,
-  idea: [{ to: "researching", label: "Start" }],
-  researching: [], confirmed: [],
+  idea: [{ to: "completed", label: "Complete" }],
+  researching: [{ to: "completed", label: "Complete" }],
+  confirmed: [{ to: "completed", label: "Complete" }],
+  booked: [{ to: "completed", label: "Complete" }],
+  completed: [], cancelled: [],
 };
 
 export function bookingStatusLabel(status: CommitmentStatus, confirmed: boolean): string {
@@ -54,8 +56,7 @@ export function bookingStatusActions(status: CommitmentStatus): ActivityWorkflow
   return [];
 }
 
-export function secondaryActivityActions(type: ActivityType, status: CommitmentStatus): ActivityWorkflowAction[] {
-  if (status === "completed") return [{ to: type === "booking" ? "booked" : "researching", label: "Reopen activity" }];
+export function secondaryActivityActions(_type: ActivityType, status: CommitmentStatus): ActivityWorkflowAction[] {
   if (status === "cancelled") return [{ to: "researching", label: "Restore activity" }];
   return [{ to: "cancelled", label: "Cancel activity" }];
 }

@@ -2,6 +2,7 @@
 import { computed } from "vue";
 import type { HealthFinding } from "@/types/derived";
 import { healthCodeTitle } from "@/lib/healthLabels";
+import { normalizeHealthCopy, relativeDueText, userFacingActivityStatus } from "@/lib/presentation";
 import { useDismissFinding, useSnoozeFinding, useReactivateFinding } from "@/composables/useHealth";
 import { useToast } from "@/composables/useToast";
 import { toAppError } from "@/lib/errors";
@@ -25,6 +26,28 @@ const findingRef = computed(() => ({
   subject_type: props.finding.subject_type,
   subject_id: props.finding.subject_id,
 }));
+const params = computed(() => (props.finding.params ?? {}) as Record<string, unknown>);
+const dueText = computed(() => relativeDueText(params.value));
+const displayMessage = computed(() => {
+  const cleaned = normalizeHealthCopy(props.finding.message);
+  const status = userFacingActivityStatus(String(params.value.status ?? ""));
+  const pendingStatus = /pending|overdue/i.test(cleaned) || status === "Pending" || status === "Overdue";
+  const base = props.finding.subject_label && !/This activity|This task|This .* is /i.test(cleaned)
+    ? `${props.finding.subject_label}`
+    : cleaned || "This activity is pending.";
+  if (pendingStatus && !/This activity|This task|This .* is /i.test(base)) {
+    const formatted = /^\s*\w/.test(base) ? base : "This activity is pending.";
+    return dueText.value ? `${formatted}${formatted.endsWith(".") ? " " : " "}${dueText.value}` : formatted;
+  }
+  if (dueText.value) return `${base}${base.endsWith(".") ? " " : " "}${dueText.value}`;
+  return base;
+});
+const displayResolution = computed(() => {
+  const cleaned = normalizeHealthCopy(props.finding.resolution);
+  if (/confirm it, complete it, or cancel it/i.test(cleaned)) return "Review activity";
+  if (/^\s*$/u.test(cleaned)) return "";
+  return cleaned;
+});
 
 async function doDismiss() {
   try {
@@ -57,7 +80,10 @@ async function doReactivate() {
     <SeverityIcon :severity="props.finding.severity" />
     <div class="min-w-0 flex-1 [overflow-wrap:anywhere]">
       <div class="flex items-center gap-2 flex-wrap">
-        <span class="text-14 font-medium">{{ healthCodeTitle(props.finding.code) }}</span>
+        <span
+          v-if="!props.finding.subject_label"
+          class="text-14 font-medium"
+        >{{ healthCodeTitle(props.finding.code) }}</span>
         <StatusBadge
           v-if="props.finding.subject_label"
           :label="props.finding.subject_label"
@@ -75,10 +101,13 @@ async function doReactivate() {
         />
       </div>
       <p class="text-13.5 text-ink-soft mt-0.5">
-        {{ props.finding.message }}
+        {{ displayMessage }}
       </p>
-      <p class="text-13 text-muted mt-1">
-        {{ props.finding.resolution }}
+      <p
+        v-if="displayResolution"
+        class="text-13 text-muted mt-1"
+      >
+        {{ displayResolution }}
       </p>
 
       <div
