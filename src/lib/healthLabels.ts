@@ -9,7 +9,7 @@ export const HEALTH_CODE_TITLES: Record<string, string> = {
   orphaned_owner: "Owner has left the project",
   payment_overdue: "Overdue payment",
   payment_due_soon: "Payment due soon",
-  unconfirmed_near_date: "Still unconfirmed",
+  unconfirmed_near_date: "Activity",
   commitment_inactive: "No recent activity",
   missing_cost: "Missing cost",
   budget_exceeded: "Budget exceeded",

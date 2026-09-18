@@ -143,8 +143,15 @@ const repeatLabel = computed(() =>
         >
           Complete
         </AppButton>
+        <span
+          v-else-if="props.commitment.status === 'completed'"
+          class="inline-flex items-center gap-1 rounded px-2 py-1 bg-success-soft text-success text-[12.5px] font-medium"
+        >
+          <span aria-hidden="true">✓</span>
+          Complete
+        </span>
         <div
-          v-if="props.canEdit && !isRecurring"
+          v-if="props.canEdit && !isRecurring && props.commitment.status !== 'completed'"
           class="flex flex-wrap items-center gap-2"
         >
           <AppButton

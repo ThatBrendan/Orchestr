@@ -3,7 +3,7 @@ import { computed } from "vue";
 import type { TimelineEvent } from "@/types/derived";
 import { useProjectTime } from "@/composables/useProjectTime";
 import StatusBadge from "@/components/ui/StatusBadge.vue";
-import { presentLabel } from "@/lib/presentation";
+import { userFacingActivityStatus } from "@/lib/presentation";
 
 const props = defineProps<{ events: TimelineEvent[]; timezone: string }>();
 const t = computed(() => useProjectTime(props.timezone));
@@ -37,11 +37,12 @@ const groups = computed<Group[]>(() => {
     if (!byDay.has(day)) byDay.set(day, { day, items: [] });
     const done = !!e.status && DONE_STATUSES.has(e.status);
     const isPast = new Date(e.occurs_at).getTime() < now;
+    const time = e.all_day ? "" : t.value.time(e.occurs_at);
     byDay.get(day)!.items.push({
       label: e.title,
       status: e.is_recurring_occurrence ? e.status : null,
       link: ['commitment','task'].includes(e.subject_type) ? {name:'project.commitments',params:{projectId:e.project_id},query:{[e.subject_type==='task'?'item':'commitment']:e.subject_id,...(e.occurrence_date?{occurrence:e.occurrence_date}:{})}}:null,
-      time: e.all_day ? "" : t.value.time(e.occurs_at),
+      time: time === "00:00" ? "" : time,
       allDay: e.all_day,
       done,
       overdue: e.is_recurring_occurrence ? e.status === "overdue" : !done && isPast && DEADLINE_TYPES.has(e.event_type),
@@ -66,37 +67,42 @@ const groups = computed<Group[]>(() => {
           v-for="(i, idx) in g.items"
           :key="idx"
           class="flex flex-wrap items-start gap-3 text-14"
-          :class="i.done ? 'text-muted' : ''"
         >
           <span
+            v-if="i.time || i.allDay"
             class="tnum w-12 shrink-0"
             :class="i.overdue ? 'text-danger font-medium' : 'text-ink-soft'"
           >
             {{ i.allDay ? "All day" : i.time }}
           </span>
-          <RouterLink
-            v-if="i.link"
-            :to="i.link"
-            class="min-w-0 flex-1 [overflow-wrap:anywhere] focus-ring hover:underline"
-          >
-            {{ i.label }}
-          </RouterLink>
-          <span
-            v-else
-            class="min-w-0 flex-1 [overflow-wrap:anywhere]"
-            :class="i.done ? 'line-through' : ''"
-          >{{ i.label }}</span>
-          <StatusBadge
-            v-if="i.status && !i.overdue"
-            :label="presentLabel(i.status)"
-            tone="neutral"
-            class="capitalize"
-          />
-          <StatusBadge
-            v-if="i.overdue"
-            label="Overdue"
-            tone="danger"
-          />
+          <div class="min-w-0 flex-1 [overflow-wrap:anywhere]">
+            <RouterLink
+              v-if="i.link"
+              :to="i.link"
+              class="block focus-ring hover:underline"
+              :class="i.done ? 'text-success' : ''"
+            >
+              <span aria-hidden="true" v-if="i.done">✓ </span>{{ i.label }}
+            </RouterLink>
+            <span
+              v-else
+              class="block"
+              :class="i.done ? 'text-success' : ''"
+            ><span aria-hidden="true" v-if="i.done">✓ </span>{{ i.label }}</span>
+            <div v-if="i.status && !i.overdue" class="mt-1">
+              <StatusBadge
+                :label="userFacingActivityStatus(i.status)"
+                :tone="i.done ? 'success' : 'amber'"
+                class="capitalize"
+              />
+            </div>
+            <div v-else-if="i.overdue" class="mt-1">
+              <StatusBadge
+                label="Overdue"
+                tone="danger"
+              />
+            </div>
+          </div>
         </div>
       </div>
     </div>

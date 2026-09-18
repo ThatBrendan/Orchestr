@@ -16,6 +16,7 @@ import AppButton from '@/components/ui/AppButton.vue';
 import AppModal from '@/components/ui/AppModal.vue';
 import ErrorState from '@/components/ui/ErrorState.vue';
 import AppConfirmDialog from '@/components/ui/AppConfirmDialog.vue';
+import StatusBadge from '@/components/ui/StatusBadge.vue';
 import CommitmentFormDialog from '@/components/commitments/CommitmentFormDialog.vue';
 import CommitmentDetailDialog from '@/components/commitments/CommitmentDetailDialog.vue';
 import LegacyItemDialog from '@/components/tasks/LegacyItemDialog.vue';
@@ -64,10 +65,12 @@ watch(()=>items.data.value,()=>{if(!items.isPending.value&&route.query.item&&!le
           v-if="selected"
           variant="ghost"
           size="sm"
+          class="mb-2"
           @click="selectArea(null)"
         >
-          All categories
-        </AppButton><h2 class="font-display text-xl font-semibold">
+          ← Back to Activities
+        </AppButton>
+        <h2 class="font-display text-xl font-semibold">
           {{ selectedArea?.title ?? (selected ? 'Activities without a Category' : 'Activities') }}
         </h2>
       </div>
@@ -139,6 +142,7 @@ watch(()=>items.data.value,()=>{if(!items.isPending.value&&route.query.item&&!le
             <span class="min-w-0 flex-1">
               <span class="block font-medium break-words">{{ activity.title }}</span>
               <span class="block text-13 text-muted">{{ itemTypeLabel(activity.item_type) }} · {{ members.find(m=>m.member_id===activity.assignee_member_id)?.display_name??'Unassigned' }}<template v-if="activity.item_date"> · {{ new Date(activity.item_date).toLocaleDateString(undefined,{timeZone:timezone}) }}</template></span>
+              <span class="mt-2 inline-flex"><StatusBadge :label="itemStatusLabel(activity)" :tone="activity.status === 'completed' ? 'success' : 'amber'" /></span>
             </span>
             <span class="text-14">{{ activity.cost_minor==null?'No cost':format(activity.cost_minor,currency) }}</span>
           </button>
@@ -175,7 +179,11 @@ watch(()=>items.data.value,()=>{if(!items.isPending.value&&route.query.item&&!le
           class="w-full text-left p-4 focus-ring flex flex-wrap gap-3 justify-between"
           @click="openItem(item)"
         >
-          <span class="min-w-0 flex-1"><span class="block font-medium break-words">{{ item.title }}</span><span class="block text-13 text-muted mt-1">{{ itemTypeLabel(item.item_type) }} · {{ members.find(m=>m.member_id===item.assignee_member_id)?.display_name??'Unassigned' }}<template v-if="item.item_date"> · {{ new Date(item.item_date).toLocaleDateString(undefined,{timeZone:timezone}) }}</template> · {{ itemStatusLabel(item) }}</span></span>
+          <span class="min-w-0 flex-1">
+            <span class="block font-medium break-words">{{ item.title }}</span>
+            <span class="block text-13 text-muted mt-1">{{ itemTypeLabel(item.item_type) }} · {{ members.find(m=>m.member_id===item.assignee_member_id)?.display_name??'Unassigned' }}<template v-if="item.item_date"> · {{ new Date(item.item_date).toLocaleDateString(undefined,{timeZone:timezone}) }}</template></span>
+            <span class="mt-2 inline-flex"> <StatusBadge :label="itemStatusLabel(item)" :tone="item.status === 'completed' ? 'success' : 'amber'" /> </span>
+          </span>
           <span class="text-14">{{ item.cost_minor==null?'No cost':format(item.cost_minor,currency) }}</span>
         </button>
       </div>
