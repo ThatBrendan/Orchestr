@@ -21,3 +21,16 @@ export async function markNotificationRead(id: string) {
 export function activityNotificationRoute(item: ActivityNotification) {
   return { name: "project.commitments", params: { projectId: item.project_id }, query: { commitment: item.commitment_id } };
 }
+
+export type JoinNotification = Database["public"]["Views"]["v_my_join_notifications"]["Row"];
+export async function listJoinNotifications() {
+  const { data, count, error } = await supabase.from("v_my_join_notifications")
+    .select("*", { count: "exact" }).is("read_at", null)
+    .order("created_at", { ascending: false }).order("id", { ascending: false }).limit(50);
+  if (error) throw toAppError(error);
+  return { items: data ?? [], unreadCount: count ?? 0 };
+}
+export function joinNotificationRoute(item: JoinNotification) {
+  return { name: "project.overview", params: { projectId: item.project_id },
+    query: item.kind === "project_join_requested" ? { settings: "1" } : {} };
+}

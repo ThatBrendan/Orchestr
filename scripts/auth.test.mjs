@@ -30,3 +30,19 @@ assert.equal(toAuthAppError({code:'over_email_send_rate_limit'}, 'email').kind, 
 assert.equal(toAuthAppError(new Error('AuthApiError raw provider detail'), 'email').message, 'Unable to send the email right now. Try again shortly.');
 assert(RECOVERY_SENT.startsWith('If an account exists'));
 console.log('PASS: auth redirects, environment callbacks, password policy, link parsing, safe errors and recovery copy.');
+
+const joinPath = '/join/' + 'a'.repeat(64);
+assert.equal(safeRedirect(joinPath), joinPath);
+assert.equal(safeRedirect('/join/not-a-token'), null);
+assert.equal(safeRedirect('/join/' + 'a'.repeat(64) + '/extra'), null);
+assert.equal(new URL(authCallbackUrl('https://app.example', joinPath, 'signup')).searchParams.get('redirect'), joinPath);
+assert.equal(readAuthLink(authCallbackUrl('https://app.example', joinPath, 'signup')).redirect, joinPath);
+console.log('PASS join continuation for login, signup and confirmation; malformed/external paths rejected.');
+
+const sharePath = '/s/' + 'b'.repeat(64);
+assert.equal(safeRedirect(sharePath),sharePath);
+assert.equal(safeRedirect('/s/not-a-token'),null);
+assert.equal(safeRedirect(sharePath+'/extra'),null);
+assert.equal(safeRedirect('//evil.example'+sharePath),null);
+assert.equal(readAuthLink(authCallbackUrl('https://app.example',sharePath,'signup')).redirect,sharePath);
+console.log('PASS share login/signup/confirmation continuation and redirect rejection.');

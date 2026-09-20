@@ -10,6 +10,7 @@ import { toAppError } from "@/lib/errors";
 import { PROJECT_PROFILES, isProjectModuleVisible, profileDefinition, setModuleVisibility } from "@/lib/projectProfiles";
 import AppButton from "@/components/ui/AppButton.vue";
 import AppConfirmDialog from "@/components/ui/AppConfirmDialog.vue";
+import ProjectJoinAccess from "@/components/members/ProjectJoinAccess.vue";
 import SectionHeading from "@/components/ui/SectionHeading.vue";
 import type { ProjectProfile, ProjectStatus } from "@/types/database";
 import type { Project } from "@/types/domain";
@@ -162,6 +163,10 @@ const status = computed(() => project.value?.status);
     </div>
 
     <template v-else>
+      <ProjectJoinAccess
+        :project-id="projectId"
+        :read-only="status === 'archived'"
+      />
       <div>
         <SectionHeading label="Details" />
         <form

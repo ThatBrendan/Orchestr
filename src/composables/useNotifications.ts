@@ -29,11 +29,16 @@ export function useNotifications() {
     enabled: computed(() => auth.isAuthenticated),
     refetchInterval: 30_000,
   });
+  const joins = useQuery({
+    queryKey: computed(() => [...qk.me.notifications(), "joins", auth.userId]),
+    queryFn: activityNotifications.listJoinNotifications,
+    enabled: computed(() => auth.isAuthenticated), refetchInterval: 30_000,
+  });
   const markRead = useMutation({
     mutationFn: activityNotifications.markNotificationRead,
     onSuccess: () => client.invalidateQueries({ queryKey: qk.me.notifications() }),
   });
-  const unreadCount = computed(() => (pending.data.value?.length ?? 0) + (activity.data.value?.unreadCount ?? 0));
+  const unreadCount = computed(() => (pending.data.value?.length ?? 0) + (activity.data.value?.unreadCount ?? 0) + (joins.data.value?.unreadCount ?? 0));
   const respond = useMutation({
     mutationFn: ({ token, action }: { token: string; action: "accept" | "decline" }) =>
       action === "accept" ? invitations.acceptInvitation(token) : invitations.declineInvitation(token),
@@ -42,5 +47,5 @@ export function useNotifications() {
       qk.me.attention(), qk.me.calendarRoot(), ["invitation"],
     ].map((queryKey) => client.invalidateQueries({ queryKey }))),
   });
-  return { pending, respond, activity, markRead, unreadCount };
+  return { pending, respond, activity, joins, markRead, unreadCount };
 }

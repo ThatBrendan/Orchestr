@@ -22,8 +22,8 @@ export interface Database {
   public: {
     Tables: {
       notifications: {
-        Row: { id: string; project_id: string; commitment_id: string; recipient_user_id: string; kind: "activity_created"; created_at: string; read_at: string | null };
-        Insert: { id?: string; project_id: string; commitment_id: string; recipient_user_id: string; kind?: "activity_created"; created_at?: string; read_at?: string | null };
+        Row: { id: string; project_id: string; commitment_id: string | null; join_request_id: string | null; recipient_user_id: string; kind: "activity_created" | "project_join_requested" | "project_member_approved"; created_at: string; read_at: string | null };
+        Insert: { id?: string; project_id: string; commitment_id?: string | null; join_request_id?: string | null; recipient_user_id: string; kind?: "activity_created" | "project_join_requested" | "project_member_approved"; created_at?: string; read_at?: string | null };
         Update: { read_at?: string | null };
         Relationships: [];
       };
@@ -557,6 +557,7 @@ export interface Database {
       };
     };
     Views: {
+      v_my_join_notifications: { Row: { id: string; project_id: string; join_request_id: string; kind: "project_join_requested" | "project_member_approved"; created_at: string; read_at: string | null; project_name: string }; Relationships: [] };
       v_project_items: { Row: {id:string;project_id:string;area_id:string|null;source:string;financial_id:string|null;title:string;item_type:string;status:string;assignee_member_id:string|null;item_date:string|null;notes:string|null;recurrence_frequency:string|null;cost_minor:number|null;paid_minor:number;outstanding_minor:number;created_at:string}; Relationships: [] };
       v_area_totals: { Row: {project_id:string;area_id:string|null;item_count:number;cost_minor:number;spent_minor:number}; Relationships: [] };
       v_item_member_balances: { Row: Database['public']['Views']['v_activity_member_settlements']['Row'] & {item_id:string;item_title:string;area_id:string|null;area_title:string|null}; Relationships: [] };
@@ -873,6 +874,17 @@ export interface Database {
       };
     };
         Functions: {
+      get_resource_share_link: { Args: { p_resource_type: string; p_resource_id: string }; Returns: Json };
+      create_resource_share_link: { Args: { p_resource_type: string; p_resource_id: string }; Returns: string };
+      regenerate_resource_share_link: { Args: { p_resource_type: string; p_resource_id: string }; Returns: string };
+      disable_resource_share_link: { Args: { p_resource_type: string; p_resource_id: string }; Returns: undefined };
+      resolve_shared_resource: { Args: { p_token: string }; Returns: Json };
+      get_project_join_access: { Args: { p_project: string; p_offset?: number }; Returns: Json };
+      regenerate_project_join_link: { Args: { p_project: string }; Returns: string };
+      disable_project_join_link: { Args: { p_project: string }; Returns: undefined };
+      resolve_project_join_link: { Args: { p_token: string }; Returns: Json };
+      request_project_access: { Args: { p_token: string }; Returns: Json };
+      review_project_join_request: { Args: { p_request: string; p_approve: boolean }; Returns: undefined };
           delete_project_category: { Args: { p_category: string }; Returns: string };
           create_activity_in_category: { Args: { p_project: string; p_category: string; p_fields: Json; p_split: Json | null }; Returns: Database["public"]["Tables"]["commitments"]["Row"] };
       complete_assigned_item: { Args: {p_item:string;p_occurrence_date?:string|null}; Returns: undefined };

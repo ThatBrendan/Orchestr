@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { ref } from "vue";
+import { useQueryClient } from "@tanstack/vue-query";
+import { qk } from "@/composables/keys";
 import { useRouter } from "vue-router";
-import { activityNotificationRoute, type ActivityNotification } from "@/services/notifications";
+import { activityNotificationRoute, joinNotificationRoute, type JoinNotification, type ActivityNotification } from "@/services/notifications";
 import { useNotifications } from "@/composables/useNotifications";
 import { toAppError } from "@/lib/errors";
 import AppModal from "@/components/ui/AppModal.vue";
@@ -11,7 +13,8 @@ import { presentLabel } from "@/lib/presentation";
 const open = ref(false);
 const message = ref("");
 const router = useRouter();
-const { pending, respond, activity, markRead, unreadCount } = useNotifications();
+const client = useQueryClient();
+const { pending, respond, activity, joins, markRead, unreadCount } = useNotifications();
 async function answer(token: string, action: "accept" | "decline") {
   message.value = "";
   try {
@@ -30,6 +33,14 @@ async function openActivity(item: ActivityNotification) {
     open.value = false;
     await router.push(activityNotificationRoute(item));
   } catch (error) { message.value = toAppError(error).message; }
+}
+async function openJoin(item: JoinNotification) {
+  if (markRead.isPending.value) return;
+  message.value = "";
+  try { await markRead.mutateAsync(item.id);
+    await Promise.all([qk.project.root(item.project_id), qk.me.projects()].map(queryKey => client.invalidateQueries({ queryKey })));
+    open.value = false; await router.push(joinNotificationRoute(item)); }
+  catch (error) { message.value = toAppError(error).message; }
 }
 </script>
 
@@ -176,6 +187,56 @@ async function openActivity(item: ActivityNotification) {
           Showing the newest 50. Open notifications to see older unread activities.
         </p>
       </div>
+    </section>
+    <section
+      class="mt-6 space-y-3"
+      aria-labelledby="join-notifications-title"
+    >
+      <h2
+        id="join-notifications-title"
+        class="text-14 font-semibold"
+      >
+        Project access
+      </h2>
+      <p
+        v-if="joins.isPending.value"
+        class="text-14 text-muted"
+      >
+        Loading access notifications…
+      </p>
+      <p
+        v-else-if="joins.isError.value"
+        class="text-14 text-danger"
+      >
+        Could not load access notifications. <button
+          class="underline focus-ring"
+          @click="joins.refetch()"
+        >
+          Retry
+        </button>
+      </p>
+      <p
+        v-else-if="!joins.data.value?.unreadCount"
+        class="text-14 text-muted"
+      >
+        No unread access notifications.
+      </p>
+      <button
+        v-for="item in joins.data.value?.items"
+        :key="item.id"
+        :disabled="markRead.isPending.value"
+        class="block w-full min-w-0 text-left border border-line rounded-lg p-4 focus-ring hover:bg-paper [overflow-wrap:anywhere] disabled:opacity-50"
+        @click="openJoin(item)"
+      >
+        <span class="block text-14 font-semibold">{{ item.kind === 'project_join_requested' ? 'New project access request' : "You're in" }}</span>
+        <span class="block mt-1 text-14">{{ item.kind === 'project_join_requested' ? 'Someone requested access to ' + item.project_name + '.' : 'Your request to join ' + item.project_name + ' was approved.' }}</span>
+      </button>
+      <p
+        v-if="(joins.data.value?.unreadCount ?? 0) > 50"
+        class="text-13 text-muted"
+      >
+        Showing the newest 50. Open notifications to see older requests.
+      </p>
     </section>
     <p
       v-if="message"

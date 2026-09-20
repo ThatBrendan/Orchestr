@@ -32,7 +32,7 @@ for (const [path, page] of Object.entries(PUBLIC_PAGES)) {
     }
   }
 }
-for (const path of ["/auth/callback?code=secret", "/invite/token", "/app/projects/private-id", "/admin/users/private-id", "/unknown"]) {
+for (const path of ["/auth/callback?code=secret", "/invite/token", "/join/private-token", "/s/private-token", "/app/projects/private-id", "/admin/users/private-id", "/unknown"]) {
   const m = pageMetadata(path, true);
   assert.equal(m.robots, "noindex, nofollow");
   assert.equal(m.canonical, undefined);
@@ -72,3 +72,8 @@ const { toAuthAppError } = await load("src/lib/errors.ts");
 assert.equal(toAuthAppError({ code: "invalid_credentials", message: "private provider data" }).message, "Email or password is incorrect.");
 assert(!toAuthAppError(new Error("private provider data")).message.includes("private"));
 console.log("PASS: metadata, canonical/indexing policy, static content/assets, structured data, search files, 404, analytics URL redaction and public auth errors.");
+
+assert.equal(analyticsPath('/join/' + 'a'.repeat(64)), null);
+
+assert.equal(analyticsPath("/s/private-token"), null);
+assert(robotsContent(true).includes("Disallow: /s/"));

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import ShareLinkDialog from "@/components/sharing/ShareLinkDialog.vue";
 import MemberBalances from '@/components/budget/MemberBalances.vue';
 import {useProjectContext} from '@/composables/useProjectContext';
 import {useQueryClient} from '@tanstack/vue-query';
@@ -47,6 +48,8 @@ const toast = useToast();
 const {context,project}=useProjectContext(),client=useQueryClient();
 const viewerCanComplete=computed(()=>context.value?.role==='viewer'&&context.value.memberId===props.commitment.owner_member_id&&project.value?.status!=='archived'&&!['completed','cancelled'].includes(props.commitment.status));
 const viewerBusy=ref(false);
+const shareOpen = ref(false);
+const canShare = computed(() => context.value?.role === "organizer" || context.value?.role === "member");
 async function viewerComplete(){viewerBusy.value=true;try{await completeAssignedItem(props.commitment.id);await invalidatePlanning(client,props.projectId,[['project',props.projectId,'commitments']]);}catch(e){toast.error(toAppError(e).message);}finally{viewerBusy.value=false;}}
 
 const setStatus = useSetCommitmentStatus(props.projectId);
@@ -385,7 +388,21 @@ const repeatLabel = computed(() =>
       @confirm="doDelete"
     />
 
+    <ShareLinkDialog
+      v-if="shareOpen && props.open && canShare"
+      :resource="{ type: 'activity', id: props.commitment.id }"
+      :read-only="project?.status === 'archived'"
+      @close="shareOpen = false"
+    />
     <template #footer>
+      <AppButton
+        v-if="canShare"
+        variant="ghost"
+        size="sm"
+        @click="shareOpen = true"
+      >
+        Share
+      </AppButton>
       <AppButton
         variant="secondary"
         size="sm"
