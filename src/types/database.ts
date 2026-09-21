@@ -1,3 +1,4 @@
+import type { ResourceCommentRow } from "./comments";
 import type { DecisionRow, DecisionOptionRow, DecisionVoteRow } from "./decisions";
 /**
  * Supabase database types — `public` schema.
@@ -22,6 +23,7 @@ export type Json =
 export interface Database {
   public: {
     Tables: {
+      resource_comments: { Row: ResourceCommentRow; Insert: never; Update: never; Relationships: [] };
       decisions: { Row: DecisionRow; Insert: never; Update: never; Relationships: [] };
       decision_options: { Row: DecisionOptionRow; Insert: never; Update: never; Relationships: [] };
       decision_votes: { Row: DecisionVoteRow; Insert: never; Update: never; Relationships: [] };
@@ -879,6 +881,9 @@ export interface Database {
       };
     };
         Functions: {
+      create_resource_comment: { Args: { p_resource_type: string; p_resource_id: string; p_body: string; p_id?: string }; Returns: Json };
+      delete_resource_comment: { Args: { p_resource_type: string; p_resource_id: string; p_comment: string }; Returns: undefined };
+      get_resource_comments: { Args: { p_resource_type: string; p_resource_id: string; p_before_at?: string; p_before_id?: string }; Returns: Json };
       get_decisions: { Args: { p_project: string; p_decision?: string }; Returns: Json };
       create_decision: { Args: { p_project: string; p_title: string; p_description: string | null; p_deadline: string | null; p_options: Json; p_id?: string }; Returns: string };
       edit_decision: { Args: { p_decision: string; p_title: string; p_description: string | null; p_deadline: string | null; p_options?: Json }; Returns: undefined };

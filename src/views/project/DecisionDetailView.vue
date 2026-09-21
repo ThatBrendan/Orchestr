@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import ResourceComments from "@/components/comments/ResourceComments.vue";
 import { computed, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useQuery } from "@tanstack/vue-query";
@@ -203,6 +204,11 @@ async function removed() { await deleteDecision(id.value); await router.push({ n
           Open Activity
         </AppButton>
       </div>
+      <ResourceComments
+        :key="id"
+        :resource="{ type: 'decision', id }"
+        :timezone="project?.timezone ?? 'UTC'"
+      />
       <DecisionFormDialog
         v-if="dialog === 'edit'"
         :decision="decision"

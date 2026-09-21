@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import ResourceComments from "@/components/comments/ResourceComments.vue";
 import ShareLinkDialog from "@/components/sharing/ShareLinkDialog.vue";
 import MemberBalances from '@/components/budget/MemberBalances.vue';
 import {useProjectContext} from '@/composables/useProjectContext';
@@ -326,6 +327,12 @@ const repeatLabel = computed(() =>
           {{ props.commitment.notes }}
         </p>
       </div>
+      <ResourceComments
+        v-if="props.open"
+        :key="props.commitment.id"
+        :resource="{ type: 'activity', id: props.commitment.id }"
+        :timezone="props.timezone"
+      />
       <OccurrencePanel
         v-if="isRecurring"
         :project-id="props.projectId"

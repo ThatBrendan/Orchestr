@@ -1,15 +1,14 @@
 /** Private app-schema contracts, not part of the public PostgREST Database API.
- * Keep aligned with the event foundation, project join and Decision migrations.
+ * Keep aligned with the event foundation, project join, Decision and Comment migrations.
  * No client emitter: these describe trusted server facts only.
  */
-export type DomainEventType = "activity.created" | "activity.completed" | "project.join_requested" | "project.member_approved" | "decision.created" | "decision.vote_cast" | "decision.deadline_reached" | "decision.resolved";
+export type DomainEventType = "comment.created" | "activity.created" | "activity.completed" | "project.join_requested" | "project.member_approved" | "decision.created" | "decision.vote_cast" | "decision.deadline_reached" | "decision.resolved";
 
 /** Reserved vocabulary: register a validated server handler before enabling emission. */
 export type FutureDomainEventType =
   | "activity.due_soon" | "activity.overdue"
   | "payment.obligation_created" | "payment.requested" | "payment.due_soon"
-  | "payment.marked_paid" | "payment.confirmed" | "payment.collection_settled"
-  | "comment.created";
+  | "payment.marked_paid" | "payment.confirmed" | "payment.collection_settled";
 
 interface DomainEventBase {
   readonly id: string;
@@ -21,6 +20,7 @@ interface DomainEventBase {
 }
 
 export type DomainEventRow = DomainEventBase & (
+  | { readonly event_type: "comment.created"; readonly resource_type: "comment"; readonly payload: { readonly parent_resource_type: "activity" | "decision"; readonly parent_resource_id: string } }
   | { readonly event_type: "decision.created" | "decision.vote_cast" | "decision.deadline_reached"; readonly resource_type: "decision"; readonly payload: Record<string, never> }
   | { readonly event_type: "decision.resolved"; readonly resource_type: "decision"; readonly payload: { readonly resolved_option_id: string } }
   | { readonly event_type: "activity.created" | "activity.completed"; readonly resource_type: "activity"; readonly payload: { readonly category_id: string | null } }
@@ -29,7 +29,7 @@ export type DomainEventRow = DomainEventBase & (
 
 export interface DomainEventTypeRow {
   event_type: DomainEventType;
-  resource_type: "activity" | "join_request" | "decision";
+  resource_type: "activity" | "join_request" | "decision" | "comment";
 }
 export interface AutomationRuleRow {
   id: string;
