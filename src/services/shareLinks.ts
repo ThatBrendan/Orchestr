@@ -3,9 +3,9 @@ import { config } from "@/config";
 import { toAppError } from "@/lib/errors";
 
 /** Only implemented policies belong here. Reserved future vocabulary grants nothing. */
-export type ShareableResource = { type: "activity"; id: string };
+export type ShareableResource = { type: "activity" | "decision"; id: string };
 export type ShareResolution = { state: "sign_in" | "unavailable" } | {
-  state: "authorized"; resource_type: "activity"; resource_id: string; project_id: string;
+  state: "authorized"; resource_type: "activity" | "decision" | "decision"; resource_id: string; project_id: string;
 };
 export interface ShareLink { active: boolean; url: string | null }
 const args = (r: ShareableResource) => ({ p_resource_type: r.type, p_resource_id: r.id });

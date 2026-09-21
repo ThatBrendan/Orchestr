@@ -92,6 +92,8 @@ const routes: RouteRecordRaw[] = [
         children: [
           { path: "", redirect: (to) => ({ name: "project.overview", params: to.params }) },
           { path: "overview", name: "project.overview", component: () => import("@/views/project/OverviewTab.vue") },
+          { path: "decisions", name: "project.decisions", component: () => import("@/views/project/DecisionsTab.vue") },
+          { path: "decisions/:decisionId", name: "project.decision", component: () => import("@/views/project/DecisionDetailView.vue") },
           { path: "areas", alias: "activities", name: "project.commitments", component: () => import("@/views/project/CommitmentsTab.vue") },
           { path: "budget", name: "project.budget", component: () => import("@/views/project/BudgetTab.vue") },
           { path: "timeline", name: "project.timeline", component: () => import("@/views/project/TimelineTab.vue") },

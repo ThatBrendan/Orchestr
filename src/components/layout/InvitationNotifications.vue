@@ -3,7 +3,7 @@ import { ref } from "vue";
 import { useQueryClient } from "@tanstack/vue-query";
 import { qk } from "@/composables/keys";
 import { useRouter } from "vue-router";
-import { activityNotificationRoute, joinNotificationRoute, type JoinNotification, type ActivityNotification } from "@/services/notifications";
+import { decisionNotificationRoute, type DecisionNotification, activityNotificationRoute, joinNotificationRoute, type JoinNotification, type ActivityNotification } from "@/services/notifications";
 import { useNotifications } from "@/composables/useNotifications";
 import { toAppError } from "@/lib/errors";
 import AppModal from "@/components/ui/AppModal.vue";
@@ -14,7 +14,7 @@ const open = ref(false);
 const message = ref("");
 const router = useRouter();
 const client = useQueryClient();
-const { pending, respond, activity, joins, markRead, unreadCount } = useNotifications();
+const { pending, respond, activity, joins, decisions, markRead, unreadCount } = useNotifications();
 async function answer(token: string, action: "accept" | "decline") {
   message.value = "";
   try {
@@ -40,6 +40,12 @@ async function openJoin(item: JoinNotification) {
   try { await markRead.mutateAsync(item.id);
     await Promise.all([qk.project.root(item.project_id), qk.me.projects()].map(queryKey => client.invalidateQueries({ queryKey })));
     open.value = false; await router.push(joinNotificationRoute(item)); }
+  catch (error) { message.value = toAppError(error).message; }
+}
+async function openDecision(item: DecisionNotification) {
+  if (markRead.isPending.value) return;
+  message.value = "";
+  try { await markRead.mutateAsync(item.id); open.value = false; await router.push(decisionNotificationRoute(item)); }
   catch (error) { message.value = toAppError(error).message; }
 }
 </script>
@@ -236,6 +242,56 @@ async function openJoin(item: JoinNotification) {
         class="text-13 text-muted"
       >
         Showing the newest 50. Open notifications to see older requests.
+      </p>
+    </section>
+    <section
+      class="mt-6 space-y-3"
+      aria-labelledby="decision-notifications-title"
+    >
+      <h2
+        id="decision-notifications-title"
+        class="text-14 font-semibold"
+      >
+        Decisions
+      </h2>
+      <p
+        v-if="decisions.isPending.value"
+        class="text-14"
+      >
+        Loading decisions…
+      </p>
+      <p
+        v-else-if="decisions.isError.value"
+        class="text-14"
+      >
+        Could not load decision notifications. <button
+          class="underline focus-ring"
+          @click="decisions.refetch()"
+        >
+          Retry
+        </button>
+      </p>
+      <p
+        v-else-if="!decisions.data.value?.unreadCount"
+        class="text-14 text-muted"
+      >
+        No unread decision notifications.
+      </p>
+      <button
+        v-for="item in decisions.data.value?.items"
+        :key="item.id"
+        :disabled="markRead.isPending.value"
+        class="block w-full text-left border border-line rounded-lg p-4 focus-ring [overflow-wrap:anywhere]"
+        @click="openDecision(item)"
+      >
+        <span class="block font-semibold">{{ item.kind === 'decision_resolved' ? 'Decision resolved' : 'Voting closed' }}</span>
+        <span class="block text-14">{{ item.decision_title }} — {{ item.kind === 'decision_resolved' ? item.selected_title + ' was selected.' : 'Ready to resolve.' }}</span>
+      </button>
+      <p
+        v-if="(decisions.data.value?.unreadCount ?? 0) > 50"
+        class="text-13"
+      >
+        Showing the newest 50. Open notifications to see older decisions.
       </p>
     </section>
     <p

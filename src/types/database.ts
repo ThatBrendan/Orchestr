@@ -1,3 +1,4 @@
+import type { DecisionRow, DecisionOptionRow, DecisionVoteRow } from "./decisions";
 /**
  * Supabase database types — `public` schema.
  *
@@ -21,9 +22,12 @@ export type Json =
 export interface Database {
   public: {
     Tables: {
+      decisions: { Row: DecisionRow; Insert: never; Update: never; Relationships: [] };
+      decision_options: { Row: DecisionOptionRow; Insert: never; Update: never; Relationships: [] };
+      decision_votes: { Row: DecisionVoteRow; Insert: never; Update: never; Relationships: [] };
       notifications: {
-        Row: { id: string; project_id: string; commitment_id: string | null; join_request_id: string | null; recipient_user_id: string; kind: "activity_created" | "project_join_requested" | "project_member_approved"; created_at: string; read_at: string | null };
-        Insert: { id?: string; project_id: string; commitment_id?: string | null; join_request_id?: string | null; recipient_user_id: string; kind?: "activity_created" | "project_join_requested" | "project_member_approved"; created_at?: string; read_at?: string | null };
+        Row: { id: string; project_id: string; commitment_id: string | null; join_request_id: string | null; decision_id: string | null; domain_event_id: string | null; recipient_user_id: string; kind: "activity_created" | "project_join_requested" | "project_member_approved" | "decision_deadline_reached" | "decision_resolved"; created_at: string; read_at: string | null };
+        Insert: { id?: string; project_id: string; commitment_id?: string | null; join_request_id?: string | null; recipient_user_id: string; kind?: "activity_created" | "project_join_requested" | "project_member_approved" | "decision_deadline_reached" | "decision_resolved"; created_at?: string; read_at?: string | null };
         Update: { read_at?: string | null };
         Relationships: [];
       };
@@ -557,6 +561,7 @@ export interface Database {
       };
     };
     Views: {
+      v_my_decision_notifications: { Row: { id: string; project_id: string; decision_id: string; kind: "decision_deadline_reached" | "decision_resolved"; created_at: string; read_at: string | null; decision_title: string; selected_title: string | null }; Relationships: [] };
       v_my_join_notifications: { Row: { id: string; project_id: string; join_request_id: string; kind: "project_join_requested" | "project_member_approved"; created_at: string; read_at: string | null; project_name: string }; Relationships: [] };
       v_project_items: { Row: {id:string;project_id:string;area_id:string|null;source:string;financial_id:string|null;title:string;item_type:string;status:string;assignee_member_id:string|null;item_date:string|null;notes:string|null;recurrence_frequency:string|null;cost_minor:number|null;paid_minor:number;outstanding_minor:number;created_at:string}; Relationships: [] };
       v_area_totals: { Row: {project_id:string;area_id:string|null;item_count:number;cost_minor:number;spent_minor:number}; Relationships: [] };
@@ -874,6 +879,13 @@ export interface Database {
       };
     };
         Functions: {
+      get_decisions: { Args: { p_project: string; p_decision?: string }; Returns: Json };
+      create_decision: { Args: { p_project: string; p_title: string; p_description: string | null; p_deadline: string | null; p_options: Json; p_id?: string }; Returns: string };
+      edit_decision: { Args: { p_decision: string; p_title: string; p_description: string | null; p_deadline: string | null; p_options?: Json }; Returns: undefined };
+      cast_decision_vote: { Args: { p_decision: string; p_option: string | null }; Returns: undefined };
+      resolve_decision: { Args: { p_decision: string; p_option: string }; Returns: undefined };
+      soft_delete_decision: { Args: { p_decision: string }; Returns: undefined };
+      convert_decision_to_activity: { Args: { p_decision: string; p_category: string; p_activity_type?: string }; Returns: string };
       get_resource_share_link: { Args: { p_resource_type: string; p_resource_id: string }; Returns: Json };
       create_resource_share_link: { Args: { p_resource_type: string; p_resource_id: string }; Returns: string };
       regenerate_resource_share_link: { Args: { p_resource_type: string; p_resource_id: string }; Returns: string };

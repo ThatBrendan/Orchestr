@@ -11,6 +11,7 @@ const { project } = useProjectContext();
 const TABS = [
   { name: "project.overview", label: "Overview", module: "overview" },
   { name: "project.commitments", label: "Activities", module: "commitments" },
+  { name: "project.decisions", label: "Decisions", module: "decisions" },
   { name: "project.budget", label: "Budget", module: "budget" },
   { name: "project.timeline", label: "Timeline", module: "timeline" },
   { name: "project.people", label: "People", module: "people" },
@@ -32,7 +33,7 @@ const current = computed(() => String(route.name ?? ""));
       :key="t.name"
       :to="{ name: t.name, params: { projectId: props.projectId } }"
       class="px-3.5 py-2.5 text-[13.5px] font-medium whitespace-nowrap border-b-2 -mb-px focus-ring transition-colors"
-      :class="current === t.name ? 'border-ink text-ink' : 'border-transparent text-muted hover:text-ink-soft'"
+      :class="(current === t.name || (t.name === 'project.decisions' && current === 'project.decision')) ? 'border-ink text-ink' : 'border-transparent text-muted hover:text-ink-soft'"
     >
       {{ t.label }}
     </RouterLink>

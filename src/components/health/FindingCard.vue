@@ -29,6 +29,7 @@ const findingRef = computed(() => ({
 const params = computed(() => (props.finding.params ?? {}) as Record<string, unknown>);
 const dueText = computed(() => relativeDueText(params.value));
 const displayMessage = computed(() => {
+  if (props.finding.subject_type === "decision") return props.finding.message;
   const cleaned = normalizeHealthCopy(props.finding.message);
   const status = userFacingActivityStatus(String(params.value.status ?? ""));
   const pendingStatus = /pending|overdue/i.test(cleaned) || status === "Pending" || status === "Overdue";
@@ -103,8 +104,15 @@ async function doReactivate() {
       <p class="text-13.5 text-ink-soft mt-0.5">
         {{ displayMessage }}
       </p>
+      <RouterLink
+        v-if="finding.subject_type === 'decision'"
+        :to="{ name: 'project.decision', params: { projectId, decisionId: finding.subject_id } }"
+        class="text-13 underline focus-ring"
+      >
+        Open decision
+      </RouterLink>
       <p
-        v-if="displayResolution"
+        v-else-if="displayResolution"
         class="text-13 text-muted mt-1"
       >
         {{ displayResolution }}

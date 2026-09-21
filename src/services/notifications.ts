@@ -34,3 +34,13 @@ export function joinNotificationRoute(item: JoinNotification) {
   return { name: "project.overview", params: { projectId: item.project_id },
     query: item.kind === "project_join_requested" ? { settings: "1" } : {} };
 }
+
+export type DecisionNotification = Database["public"]["Views"]["v_my_decision_notifications"]["Row"];
+export async function listDecisionNotifications() {
+  const { data, count, error } = await supabase.from("v_my_decision_notifications").select("*", { count: "exact" }).is("read_at", null).order("created_at", { ascending: false }).order("id", { ascending: false }).limit(50);
+  if (error) throw toAppError(error);
+  return { items: data ?? [], unreadCount: count ?? 0 };
+}
+export function decisionNotificationRoute(item: DecisionNotification) {
+  return { name: "project.decision", params: { projectId: item.project_id, decisionId: item.decision_id } };
+}

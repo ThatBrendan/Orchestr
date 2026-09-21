@@ -12,13 +12,13 @@ const t = computed(() => useProjectTime(props.timezone));
 // muted rather than looking identical to something still pending. "Upcoming deadlines"
 // that have slipped into the past while still open (a due payment/task) are flagged —
 // this is a purely visual read of already-derived fields, not a second health engine.
-const DONE_STATUSES = new Set(["completed", "cancelled", "paid", "skipped"]);
+const DONE_STATUSES = new Set(["resolved", "completed", "cancelled", "paid", "skipped"]);
 const DEADLINE_TYPES = new Set(["payment_due", "task_due", "recurring_commitment_due", "recurring_task_due"]);
 
 interface Item {
   label: string;
   status: string | null;
-  link: { name: string; params: { projectId: string }; query: Record<string,string> } | null;
+  link: { name: string; params: { projectId: string; decisionId?: string }; query: Record<string,string> } | null;
   time: string;
   allDay: boolean;
   done: boolean;
@@ -40,8 +40,8 @@ const groups = computed<Group[]>(() => {
     const time = e.all_day ? "" : t.value.time(e.occurs_at);
     byDay.get(day)!.items.push({
       label: e.title,
-      status: e.is_recurring_occurrence ? e.status : null,
-      link: ['commitment','task'].includes(e.subject_type) ? {name:'project.commitments',params:{projectId:e.project_id},query:{[e.subject_type==='task'?'item':'commitment']:e.subject_id,...(e.occurrence_date?{occurrence:e.occurrence_date}:{})}}:null,
+      status: e.subject_type === "decision" ? ({ voting_open: "Voting open", voting_closed: "Voting closed", resolved: "Resolved" }[e.status ?? ""] ?? null) : e.is_recurring_occurrence ? e.status : null,
+      link: e.subject_type === 'decision' ? { name: 'project.decision', params: { projectId: e.project_id, decisionId: e.subject_id }, query: {} } : ['commitment','task'].includes(e.subject_type) ? {name:'project.commitments',params:{projectId:e.project_id},query:{[e.subject_type==='task'?'item':'commitment']:e.subject_id,...(e.occurrence_date?{occurrence:e.occurrence_date}:{})}}:null,
       time: time === "00:00" ? "" : time,
       allDay: e.all_day,
       done,

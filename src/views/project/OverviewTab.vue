@@ -98,6 +98,7 @@ watch(() => health.needsAttention.value.length, () => {
               v-for="(f, i) in attentionPage.items"
               :key="f.code + (f.subject_id ?? '') + i"
               :finding="f"
+              :to="f.subject_type === 'decision' ? { name: 'project.decision', params: { projectId, decisionId: f.subject_id } } : undefined"
             />
           </div>
           <div

@@ -21,6 +21,8 @@ async function resolve() {
     if (result.state === "authorized" && result.resource_type === "activity") {
       // A known internal route only. Normal router guards, Activity APIs and RLS still apply.
       await router.replace({ name: "project.commitments", params: { projectId: result.project_id }, query: { commitment: result.resource_id } });
+    } else if (result.state === "authorized" && result.resource_type === "decision") {
+      await router.replace({ name: "project.decision", params: { projectId: result.project_id, decisionId: result.resource_id } });
     }
   } catch { if (current === generation) failed.value = true; }
   finally { if (current === generation) loading.value = false; }

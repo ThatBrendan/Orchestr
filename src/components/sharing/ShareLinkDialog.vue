@@ -40,7 +40,7 @@ async function copy() {
 <template>
   <AppModal
     :open="true"
-    title="Share activity"
+    :title="resource.type === 'decision' ? 'Share decision' : 'Share activity'"
     :busy="busy"
     @close="emit('close')"
   >

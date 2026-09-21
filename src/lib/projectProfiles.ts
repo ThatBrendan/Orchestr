@@ -1,6 +1,6 @@
 import type { Json, ProjectProfile } from "@/types/database";
 
-export type ProjectModule = "overview" | "commitments" | "budget" | "timeline" | "people" | "notes" | "health";
+export type ProjectModule = "overview" | "decisions" | "commitments" | "budget" | "timeline" | "people" | "notes" | "health";
 
 export interface ProjectProfileDefinition {
   value: ProjectProfile;
@@ -9,7 +9,7 @@ export interface ProjectProfileDefinition {
   defaultModules: ProjectModule[];
 }
 
-export const ALL_PROJECT_MODULES: ProjectModule[] = ["overview", "commitments", "budget", "timeline", "people", "notes", "health"];
+export const ALL_PROJECT_MODULES: ProjectModule[] = ["overview", "commitments", "decisions", "budget", "timeline", "people", "notes", "health"];
 
 export const PROJECT_PROFILES: ProjectProfileDefinition[] = [
   {
@@ -28,19 +28,19 @@ export const PROJECT_PROFILES: ProjectProfileDefinition[] = [
     value: "house_move",
     label: "House Move & Checklist",
     description: "Keep activities, deadlines and responsibilities organised.",
-    defaultModules: ["overview", "commitments", "timeline", "people", "notes", "health"],
+    defaultModules: ["overview", "commitments", "decisions", "timeline", "people", "notes", "health"],
   },
   {
     value: "recurring_process",
     label: "Recurring Process",
     description: "Run work that repeats weekly, fortnightly or monthly.",
-    defaultModules: ["overview", "commitments", "timeline", "people", "notes", "health"],
+    defaultModules: ["overview", "commitments", "decisions", "timeline", "people", "notes", "health"],
   },
   {
     value: "team_project",
     label: "Team Project",
     description: "Coordinate owners, deadlines, milestones and execution.",
-    defaultModules: ["overview", "commitments", "timeline", "people", "notes", "health"],
+    defaultModules: ["overview", "commitments", "decisions", "timeline", "people", "notes", "health"],
   },
   {
     value: "launch",
