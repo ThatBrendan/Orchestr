@@ -44,3 +44,13 @@ export async function listDecisionNotifications() {
 export function decisionNotificationRoute(item: DecisionNotification) {
   return { name: "project.decision", params: { projectId: item.project_id, decisionId: item.decision_id } };
 }
+
+export type PaymentNotification = Database["public"]["Views"]["v_my_payment_notifications"]["Row"];
+export async function listPaymentNotifications() {
+  const { data, count, error } = await supabase.from("v_my_payment_notifications").select("*", { count: "exact" }).is("read_at", null).order("created_at", { ascending: false }).order("id", { ascending: false }).limit(50);
+  if (error) throw toAppError(error);
+  return { items: data ?? [], unreadCount: count ?? 0 };
+}
+export function paymentNotificationRoute(item: PaymentNotification) {
+  return { name: "project.commitments", params: { projectId: item.project_id }, query: { commitment: item.commitment_id, section: "payments" } };
+}

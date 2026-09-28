@@ -198,6 +198,12 @@ export interface Database {
         Update: {title?:string;notes?:string|null};
         Relationships: [];
       };
+      activity_payment_schedules: {
+        Row: { id: string; project_id: string; commitment_id: string; title: string; amount_minor: number; due_on: string; sort_order: number; created_at: string; updated_at: string; deleted_at: string | null };
+        Insert: { project_id: string; commitment_id: string; title: string; amount_minor: number; due_on: string; sort_order?: number; deleted_at?: string | null };
+        Update: { title?: string; amount_minor?: number; due_on?: string; sort_order?: number; deleted_at?: string | null };
+        Relationships: [];
+      };
       commitments: {
         Row: {
           id: string;
@@ -324,6 +330,7 @@ export interface Database {
         Row: {
           id: string;
           settlement_group_id: string | null;
+          payment_schedule_id: string | null;
           project_id: string;
           commitment_id: string;
           type: Database["public"]["Enums"]["payment_type"];
@@ -355,6 +362,7 @@ export interface Database {
           method?: string | null;
           reference?: string | null;
           notes?: string | null;
+          payment_schedule_id?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["payments"]["Insert"]> & {
           deleted_at?: string | null;
@@ -563,6 +571,7 @@ export interface Database {
       };
     };
     Views: {
+      v_my_payment_notifications: { Row: { id: string; project_id: string; created_at: string; read_at: string | null; commitment_id: string; title: string; due_on: string; outstanding_minor: number; currency: string }; Relationships: [] };
       v_my_decision_notifications: { Row: { id: string; project_id: string; decision_id: string; kind: "decision_deadline_reached" | "decision_resolved"; created_at: string; read_at: string | null; decision_title: string; selected_title: string | null }; Relationships: [] };
       v_my_join_notifications: { Row: { id: string; project_id: string; join_request_id: string; kind: "project_join_requested" | "project_member_approved"; created_at: string; read_at: string | null; project_name: string }; Relationships: [] };
       v_project_items: { Row: {id:string;project_id:string;area_id:string|null;source:string;financial_id:string|null;title:string;item_type:string;status:string;assignee_member_id:string|null;item_date:string|null;notes:string|null;recurrence_frequency:string|null;cost_minor:number|null;paid_minor:number;outstanding_minor:number;created_at:string}; Relationships: [] };
@@ -575,6 +584,7 @@ export interface Database {
       v_project_member_settlements: { Row: { project_id: string; member_id: string; display_name: string; member_status: string; currency: string; allocated_minor: number; paid_minor: number; remaining_minor: number }; Relationships: [] };
       v_project_settlement_totals: { Row: { project_id: string; remaining_minor: number; credit_minor: number }; Relationships: [] };
       v_activity_member_settlements: { Row: { project_id: string; commitment_id: string; member_id: string; display_name: string; member_status: string; allocated_minor: number; paid_minor: number; remaining_minor: number }; Relationships: [] };
+      v_activity_payment_schedule_financials: { Row: { payment_schedule_id: string; project_id: string; commitment_id: string; title: string; scheduled_amount_minor: number; due_on: string; sort_order: number; gross_paid_minor: number; refunded_minor: number; net_paid_minor: number; outstanding_minor: number }; Relationships: [] };
       v_activity_cost_shares: {
         Row: { project_id: string; commitment_id: string; member_id: string; amount_minor: number };
         Relationships: [];
@@ -927,6 +937,7 @@ export interface Database {
       decline_invitation: { Args: { p_token: string }; Returns: string };
       list_my_invitations: { Args: Record<string, never>; Returns: { id: string; project_id: string; token: string; project_name: string; inviter_name: string | null; role: MemberRole; created_at: string }[] };
 
+      soft_delete_payment_schedule: { Args: { p_schedule: string }; Returns: undefined };
       soft_delete_commitment: { Args: { p_commitment: string }; Returns: string };
       soft_delete_task: { Args: { p_task: string }; Returns: string };
       soft_delete_project: { Args: { p_project: string }; Returns: string };

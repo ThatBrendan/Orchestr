@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { paymentScheduleLabels, paymentScheduleTone } from "@/lib/paymentSchedules";
 import { computed } from "vue";
 import type { TimelineEvent } from "@/types/derived";
 import { useProjectTime } from "@/composables/useProjectTime";
@@ -21,6 +22,7 @@ interface Item {
   link: { name: string; params: { projectId: string; decisionId?: string }; query: Record<string,string> } | null;
   time: string;
   allDay: boolean;
+  schedule: boolean;
   done: boolean;
   overdue: boolean;
 }
@@ -40,12 +42,13 @@ const groups = computed<Group[]>(() => {
     const time = e.all_day ? "" : t.value.time(e.occurs_at);
     byDay.get(day)!.items.push({
       label: e.title,
-      status: e.subject_type === "decision" ? ({ voting_open: "Voting open", voting_closed: "Voting closed", resolved: "Resolved" }[e.status ?? ""] ?? null) : e.is_recurring_occurrence ? e.status : null,
-      link: e.subject_type === 'decision' ? { name: 'project.decision', params: { projectId: e.project_id, decisionId: e.subject_id }, query: {} } : ['commitment','task'].includes(e.subject_type) ? {name:'project.commitments',params:{projectId:e.project_id},query:{[e.subject_type==='task'?'item':'commitment']:e.subject_id,...(e.occurrence_date?{occurrence:e.occurrence_date}:{})}}:null,
+      schedule: e.subject_type === "payment_schedule",
+      status: e.subject_type === "payment_schedule" ? (paymentScheduleLabels[e.status ?? ""] ?? null) : e.subject_type === "decision" ? ({ voting_open: "Voting open", voting_closed: "Voting closed", resolved: "Resolved" }[e.status ?? ""] ?? null) : e.is_recurring_occurrence ? e.status : null,
+      link: e.subject_type === 'payment_schedule' ? {name:'project.commitments',params:{projectId:e.project_id},query:{commitment:e.subject_id,section:'payments'}} : e.subject_type === 'decision' ? { name: 'project.decision', params: { projectId: e.project_id, decisionId: e.subject_id }, query: {} } : ['commitment','task'].includes(e.subject_type) ? {name:'project.commitments',params:{projectId:e.project_id},query:{[e.subject_type==='task'?'item':'commitment']:e.subject_id,...(e.occurrence_date?{occurrence:e.occurrence_date}:{})}}:null,
       time: time === "00:00" ? "" : time,
       allDay: e.all_day,
       done,
-      overdue: e.is_recurring_occurrence ? e.status === "overdue" : !done && isPast && DEADLINE_TYPES.has(e.event_type),
+      overdue: e.subject_type === "payment_schedule" ? e.status === "overdue" : e.is_recurring_occurrence ? e.status === "overdue" : !done && isPast && DEADLINE_TYPES.has(e.event_type),
     });
   }
   return [...byDay.values()];
@@ -82,21 +85,33 @@ const groups = computed<Group[]>(() => {
               class="block focus-ring hover:underline"
               :class="i.done ? 'text-success' : ''"
             >
-              <span aria-hidden="true" v-if="i.done">✓ </span>{{ i.label }}
+              <span
+                v-if="i.done"
+                aria-hidden="true"
+              >✓ </span>{{ i.label }}
             </RouterLink>
             <span
               v-else
               class="block"
               :class="i.done ? 'text-success' : ''"
-            ><span aria-hidden="true" v-if="i.done">✓ </span>{{ i.label }}</span>
-            <div v-if="i.status && !i.overdue" class="mt-1">
+            ><span
+              v-if="i.done"
+              aria-hidden="true"
+            >✓ </span>{{ i.label }}</span>
+            <div
+              v-if="i.status && !i.overdue"
+              class="mt-1"
+            >
               <StatusBadge
-                :label="userFacingActivityStatus(i.status)"
-                :tone="i.done ? 'success' : 'amber'"
+                :label="i.schedule ? i.status : userFacingActivityStatus(i.status)"
+                :tone="i.schedule ? paymentScheduleTone(i.status ?? '') : i.done ? 'success' : 'amber'"
                 class="capitalize"
               />
             </div>
-            <div v-else-if="i.overdue" class="mt-1">
+            <div
+              v-else-if="i.overdue"
+              class="mt-1"
+            >
               <StatusBadge
                 label="Overdue"
                 tone="danger"

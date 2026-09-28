@@ -29,7 +29,7 @@ const findingRef = computed(() => ({
 const params = computed(() => (props.finding.params ?? {}) as Record<string, unknown>);
 const dueText = computed(() => relativeDueText(params.value));
 const displayMessage = computed(() => {
-  if (props.finding.subject_type === "decision") return props.finding.message;
+  if (["decision", "payment_schedule"].includes(props.finding.subject_type)) return props.finding.message;
   const cleaned = normalizeHealthCopy(props.finding.message);
   const status = userFacingActivityStatus(String(params.value.status ?? ""));
   const pendingStatus = /pending|overdue/i.test(cleaned) || status === "Pending" || status === "Overdue";
@@ -110,6 +110,13 @@ async function doReactivate() {
         class="text-13 underline focus-ring"
       >
         Open decision
+      </RouterLink>
+      <RouterLink
+        v-else-if="finding.subject_type === 'payment_schedule'"
+        :to="{name: 'project.commitments', params: {projectId}, query: {commitment: String(params.activity_id), section: 'payments'}}"
+        class="text-13 underline focus-ring"
+      >
+        Open payments
       </RouterLink>
       <p
         v-else-if="displayResolution"
