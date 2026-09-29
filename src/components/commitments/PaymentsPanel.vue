@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import ReimbursementsPanel from "./ReimbursementsPanel.vue";
 import {useProjectContext} from '@/composables/useProjectContext';
 import { useRoute } from "vue-router";
 import { onMounted, nextTick, computed, reactive, ref, watch } from "vue";
@@ -614,5 +615,13 @@ const scheduleTone = (schedule: typeof schedules.value[number]) => paymentSchedu
         </form>
       </div>
     </div>
+    <ReimbursementsPanel
+      :project-id="projectId"
+      :activity-id="commitmentId"
+      :currency="currency"
+      :payments="allPayments"
+      :members="members"
+      :can-edit="canEdit"
+    />
   </div>
 </template>

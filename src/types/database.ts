@@ -1,3 +1,4 @@
+import type { Reimbursement, ReimbursementSuggestion, ReimbursementNotification, ReimbursementRequest } from "./reimbursements";
 import type { ResourceCommentRow } from "./comments";
 import type { DecisionRow, DecisionOptionRow, DecisionVoteRow } from "./decisions";
 /**
@@ -23,13 +24,14 @@ export type Json =
 export interface Database {
   public: {
     Tables: {
+      reimbursement_requests: { Row: ReimbursementRequest; Insert: never; Update: never; Relationships: [] };
       resource_comments: { Row: ResourceCommentRow; Insert: never; Update: never; Relationships: [] };
       decisions: { Row: DecisionRow; Insert: never; Update: never; Relationships: [] };
       decision_options: { Row: DecisionOptionRow; Insert: never; Update: never; Relationships: [] };
       decision_votes: { Row: DecisionVoteRow; Insert: never; Update: never; Relationships: [] };
       notifications: {
-        Row: { id: string; project_id: string; commitment_id: string | null; join_request_id: string | null; decision_id: string | null; domain_event_id: string | null; recipient_user_id: string; kind: "activity_created" | "project_join_requested" | "project_member_approved" | "decision_deadline_reached" | "decision_resolved"; created_at: string; read_at: string | null };
-        Insert: { id?: string; project_id: string; commitment_id?: string | null; join_request_id?: string | null; recipient_user_id: string; kind?: "activity_created" | "project_join_requested" | "project_member_approved" | "decision_deadline_reached" | "decision_resolved"; created_at?: string; read_at?: string | null };
+        Row: { id: string; project_id: string; commitment_id: string | null; join_request_id: string | null; decision_id: string | null; reimbursement_id: string | null; payment_schedule_id: string | null; domain_event_id: string | null; recipient_user_id: string; kind: "reimbursement_created" | "payment_due_soon" | "activity_created" | "project_join_requested" | "project_member_approved" | "decision_deadline_reached" | "decision_resolved"; created_at: string; read_at: string | null };
+        Insert: { id?: string; project_id: string; commitment_id?: string | null; join_request_id?: string | null; recipient_user_id: string; kind?: "reimbursement_created" | "payment_due_soon" | "activity_created" | "project_join_requested" | "project_member_approved" | "decision_deadline_reached" | "decision_resolved"; created_at?: string; read_at?: string | null };
         Update: { read_at?: string | null };
         Relationships: [];
       };
@@ -571,6 +573,8 @@ export interface Database {
       };
     };
     Views: {
+      v_reimbursements: { Row: Reimbursement; Relationships: [] };
+      v_my_reimbursement_notifications: { Row: ReimbursementNotification; Relationships: [] };
       v_my_payment_notifications: { Row: { id: string; project_id: string; created_at: string; read_at: string | null; commitment_id: string; title: string; due_on: string; outstanding_minor: number; currency: string }; Relationships: [] };
       v_my_decision_notifications: { Row: { id: string; project_id: string; decision_id: string; kind: "decision_deadline_reached" | "decision_resolved"; created_at: string; read_at: string | null; decision_title: string; selected_title: string | null }; Relationships: [] };
       v_my_join_notifications: { Row: { id: string; project_id: string; join_request_id: string; kind: "project_join_requested" | "project_member_approved"; created_at: string; read_at: string | null; project_name: string }; Relationships: [] };
@@ -891,6 +895,9 @@ export interface Database {
       };
     };
         Functions: {
+      get_reimbursement_suggestions: { Args: { p_payment: string }; Returns: ReimbursementSuggestion[] };
+      create_reimbursement: { Args: { p_payment: string; p_debtor: string; p_amount: number }; Returns: string };
+      cancel_reimbursement: { Args: { p_request: string }; Returns: undefined };
       create_resource_comment: { Args: { p_resource_type: string; p_resource_id: string; p_body: string; p_id?: string }; Returns: Json };
       delete_resource_comment: { Args: { p_resource_type: string; p_resource_id: string; p_comment: string }; Returns: undefined };
       get_resource_comments: { Args: { p_resource_type: string; p_resource_id: string; p_before_at?: string; p_before_id?: string }; Returns: Json };

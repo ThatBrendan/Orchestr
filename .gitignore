@@ -20,3 +20,8 @@ supabase/.temp/
 
 
 
+
+# Phase 7 financial workflow documentation
+!docs/REIMBURSEMENTS.md
+!docs/PHASE_7_REIMBURSEMENTS_REPORT.md
+!docs/DOMAIN_EVENTS.md

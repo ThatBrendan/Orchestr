@@ -29,7 +29,7 @@ const findingRef = computed(() => ({
 const params = computed(() => (props.finding.params ?? {}) as Record<string, unknown>);
 const dueText = computed(() => relativeDueText(params.value));
 const displayMessage = computed(() => {
-  if (["decision", "payment_schedule"].includes(props.finding.subject_type)) return props.finding.message;
+  if (["decision", "payment_schedule", "reimbursement"].includes(props.finding.subject_type)) return props.finding.message;
   const cleaned = normalizeHealthCopy(props.finding.message);
   const status = userFacingActivityStatus(String(params.value.status ?? ""));
   const pendingStatus = /pending|overdue/i.test(cleaned) || status === "Pending" || status === "Overdue";
@@ -44,6 +44,7 @@ const displayMessage = computed(() => {
   return base;
 });
 const displayResolution = computed(() => {
+  if (props.finding.subject_type === "reimbursement") return props.finding.resolution;
   const cleaned = normalizeHealthCopy(props.finding.resolution);
   if (/confirm it, complete it, or cancel it/i.test(cleaned)) return "Review activity";
   if (/^\s*$/u.test(cleaned)) return "";
@@ -112,8 +113,8 @@ async function doReactivate() {
         Open decision
       </RouterLink>
       <RouterLink
-        v-else-if="finding.subject_type === 'payment_schedule'"
-        :to="{name: 'project.commitments', params: {projectId}, query: {commitment: String(params.activity_id), section: 'payments'}}"
+        v-else-if="['payment_schedule', 'reimbursement'].includes(finding.subject_type)"
+        :to="{name: 'project.commitments', params: {projectId}, query: {commitment: String(params.activity_id), section: finding.subject_type === 'reimbursement' ? 'reimbursements' : 'payments'}}"
         class="text-13 underline focus-ring"
       >
         Open payments

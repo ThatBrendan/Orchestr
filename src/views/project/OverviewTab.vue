@@ -98,7 +98,7 @@ watch(() => health.needsAttention.value.length, () => {
               v-for="(f, i) in attentionPage.items"
               :key="f.code + (f.subject_id ?? '') + i"
               :finding="f"
-              :to="f.subject_type === 'decision' ? { name: 'project.decision', params: { projectId, decisionId: f.subject_id } } : f.subject_type === 'payment_schedule' ? { name: 'project.commitments', params: { projectId }, query: { commitment: String((f.params as Record<string, unknown>).activity_id), section: 'payments' } } : undefined"
+              :to="f.subject_type === 'decision' ? { name: 'project.decision', params: { projectId, decisionId: f.subject_id } } : ['payment_schedule','reimbursement'].includes(f.subject_type) ? { name: 'project.commitments', params: { projectId }, query: { commitment: String((f.params as Record<string, unknown>).activity_id), section: f.subject_type === 'reimbursement' ? 'reimbursements' : 'payments' } } : undefined"
             />
           </div>
           <div

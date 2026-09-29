@@ -2,6 +2,7 @@
 import {computed,ref} from 'vue';
 import {useQuery,useQueryClient} from '@tanstack/vue-query';
 import {DateTime} from 'luxon';
+import {useReimbursements} from '@/composables/useReimbursements';
 import {useProjectSettlement} from '@/composables/useSettlement';
 import {useProjectContext} from '@/composables/useProjectContext';
 import {useMoney} from '@/composables/useMoney';
@@ -11,6 +12,8 @@ import {toAppError} from '@/lib/errors';
 import AppButton from '@/components/ui/AppButton.vue';
 import AppModal from '@/components/ui/AppModal.vue';
 const props=defineProps<{projectId:string;currency:string;itemId?:string}>();
+const reimbursements=useReimbursements(()=>props.projectId);
+function memberRequests(id:string){return (reimbursements.data.value??[]).filter(r=>(r.debtor_member_id===id||r.creditor_member_id===id)&&(!props.itemId||r.commitment_id===props.itemId));}
 const query=useProjectSettlement(()=>props.projectId),client=useQueryClient();
 const {project,isOrganizer}=useProjectContext();const {format,toMinor,toMajor}=useMoney();
 const lines=useQuery({queryKey:computed(()=>['settlement','items',props.projectId]),queryFn:async()=>{const {data,error}=await supabase.from('v_item_member_balances').select('*').eq('project_id',props.projectId);if(error)throw toAppError(error);return data;}});
@@ -88,6 +91,41 @@ async function cancel(){if(!cancelling.value)return;busy.value=true;error.value=
             </AppButton>
           </div>
         </div>
+        <section
+          class="mt-4 space-y-2 text-13"
+          aria-label="Reimbursement requests"
+        >
+          <h3 class="font-medium">
+            Reimbursements
+          </h3>
+          <p v-if="reimbursements.isPending.value">
+            Loading reimbursements…
+          </p>
+          <p v-else-if="reimbursements.isError.value">
+            Could not load reimbursements. <button
+              class="underline"
+              @click="reimbursements.refetch()"
+            >
+              Retry
+            </button>
+          </p>
+          <p
+            v-else-if="!memberRequests(member.member_id).length"
+            class="text-muted"
+          >
+            No reimbursement requests.
+          </p>
+          <RouterLink
+            v-for="request in memberRequests(member.member_id)"
+            :key="request.id"
+            :to="{name:'project.commitments',params:{projectId},query:{commitment:request.commitment_id,section:'reimbursements'}}"
+            class="block rounded-lg border border-line p-3 focus-ring [overflow-wrap:anywhere]"
+          >
+            <span class="block font-medium">{{ request.activity_title }}</span>
+            <span>{{ request.status==='cancelled'||request.needs_review ? request.debtor_name+' → '+request.creditor_name : request.is_debtor ? 'You owe '+request.creditor_name : request.is_creditor ? request.debtor_name+' owes you' : request.debtor_name+' owes '+request.creditor_name }} · {{ format(request.amount_minor,currency) }}</span>
+            <span class="block text-muted">{{ request.status==='cancelled'?'Cancelled':request.needs_review?'Review needed — original request amount':'Outstanding' }}</span>
+          </RouterLink>
+        </section>
       </details>
     </template>
     <details
