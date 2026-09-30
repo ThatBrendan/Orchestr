@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import PaymentLinksSettings from "@/components/settings/PaymentLinksSettings.vue";
 import PasswordForm from "@/components/ui/PasswordForm.vue";
 import { computed, ref, watch } from "vue";
 import { useMyProfile, useUpdateMyDisplayName } from "@/composables/useDashboard";
@@ -150,6 +151,7 @@ async function saveName() {
         </div>
       </div>
     </div>
+    <PaymentLinksSettings />
     <section
       class="mt-8 max-w-sm border rounded-xl p-5 border-line bg-surface"
       aria-labelledby="change-password-title"

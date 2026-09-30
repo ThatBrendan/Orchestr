@@ -31,7 +31,7 @@ RLS is enabled and forced. Reads require live project/Activity/source and active
 
 Creation emits `reimbursement.created` with only parent Activity/payment IDs; one debtor notification is produced transactionally. Cancellation emits `reimbursement.cancelled` without a notification. No personal profile or amount payload is needed. Notifications link to Activity Payments/Reimbursements. Valid open requests produce a debtor-only Outstanding attention finding, with no invented due date or Timeline row. No reimbursement share-link policy or comment resource is registered.
 
-Payment links can later attach to the authenticated request resource without changing any accounting. Public links, providers, bank details, “I've paid”, receipt confirmation and Phase 8 are deferred.
+Phase 8 adds user-owned payment links through a debtor-only, request-scoped read endpoint; see [Payment links](PAYMENT_LINKS.md). Links use current configuration and never enter reimbursement snapshots or accounting. Stale/cancelled/archived/inaccessible requests expose no payment options. Public sharing, bank details, “I've paid” and receipt confirmation remain deferred.
 
 ## Project cleanup compatibility
 

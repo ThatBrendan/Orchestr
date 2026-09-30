@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import ReimbursementPaymentOptions from "./ReimbursementPaymentOptions.vue";
 import { computed, nextTick, onMounted, watch, ref } from 'vue';
 import { useRoute } from 'vue-router';
 import { useProjectContext } from '@/composables/useProjectContext';
@@ -13,7 +14,7 @@ import AppButton from '@/components/ui/AppButton.vue';
 import StatusBadge from '@/components/ui/StatusBadge.vue';
 const props = defineProps<{ projectId: string; activityId: string; currency: string; payments: Payment[]; members: MemberDirectoryEntry[]; canEdit: boolean }>();
 const route = useRoute();
-const { context, isOrganizer } = useProjectContext();
+const { context, isOrganizer, project } = useProjectContext();
 const { format } = useMoney();
 const query = useReimbursements(() => props.projectId, () => props.activityId);
 const refresh = useRefreshReimbursements(props.projectId);
@@ -119,6 +120,17 @@ watch(() => route.query.section, focusRequestedSection);
       </p>
       <p class="text-muted">
         {{ r.activity_title }} · From {{ format(r.source_amount_minor, r.currency) }} paid by {{ r.creditor_name }} on {{ r.source_paid_on }} · Request created {{ new Date(r.created_at).toLocaleDateString() }}
+      </p>
+      <ReimbursementPaymentOptions
+        v-if="r.is_debtor && r.status==='open' && !r.needs_review && project?.status!=='archived'"
+        :request-id="r.id"
+        :creditor-name="r.creditor_name"
+      />
+      <p
+        v-if="r.is_debtor && r.needs_review"
+        class="text-muted"
+      >
+        This reimbursement needs review before payment.
       </p>
       <AppButton
         v-if="r.can_cancel"

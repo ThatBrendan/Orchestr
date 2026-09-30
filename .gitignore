@@ -25,3 +25,7 @@ supabase/.temp/
 !docs/REIMBURSEMENTS.md
 !docs/PHASE_7_REIMBURSEMENTS_REPORT.md
 !docs/DOMAIN_EVENTS.md
+
+# Phase 8 personal payment-link documentation
+!docs/PAYMENT_LINKS.md
+!docs/PHASE_8_PAYMENT_LINKS_REPORT.md

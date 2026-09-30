@@ -1,3 +1,4 @@
+import type { PaymentLink, PaymentOption } from "./paymentLinks";
 import type { Reimbursement, ReimbursementSuggestion, ReimbursementNotification, ReimbursementRequest } from "./reimbursements";
 import type { ResourceCommentRow } from "./comments";
 import type { DecisionRow, DecisionOptionRow, DecisionVoteRow } from "./decisions";
@@ -24,6 +25,7 @@ export type Json =
 export interface Database {
   public: {
     Tables: {
+      user_payment_links: { Row: PaymentLink; Insert: never; Update: never; Relationships: [] };
       reimbursement_requests: { Row: ReimbursementRequest; Insert: never; Update: never; Relationships: [] };
       resource_comments: { Row: ResourceCommentRow; Insert: never; Update: never; Relationships: [] };
       decisions: { Row: DecisionRow; Insert: never; Update: never; Relationships: [] };
@@ -895,6 +897,11 @@ export interface Database {
       };
     };
         Functions: {
+      list_my_payment_links: { Args: Record<string, never>; Returns: PaymentLink[] };
+      save_my_payment_link: { Args: { p_provider: string; p_url: string; p_label?: string | null; p_id?: string | null; p_enabled?: boolean }; Returns: string };
+      delete_my_payment_link: { Args: { p_id: string }; Returns: undefined };
+      set_default_payment_link: { Args: { p_id?: string | null }; Returns: undefined };
+      get_reimbursement_payment_options: { Args: { p_request: string }; Returns: PaymentOption[] };
       get_reimbursement_suggestions: { Args: { p_payment: string }; Returns: ReimbursementSuggestion[] };
       create_reimbursement: { Args: { p_payment: string; p_debtor: string; p_amount: number }; Returns: string };
       cancel_reimbursement: { Args: { p_request: string }; Returns: undefined };
