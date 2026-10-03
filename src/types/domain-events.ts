@@ -2,11 +2,11 @@
  * Keep aligned with the event foundation, project join, Decision and Comment migrations.
  * No client emitter: these describe trusted server facts only.
  */
-export type DomainEventType = "reimbursement.receipt_confirmed" | "reimbursement.payment_acknowledged" | "reimbursement.payment_acknowledgement_withdrawn" | "reimbursement.created" | "reimbursement.cancelled" | "payment.due_soon" | "comment.created" | "activity.created" | "activity.completed" | "project.join_requested" | "project.member_approved" | "decision.created" | "decision.vote_cast" | "decision.deadline_reached" | "decision.resolved";
+export type DomainEventType = "activity.due_soon" | "reimbursement.receipt_confirmed" | "reimbursement.payment_acknowledged" | "reimbursement.payment_acknowledgement_withdrawn" | "reimbursement.created" | "reimbursement.cancelled" | "payment.due_soon" | "comment.created" | "activity.created" | "activity.completed" | "project.join_requested" | "project.member_approved" | "decision.created" | "decision.vote_cast" | "decision.deadline_reached" | "decision.resolved";
 
 /** Reserved vocabulary: register a validated server handler before enabling emission. */
 export type FutureDomainEventType =
-  | "activity.due_soon" | "activity.overdue"
+  | "activity.overdue"
   | "payment.obligation_created" | "payment.requested"
   | "payment.marked_paid" | "payment.confirmed" | "payment.collection_settled";
 
@@ -20,6 +20,7 @@ interface DomainEventBase {
 }
 
 export type DomainEventRow = DomainEventBase & (
+  | { readonly event_type: "activity.due_soon"; readonly resource_type: "activity"; readonly payload: Record<string, never> }
   | { readonly event_type: "reimbursement.receipt_confirmed"; readonly resource_type: "reimbursement_receipt_confirmation"; readonly payload: { readonly activity_id: string; readonly reimbursement_request_id: string; readonly acknowledgement_id: string } }
   | { readonly event_type: "reimbursement.payment_acknowledged" | "reimbursement.payment_acknowledgement_withdrawn"; readonly resource_type: "reimbursement_payment_acknowledgement"; readonly payload: { readonly activity_id: string; readonly reimbursement_request_id: string } }
   | { readonly event_type: "reimbursement.created" | "reimbursement.cancelled"; readonly resource_type: "reimbursement"; readonly payload: { readonly activity_id: string; readonly payment_id: string } }
@@ -37,10 +38,10 @@ export interface DomainEventTypeRow {
 }
 export interface AutomationRuleRow {
   id: string;
-  event_type: "reimbursement.receipt_confirmed" | "reimbursement.payment_acknowledged" | "reimbursement.payment_acknowledgement_withdrawn" | "reimbursement.created" | "payment.due_soon" | "activity.created" | "project.join_requested" | "project.member_approved" | "decision.deadline_reached" | "decision.resolved";
+  event_type: "activity.due_soon" | "reimbursement.receipt_confirmed" | "reimbursement.payment_acknowledged" | "reimbursement.payment_acknowledgement_withdrawn" | "reimbursement.created" | "payment.due_soon" | "activity.created" | "project.join_requested" | "project.member_approved" | "decision.deadline_reached" | "decision.resolved";
   enabled: boolean;
   condition_handler: "always" | "activity_live" | "join_project_live" | "decision_live";
-  action_type: "notify_receipt_debtor" | "notify_reimbursement_creditor" | "notify_reimbursement_debtor" | "notify_payment_responsible" | "notify_activity_collaborators" | "notify_join_organizers" | "notify_approved_requester" | "notify_decision_managers" | "notify_decision_members";
+  action_type: "notify_activity_responsible" | "notify_receipt_debtor" | "notify_reimbursement_creditor" | "notify_reimbursement_debtor" | "notify_payment_responsible" | "notify_activity_collaborators" | "notify_join_organizers" | "notify_approved_requester" | "notify_decision_managers" | "notify_decision_members";
   action_config: Record<string, never>;
   priority: number;
 }

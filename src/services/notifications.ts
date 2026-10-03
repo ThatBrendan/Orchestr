@@ -78,3 +78,30 @@ export async function listReceiptConfirmationNotifications() {
  if (error) throw toAppError(error);
  return { items: data ?? [], unreadCount: count ?? 0 };
 }
+
+export type InboxNotification = Database['public']['Views']['v_my_notification_inbox']['Row'];
+export type NotificationCursor = Pick<InboxNotification, 'created_at' | 'id'>;
+export async function listNotificationInbox(cursor?: NotificationCursor) {
+  let query = supabase.from('v_my_notification_inbox').select('*').order('created_at', { ascending: false }).order('id', { ascending: false }).limit(21);
+  if (cursor) query = query.or(`created_at.lt.${cursor.created_at},and(created_at.eq.${cursor.created_at},id.lt.${cursor.id})`);
+  const { data, error } = await query;
+  if (error) throw toAppError(error);
+  const items = (data ?? []).slice(0, 20);
+  return { items, next: (data?.length ?? 0) > 20 ? items.at(-1) : undefined };
+}
+export async function notificationUnreadCount() {
+  const { count, error } = await supabase.from('v_my_notification_inbox').select('id', { count: 'exact', head: true }).is('read_at', null);
+  if (error) throw toAppError(error);
+  return count ?? 0;
+}
+export async function markAllNotificationsRead() {
+  const { data, error } = await supabase.rpc('mark_all_notifications_read');
+  if (error) throw toAppError(error);
+  return data;
+}
+export function notificationRoute(item: InboxNotification) {
+  if (item.resource_type === 'activity') return { name: 'project.commitments', params: { projectId: item.project_id }, query: { commitment: item.resource_id, ...(item.section === 'payments' || item.section === 'reimbursements' ? { section: item.section } : {}) } };
+  if (item.resource_type === 'decision') return { name: 'project.decision', params: { projectId: item.project_id, decisionId: item.resource_id } };
+  if (item.resource_type === 'project') return { name: 'project.overview', params: { projectId: item.project_id }, query: item.section === 'people' ? { settings: '1' } : {} };
+  throw new AppError('not_found', 'This notification is no longer available.');
+}

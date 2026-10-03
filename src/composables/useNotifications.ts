@@ -1,5 +1,5 @@
 import { computed, toValue, type MaybeRefOrGetter } from "vue";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/vue-query";
+import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/vue-query";
 import { useAuthStore } from "@/stores/auth";
 import * as activityNotifications from "@/services/notifications";
 import * as invitations from "@/services/invitations";
@@ -23,27 +23,20 @@ export function useNotifications() {
     enabled: computed(() => auth.isAuthenticated),
     refetchInterval: 30_000,
   });
-  const activity = useQuery({
-    queryKey: computed(() => [...qk.me.notifications(), "activities", auth.userId]),
-    queryFn: activityNotifications.listActivityNotifications,
-    enabled: computed(() => auth.isAuthenticated),
-    refetchInterval: 30_000,
-  });
-  const joins = useQuery({
-    queryKey: computed(() => [...qk.me.notifications(), "joins", auth.userId]),
-    queryFn: activityNotifications.listJoinNotifications,
+  const inbox = useInfiniteQuery({
+    queryKey: computed(() => [...qk.me.notifications(), 'inbox', auth.userId]),
+    initialPageParam: undefined as activityNotifications.NotificationCursor | undefined,
+    queryFn: ({ pageParam }) => activityNotifications.listNotificationInbox(pageParam),
+    getNextPageParam: page => page.next,
     enabled: computed(() => auth.isAuthenticated), refetchInterval: 30_000,
   });
-  const decisions = useQuery({ queryKey: computed(() => [...qk.me.notifications(), "decisions", auth.userId]), queryFn: activityNotifications.listDecisionNotifications, enabled: computed(() => auth.isAuthenticated), refetchInterval: 30_000 });
-  const payments = useQuery({ queryKey: computed(() => [...qk.me.notifications(), "payments", auth.userId]), queryFn: activityNotifications.listPaymentNotifications, enabled: computed(() => auth.isAuthenticated), refetchInterval: 30_000 });
-  const receipts = useQuery({ queryKey: computed(() => [...qk.me.notifications(), "receipts", auth.userId]), queryFn: activityNotifications.listReceiptConfirmationNotifications, enabled: computed(() => auth.isAuthenticated), refetchInterval: 30_000 });
-  const acknowledgements = useQuery({ queryKey: computed(() => [...qk.me.notifications(), "acknowledgements", auth.userId]), queryFn: activityNotifications.listPaymentAcknowledgementNotifications, enabled: computed(() => auth.isAuthenticated), refetchInterval: 30_000 });
-  const reimbursements = useQuery({ queryKey: computed(() => [...qk.me.notifications(), "reimbursements", auth.userId]), queryFn: activityNotifications.listReimbursementNotifications, enabled: computed(() => auth.isAuthenticated), refetchInterval: 30_000 });
+  const count = useQuery({ queryKey: computed(() => [...qk.me.notifications(), 'unread', auth.userId]), queryFn: activityNotifications.notificationUnreadCount, enabled: computed(() => auth.isAuthenticated), refetchInterval: 30_000 });
+  const markAllRead = useMutation({ mutationFn: activityNotifications.markAllNotificationsRead, onSuccess: () => client.invalidateQueries({ queryKey: qk.me.notifications() }) });
   const markRead = useMutation({
     mutationFn: activityNotifications.markNotificationRead,
     onSuccess: () => client.invalidateQueries({ queryKey: qk.me.notifications() }),
   });
-  const unreadCount = computed(() => (pending.data.value?.length ?? 0) + (activity.data.value?.unreadCount ?? 0) + (joins.data.value?.unreadCount ?? 0) + (decisions.data.value?.unreadCount ?? 0) + (payments.data.value?.unreadCount ?? 0) + (reimbursements.data.value?.unreadCount ?? 0) + (acknowledgements.data.value?.unreadCount ?? 0) + (receipts.data.value?.unreadCount ?? 0));
+  const unreadCount = computed(() => (pending.data.value?.length ?? 0) + (count.data.value ?? 0));
   const respond = useMutation({
     mutationFn: ({ token, action }: { token: string; action: "accept" | "decline" }) =>
       action === "accept" ? invitations.acceptInvitation(token) : invitations.declineInvitation(token),
@@ -52,5 +45,5 @@ export function useNotifications() {
       qk.me.attention(), qk.me.calendarRoot(), ["invitation"],
     ].map((queryKey) => client.invalidateQueries({ queryKey }))),
   });
-  return { pending, respond, activity, joins, decisions, payments, reimbursements, acknowledgements, receipts, markRead, unreadCount };
+  return { pending, respond, inbox, count, markRead, markAllRead, unreadCount };
 }

@@ -118,10 +118,10 @@ pending ones. External actions will require an outbox and per-action delivery re
 receipts must not be treated as proof of exactly-once external delivery. Do not build independent
 notification-specific cron systems per feature.
 
-Phase 6 payment schedules do not emit a new event yet. Their due dates remain ordinary derived
-financial data until the trusted evaluator is extended with schedule-aware, project-timezone
-conditions and organizer recipient rules. The reserved `payment.due_soon` vocabulary remains
-available; no duplicate payment event name is introduced.
+Phase 6 payment schedules emit `payment.due_soon` through the shared trusted evaluator.
+The seven-day window uses project-local dates and outstanding schedule balances, with assigned
+owner or active Organizer fallback. Stable schedule/date keys deduplicate rescans. Phase 11
+adds recipient-specific optional delivery while preserving this event and its financial invariance.
 
 ## Phase 2 extension: project access requests
 
@@ -215,3 +215,16 @@ settlement event, so no second event is emitted. A request's transition to settl
 emit the older cancellation event. Existing acknowledgement notifications hide once settled;
 receipt notifications resolve authorized current state and use correction copy if the pair
 was later reversed. See [Receipt confirmations](REIMBURSEMENT_CONFIRMATIONS.md).
+
+## Phase 11: optional recipient delivery and shared scheduling
+
+See [Notifications and automation](NOTIFICATIONS_AUTOMATION.md) for the audited current architecture.
+`activity.due_soon` adds a minimal empty payload and timestamp/three-day key. The existing
+one-minute cron now dispatches three static bounded evaluators with per-resource failure evidence.
+`app.notification_policy` categorizes known actions. Optional preference filtering occurs per
+recipient at insertion, never in event emission or a rule-wide condition. Critical payment claims,
+withdrawals, receipt confirmations and access approvals bypass optional category preferences.
+Immutable delivery receipts distinguish delivered from preference-suppressed; event processing
+and action receipts remain authoritative and idempotent. Re-enabling never replays old facts.
+The authorized unified inbox adds cursor history and current-user mark-all-read. No external
+channel, business-state automation toggle, Health/Timeline projection or Phase 12 work is added.

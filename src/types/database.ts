@@ -27,6 +27,7 @@ export type Json =
 export interface Database {
   public: {
     Tables: {
+      user_notification_preferences: { Row: { id: string; user_id: string; category: string; enabled: boolean; created_at: string; updated_at: string }; Insert: never; Update: never; Relationships: [] };
       user_payment_links: { Row: PaymentLink; Insert: never; Update: never; Relationships: [] };
       reimbursement_payment_acknowledgements: { Row: PaymentAcknowledgement; Insert: never; Update: never; Relationships: [] };
       reimbursement_receipt_confirmations: { Row: ReceiptConfirmation; Insert: never; Update: never; Relationships: [] };
@@ -36,7 +37,7 @@ export interface Database {
       decision_options: { Row: DecisionOptionRow; Insert: never; Update: never; Relationships: [] };
       decision_votes: { Row: DecisionVoteRow; Insert: never; Update: never; Relationships: [] };
       notifications: {
-        Row: { id: string; project_id: string; commitment_id: string | null; join_request_id: string | null; decision_id: string | null; reimbursement_id: string | null; payment_acknowledgement_id: string | null; receipt_confirmation_id: string | null; payment_schedule_id: string | null; domain_event_id: string | null; recipient_user_id: string; kind: "reimbursement_receipt_confirmed" | "reimbursement_payment_acknowledged" | "reimbursement_payment_acknowledgement_withdrawn" | "reimbursement_created" | "payment_due_soon" | "activity_created" | "project_join_requested" | "project_member_approved" | "decision_deadline_reached" | "decision_resolved"; created_at: string; read_at: string | null };
+        Row: { id: string; project_id: string; activity_reminder_id: string | null; commitment_id: string | null; join_request_id: string | null; decision_id: string | null; reimbursement_id: string | null; payment_acknowledgement_id: string | null; receipt_confirmation_id: string | null; payment_schedule_id: string | null; domain_event_id: string | null; recipient_user_id: string; kind: "activity_due_soon" | "reimbursement_receipt_confirmed" | "reimbursement_payment_acknowledged" | "reimbursement_payment_acknowledgement_withdrawn" | "reimbursement_created" | "payment_due_soon" | "activity_created" | "project_join_requested" | "project_member_approved" | "decision_deadline_reached" | "decision_resolved"; created_at: string; read_at: string | null };
         Insert: { id?: string; project_id: string; commitment_id?: string | null; join_request_id?: string | null; recipient_user_id: string; kind?: "reimbursement_created" | "payment_due_soon" | "activity_created" | "project_join_requested" | "project_member_approved" | "decision_deadline_reached" | "decision_resolved"; created_at?: string; read_at?: string | null };
         Update: { read_at?: string | null };
         Relationships: [];
@@ -579,6 +580,7 @@ export interface Database {
       };
     };
     Views: {
+      v_my_notification_inbox: { Row: { id: string; project_id: string; created_at: string; read_at: string | null; kind: string; category: string; resource_type: 'activity' | 'decision' | 'project'; resource_id: string; section: 'payments' | 'reimbursements' | 'people' | null; title: string; body: string }; Relationships: [] };
       v_reimbursement_payment_status: { Row: ReimbursementPaymentStatus; Relationships: [] };
       v_my_payment_acknowledgement_notifications: { Row: PaymentAcknowledgementNotification; Relationships: [] };
       v_my_receipt_confirmation_notifications: { Row: ReceiptConfirmationNotification; Relationships: [] };
@@ -904,6 +906,8 @@ export interface Database {
       };
     };
         Functions: {
+      set_my_notification_preference: { Args: { p_category: string; p_enabled: boolean }; Returns: undefined };
+      mark_all_notifications_read: { Args: Record<string, never>; Returns: number };
       list_my_payment_links: { Args: Record<string, never>; Returns: PaymentLink[] };
       save_my_payment_link: { Args: { p_provider: string; p_url: string; p_label?: string | null; p_id?: string | null; p_enabled?: boolean }; Returns: string };
       delete_my_payment_link: { Args: { p_id: string }; Returns: undefined };
