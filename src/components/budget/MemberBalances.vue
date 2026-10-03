@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import ReimbursementStatusLabel from "@/components/commitments/ReimbursementStatusLabel.vue";
 import {computed,ref} from 'vue';
 import {useQuery,useQueryClient} from '@tanstack/vue-query';
 import {DateTime} from 'luxon';
@@ -123,7 +124,7 @@ async function cancel(){if(!cancelling.value)return;busy.value=true;error.value=
           >
             <span class="block font-medium">{{ request.activity_title }}</span>
             <span>{{ request.status==='cancelled'||request.needs_review ? request.debtor_name+' → '+request.creditor_name : request.is_debtor ? 'You owe '+request.creditor_name : request.is_creditor ? request.debtor_name+' owes you' : request.debtor_name+' owes '+request.creditor_name }} · {{ format(request.amount_minor,currency) }}</span>
-            <span class="block text-muted">{{ request.status==='cancelled'?'Cancelled':request.needs_review?'Review needed — original request amount':'Outstanding' }}</span>
+            <ReimbursementStatusLabel :request="request" />
           </RouterLink>
         </section>
       </details>

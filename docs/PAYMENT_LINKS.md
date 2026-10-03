@@ -86,3 +86,12 @@ are not persisted. A future debtor acknowledgement must be an explicit audited
 workflow, independent of link clicks, before any later creditor confirmation and
 existing settlement transfer. Phase 9/10, public sharing and payment initiation
 are not part of Phase 8.
+
+## Phase 9 integration
+
+An active debtor acknowledgement now suppresses both the normal payment CTA and the
+server `get_reimbursement_payment_options` response, preventing encouragement to pay
+twice. The renamed prior implementation has no client execution grant. Explicit undo
+restores options only when the request is otherwise current, open and accessible.
+Opening an external link still performs no mutation and is never evidence of payment.
+See [Payment acknowledgements](PAYMENT_ACKNOWLEDGEMENTS.md).

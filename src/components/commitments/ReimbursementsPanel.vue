@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import ReimbursementPaymentOptions from "./ReimbursementPaymentOptions.vue";
+import ReimbursementCard from "./ReimbursementCard.vue";
 import { computed, nextTick, onMounted, watch, ref } from 'vue';
 import { useRoute } from 'vue-router';
 import { useProjectContext } from '@/composables/useProjectContext';
@@ -11,19 +11,18 @@ import type { Payment } from '@/services/payments';
 import type { MemberDirectoryEntry } from '@/types/derived';
 import type { Reimbursement, ReimbursementSuggestion } from '@/types/reimbursements';
 import AppButton from '@/components/ui/AppButton.vue';
-import StatusBadge from '@/components/ui/StatusBadge.vue';
 const props = defineProps<{ projectId: string; activityId: string; currency: string; payments: Payment[]; members: MemberDirectoryEntry[]; canEdit: boolean }>();
 const route = useRoute();
-const { context, isOrganizer, project } = useProjectContext();
+const { context, isOrganizer } = useProjectContext();
 const { format } = useMoney();
 const query = useReimbursements(() => props.projectId, () => props.activityId);
 const refresh = useRefreshReimbursements(props.projectId);
 const sources = computed(() => props.payments.filter(p => p.status === 'paid' && p.direction === 'outgoing' && !p.settlement_group_id && p.paid_by_member_id && (isOrganizer.value || p.paid_by_member_id === context.value?.memberId)));
 const show = ref(false), source = ref(''), busy = ref(false), error = ref('');
 const suggestions = ref<ReimbursementSuggestion[]>([]), selected = ref<string[]>([]);
+const cancellingAcknowledged = ref(false);
 const cancelling = ref<Reimbursement | null>(null);
 const total = computed(() => suggestions.value.filter(s => selected.value.includes(s.debtor_member_id)).reduce((sum, s) => sum + s.amount_minor, 0));
-function perspective(r: Reimbursement) { return r.is_debtor ? `You owe ${r.creditor_name}` : r.is_creditor ? `${r.debtor_name} owes you` : `${r.debtor_name} owes ${r.creditor_name}`; }
 async function load() {
   error.value = ''; suggestions.value = []; selected.value = [];
   if (!source.value) return;
@@ -99,48 +98,12 @@ watch(() => route.query.section, focusRequestedSection);
     >
       No reimbursements requested.
     </p>
-    <div
+    <ReimbursementCard
       v-for="r in query.data.value"
       :key="r.id"
-      class="rounded-lg border border-line p-3 space-y-2 text-13"
-      :data-reimbursement-id="r.id"
-    >
-      <p class="font-medium">
-        {{ r.status === 'cancelled' || r.needs_review ? `${r.debtor_name} → ${r.creditor_name}` : perspective(r) }}
-      </p>
-      <div class="flex flex-wrap items-center gap-2">
-        <span>{{ r.needs_review ? 'Original request: ' : '' }}{{ format(r.amount_minor, r.currency) }}</span>
-        <StatusBadge
-          :label="r.status === 'cancelled' ? 'Cancelled' : r.needs_review ? 'Review needed' : 'Outstanding'"
-          tone="neutral"
-        />
-      </div>
-      <p v-if="r.needs_review">
-        Payments or shares changed. This original request needs review; cancel and recreate it using the current balances.
-      </p>
-      <p class="text-muted">
-        {{ r.activity_title }} · From {{ format(r.source_amount_minor, r.currency) }} paid by {{ r.creditor_name }} on {{ r.source_paid_on }} · Request created {{ new Date(r.created_at).toLocaleDateString() }}
-      </p>
-      <ReimbursementPaymentOptions
-        v-if="r.is_debtor && r.status==='open' && !r.needs_review && project?.status!=='archived'"
-        :request-id="r.id"
-        :creditor-name="r.creditor_name"
-      />
-      <p
-        v-if="r.is_debtor && r.needs_review"
-        class="text-muted"
-      >
-        This reimbursement needs review before payment.
-      </p>
-      <AppButton
-        v-if="r.can_cancel"
-        size="sm"
-        variant="ghost"
-        @click="cancelling=r;error=''"
-      >
-        Cancel reimbursement
-      </AppButton>
-    </div>
+      :r="r"
+      @cancel="(request, acknowledged) => { cancelling=request; cancellingAcknowledged=acknowledged; error=''; }"
+    />
     <form
       v-if="show"
       class="rounded-lg border border-line p-3 space-y-3 text-13"
@@ -199,6 +162,9 @@ watch(() => route.query.section, focusRequestedSection);
       role="group"
       aria-label="Cancel reimbursement confirmation"
     >
+      <p v-if="cancellingAcknowledged">
+        {{ cancelling.debtor_name }} marked this payment as sent. Cancelling will not record a settlement.
+      </p>
       <p>Cancel {{ cancelling.debtor_name }}'s {{ format(cancelling.amount_minor, cancelling.currency) }} reimbursement? The payment and shares will stay unchanged.</p>
       <div class="flex flex-wrap gap-2">
         <AppButton

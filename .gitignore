@@ -29,3 +29,7 @@ supabase/.temp/
 # Phase 8 personal payment-link documentation
 !docs/PAYMENT_LINKS.md
 !docs/PHASE_8_PAYMENT_LINKS_REPORT.md
+
+# Phase 9 acknowledgement documentation
+!docs/PAYMENT_ACKNOWLEDGEMENTS.md
+!docs/PHASE_9_PAYMENT_ACKNOWLEDGEMENTS_REPORT.md

@@ -61,6 +61,13 @@ export async function listReimbursementNotifications() {
   if (error) throw toAppError(error);
   return { items: data ?? [], unreadCount: count ?? 0 };
 }
-export function reimbursementNotificationRoute(item: ReimbursementNotification) {
+export function reimbursementNotificationRoute(item: Pick<ReimbursementNotification, 'project_id' | 'commitment_id'>) {
   return { name: "project.commitments", params: { projectId: item.project_id }, query: { commitment: item.commitment_id, section: "reimbursements" } };
+}
+
+export type PaymentAcknowledgementNotification = Database['public']['Views']['v_my_payment_acknowledgement_notifications']['Row'];
+export async function listPaymentAcknowledgementNotifications() {
+  const { data, count, error } = await supabase.from('v_my_payment_acknowledgement_notifications').select('*', { count: 'exact' }).is('read_at', null).order('created_at', { ascending: false }).order('id', { ascending: false }).limit(50);
+  if (error) throw toAppError(error);
+  return { items: data ?? [], unreadCount: count ?? 0 };
 }

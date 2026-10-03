@@ -5,7 +5,7 @@ import { qk } from "@/composables/keys";
 import { useRouter } from "vue-router";
 import { useMoney } from "@/composables/useMoney";
 import { DateTime } from "luxon";
-import { reimbursementNotificationRoute, type ReimbursementNotification, paymentNotificationRoute, type PaymentNotification, decisionNotificationRoute, type DecisionNotification, activityNotificationRoute, joinNotificationRoute, type JoinNotification, type ActivityNotification } from "@/services/notifications";
+import { reimbursementNotificationRoute, type ReimbursementNotification, type PaymentAcknowledgementNotification, paymentNotificationRoute, type PaymentNotification, decisionNotificationRoute, type DecisionNotification, activityNotificationRoute, joinNotificationRoute, type JoinNotification, type ActivityNotification } from "@/services/notifications";
 import { useNotifications } from "@/composables/useNotifications";
 import { toAppError } from "@/lib/errors";
 import AppModal from "@/components/ui/AppModal.vue";
@@ -17,7 +17,7 @@ const open = ref(false);
 const message = ref("");
 const router = useRouter();
 const client = useQueryClient();
-const { pending, respond, activity, joins, decisions, payments, reimbursements, markRead, unreadCount } = useNotifications();
+const { pending, respond, activity, joins, decisions, payments, reimbursements, acknowledgements, markRead, unreadCount } = useNotifications();
 async function answer(token: string, action: "accept" | "decline") {
   message.value = "";
   try {
@@ -57,7 +57,7 @@ async function openPayment(item: PaymentNotification) {
   try { await markRead.mutateAsync(item.id); open.value = false; await router.push(paymentNotificationRoute(item)); }
   catch (error) { message.value = toAppError(error).message; }
 }
-async function openReimbursement(item: ReimbursementNotification) {
+async function openReimbursement(item: ReimbursementNotification | PaymentAcknowledgementNotification) {
   if (markRead.isPending.value) return;
   message.value = "";
   try { await markRead.mutateAsync(item.id); open.value = false; await router.push(reimbursementNotificationRoute(item)); }
@@ -407,6 +407,56 @@ async function openReimbursement(item: ReimbursementNotification) {
         class="text-13"
       >
         Showing the newest 50. Open notifications to see older reimbursements.
+      </p>
+    </section>
+    <section
+      class="mt-6 space-y-3"
+      aria-labelledby="acknowledgement-notifications-title"
+    >
+      <h2
+        id="acknowledgement-notifications-title"
+        class="text-14 font-semibold"
+      >
+        Payment updates
+      </h2>
+      <p
+        v-if="acknowledgements.isPending.value"
+        class="text-14"
+      >
+        Loading payment updates…
+      </p>
+      <p
+        v-else-if="acknowledgements.isError.value"
+        class="text-14"
+      >
+        Could not load acknowledgements. <button
+          class="underline focus-ring"
+          @click="acknowledgements.refetch()"
+        >
+          Retry
+        </button>
+      </p>
+      <p
+        v-else-if="!acknowledgements.data.value?.unreadCount"
+        class="text-14 text-muted"
+      >
+        No unread acknowledgements.
+      </p>
+      <button
+        v-for="item in acknowledgements.data.value?.items"
+        :key="item.id"
+        :disabled="markRead.isPending.value"
+        class="block w-full text-left border border-line rounded-lg p-4 focus-ring [overflow-wrap:anywhere]"
+        @click="openReimbursement(item)"
+      >
+        <span class="block font-semibold">{{ item.needs_review ? 'Reimbursement needs review' : item.kind==='reimbursement_payment_acknowledged' ? 'Payment marked as sent' : 'Payment status updated' }}</span>
+        <span class="block text-14">{{ item.needs_review ? item.activity_title + ': the financial position has changed. The payment-sent history remains available.' : item.kind==='reimbursement_payment_acknowledged' ? item.debtor_name+" says they've paid "+format(item.amount_minor,item.currency)+' for '+item.activity_title+'. Awaiting confirmation.' : item.debtor_name+' withdrew their payment-sent acknowledgement for '+item.activity_title+'.' }}</span>
+      </button>
+      <p
+        v-if="(acknowledgements.data.value?.unreadCount ?? 0) > 50"
+        class="text-13"
+      >
+        Showing the newest 50. Open notifications to see older acknowledgements.
       </p>
     </section>
     <p

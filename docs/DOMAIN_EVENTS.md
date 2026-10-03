@@ -178,3 +178,25 @@ financial snapshots to review copy. Notifications open the existing Activity rou
 `section=reimbursements`. No external delivery, public share resource or scheduled event
 is introduced. Existing event handlers are retained behind delegating private wrappers,
 with client execution revoked. See [Reimbursements](REIMBURSEMENTS.md).
+
+## Phase 9: debtor payment claims
+
+`20260930160000_reimbursement_payment_acknowledgements.sql` registers
+`reimbursement.payment_acknowledged` and
+`reimbursement.payment_acknowledgement_withdrawn`, with resource type
+`reimbursement_payment_acknowledgement`. The immutable acknowledgement ID and stable
+`acknowledged` / `withdrawn` keys identify transitions. Payload contains only
+`activity_id` and `reimbursement_request_id`. Actor is the actual active debtor;
+Organizer authority cannot impersonate that person, and a Viewer debtor is valid.
+
+The private emitter validates state, identity and exact payload; the existing pipeline
+writes one processing receipt, one action receipt and one creditor-only notification.
+`notify_reimbursement_creditor` has no Organizer fallback or external delivery. Re-acknowledgement
+creates a fresh resource ID, so its notification does not collide with earlier claims.
+The inbox shows the latest applicable transition and resolves current authorized request
+data; stale requests use review copy, cancelled/deleted requests disappear. Deep links
+remain Activity `section=reimbursements`. Facts and audit remain historical.
+
+These events are claims, never proof of receipt. They do not call a settlement RPC,
+write payments or change balances. There is no creditor confirmation action, new
+Timeline item or scheduled evaluator. See [Payment acknowledgements](PAYMENT_ACKNOWLEDGEMENTS.md).
