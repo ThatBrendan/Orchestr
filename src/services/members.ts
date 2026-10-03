@@ -38,7 +38,7 @@ export async function inviteMember(projectId: string, email: string, role: Extra
   return { invitationId: data, emailed: false };
 }
 
-/** Organizer-only role change on an existing member row (docs/SECURITY_RLS.md §5.3). */
+/** Organizer-only role change on an existing member row (docs/BACKEND_SECURITY_AND_DATA.md). */
 export async function updateMemberRole(memberId: string, role: MemberRole): Promise<ProjectMember> {
   const { data, error } = await supabase
     .from("project_members")

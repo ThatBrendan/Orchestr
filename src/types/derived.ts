@@ -7,7 +7,7 @@ import type {
   MemberStatus,
 } from "./database";
 
-/** Derived — computed server-side, read-only (docs/DATABASE_SCHEMA.md §5). */
+/** Derived — computed server-side, read-only (docs/BACKEND_SECURITY_AND_DATA.md). */
 export type ProjectFinancials = Database["public"]["Views"]["v_project_financials"]["Row"];
 export type ProjectOverview = Database["public"]["Views"]["v_project_overview"]["Row"];
 export type CommitmentFinancials = Database["public"]["Views"]["v_commitment_financials"]["Row"];

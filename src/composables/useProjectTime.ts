@@ -1,7 +1,7 @@
 import { DateTime } from "luxon";
 
 /**
- * Render dates/times in the project's timezone (docs/TECHNICAL_ARCHITECTURE.md §5).
+ * Render dates/times in the project's timezone (docs/FRONTEND_AND_UX.md).
  * The project timezone is passed explicitly — never inferred from the browser.
  */
 export function useProjectTime(timezone: string) {

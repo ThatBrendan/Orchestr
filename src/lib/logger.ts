@@ -1,6 +1,6 @@
 import { config } from "@/config";
 
-/** Redacting logger (docs/TECHNICAL_ARCHITECTURE.md §19). Never log tokens/emails/rows. */
+/** Redacting logger (docs/FRONTEND_AND_UX.md). Never log tokens/emails/rows. */
 type Level = "debug" | "info" | "warn" | "error";
 
 function emit(level: Level, msg: string, ctx?: Record<string, unknown>) {

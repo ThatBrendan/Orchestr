@@ -1,4 +1,4 @@
-/** Query-key factory (docs/TECHNICAL_ARCHITECTURE.md §4.2). */
+/** Query-key factory (docs/FRONTEND_AND_UX.md). */
 export const qk = {
   invitation: (token: string) => ["invitation", token] as const,
   me: {

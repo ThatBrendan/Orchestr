@@ -3,8 +3,8 @@ import { toAppError } from "@/lib/errors";
 import type { TablesInsert } from "@/types/database";
 
 /**
- * Dismiss/snooze/reactivate a health finding (docs/BUSINESS_RULES.md HLT-F,
- * docs/SECURITY_RLS.md §5.12). Findings themselves are never written here — they are
+ * Dismiss/snooze/reactivate a health finding (docs/PRODUCT_ARCHITECTURE.md,
+ * docs/BACKEND_SECURITY_AND_DATA.md). Findings themselves are never written here — they are
  * always recomputed from live data (HLT-G); this only records the dismissal state
  * for a `(project, code, subject)` tuple. `blocker` findings are rejected by the DB
  * (`app.finding_is_dismissible` / `tg_dismissal_not_blocker`) regardless of what the

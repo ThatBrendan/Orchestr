@@ -6,7 +6,7 @@ import type { MemberRole } from "@/types/database";
 
 /**
  * The currently-open project + the caller's role.
- * Hydrated by the `hydrateProjectContext` router guard (docs/TECHNICAL_ARCHITECTURE.md §3, §5).
+ * Hydrated by the `hydrateProjectContext` router guard (docs/FRONTEND_AND_UX.md).
  */
 export function useProjectContext() {
   const store = useProjectContextStore();

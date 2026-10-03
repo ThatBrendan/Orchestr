@@ -1,6 +1,6 @@
 /**
  * Short display titles for each deterministic health rule code
- * (docs/BUSINESS_RULES.md §9.2 — HLT-1..HLT-17). Titles only — the full
+ * (docs/PRODUCT_ARCHITECTURE.md). Titles only — the full
  * human-readable sentence for a specific finding is always `finding.message`,
  * computed server-side; nothing here re-derives business meaning.
  */

@@ -7,7 +7,7 @@ export type Payment = Tables<"payments">;
 export type PaymentSchedule = Tables<"activity_payment_schedules">;
 export type PaymentScheduleFinancial = Views<"v_activity_payment_schedule_financials">;
 
-/** All non-deleted payments for a commitment (docs/SECURITY_RLS.md §5.8). */
+/** All non-deleted payments for a commitment (docs/BACKEND_SECURITY_AND_DATA.md). */
 export async function listPayments(commitmentId: string): Promise<Payment[]> {
   const { data, error } = await supabase
     .from("payments")

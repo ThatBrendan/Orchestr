@@ -11,7 +11,7 @@ import type {
   BudgetCategoryActual,
 } from "@/types/derived";
 
-/** Derived read-models — all read-only (docs/DATABASE_SCHEMA.md §5). */
+/** Derived read-models — all read-only (docs/BACKEND_SECURITY_AND_DATA.md). */
 
 export async function getProjectFinancials(projectId: string): Promise<ProjectFinancials | null> {
   const { data, error } = await supabase

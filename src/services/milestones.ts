@@ -5,7 +5,7 @@ import type { Tables, TablesInsert, TablesUpdate } from "@/types/database";
 export type Milestone = Tables<"milestones">;
 
 /**
- * Milestones have no completion state by design (docs/BUSINESS_RULES.md MIL-4/MIL-5) —
+ * Milestones have no completion state by design (docs/PRODUCT_ARCHITECTURE.md) —
  * "upcoming" vs "passed" is derived purely from `on_date` in the UI, never stored.
  */
 export async function listMilestones(projectId: string): Promise<Milestone[]> {
@@ -30,7 +30,7 @@ export async function updateMilestone(id: string, patch: TablesUpdate<"milestone
   return data;
 }
 
-/** Hard delete — correct for milestones (docs/SECURITY_RLS.md §5.10). */
+/** Hard delete — correct for milestones (docs/BACKEND_SECURITY_AND_DATA.md). */
 export async function deleteMilestone(id: string): Promise<void> {
   const { error, count } = await supabase.from("milestones").delete({ count: "exact" }).eq("id", id);
   if (error) throw toAppError(error);

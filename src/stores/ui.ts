@@ -7,7 +7,7 @@ export interface Toast {
   message: string;
 }
 
-/** Ephemeral UI state (docs/TECHNICAL_ARCHITECTURE.md §4). */
+/** Ephemeral UI state (docs/FRONTEND_AND_UX.md). */
 export const useUiStore = defineStore("ui", () => {
   const toasts = ref<Toast[]>([]);
   let seq = 0;

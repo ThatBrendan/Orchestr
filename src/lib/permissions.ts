@@ -1,7 +1,7 @@
 import type { MemberRole } from "@/types/database";
 
 /**
- * The [MEM-14] permission matrix, encoded once (docs/SECURITY_RLS.md §5).
+ * The project permission matrix, encoded once (docs/BACKEND_SECURITY_AND_DATA.md).
  * ADVISORY ONLY — RLS is the real gate. Used to disable/hide dead-end controls.
  */
 export type PermissionKey =

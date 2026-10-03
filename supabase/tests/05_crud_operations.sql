@@ -190,7 +190,7 @@ select is(
   (select count(*)::int from information_schema.columns
    where table_schema='public' and table_name='milestones' and column_name in ('completed_at','is_done','done_at')),
   0,
-  'MILESTONE: no completion column exists (docs/BUSINESS_RULES.md MIL-4/MIL-5 — derived upcoming/passed only)'
+  'MILESTONE: no completion column exists (docs/PRODUCT_ARCHITECTURE.md — derived upcoming/passed only)'
 );
 
 select * from finish();

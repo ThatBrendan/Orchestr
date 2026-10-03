@@ -2,7 +2,7 @@ import { defineStore } from "pinia";
 import { ref, computed } from "vue";
 import type { Session, User } from "@supabase/supabase-js";
 
-/** Session state only (docs/TECHNICAL_ARCHITECTURE.md §4). No domain data here. */
+/** Session state only (docs/FRONTEND_AND_UX.md). No domain data here. */
 export const useAuthStore = defineStore("auth", () => {
   const session = ref<Session | null>(null);
   const user = ref<User | null>(null);
