@@ -906,6 +906,10 @@ export interface Database {
       };
     };
         Functions: {
+      get_project_calendar: {
+        Args: { p_project: string; p_range_start: string; p_range_end: string };
+        Returns: import('./calendar').CalendarEntry[];
+      };
       set_my_notification_preference: { Args: { p_category: string; p_enabled: boolean }; Returns: undefined };
       mark_all_notifications_read: { Args: Record<string, never>; Returns: number };
       list_my_payment_links: { Args: Record<string, never>; Returns: PaymentLink[] };

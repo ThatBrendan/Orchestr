@@ -714,3 +714,8 @@ orchestr/
 | 11 | Three isolated environments; migrations-only schema changes; prototype data as seed | reproducible, safe promotion |
 | 12 | URL is the source of truth for view state | fixes the prototype's reset-on-refresh |
 ```
+
+
+## Phase 12 execution Calendar
+
+Project Calendar adds bounded Month/Agenda navigation over a security-invoker domain-date RPC. It has no independent persistence or mutations. Activity, Decision and payment-schedule source forms remain authoritative; existing timeline query invalidation refreshes the Calendar. The existing Timeline retains cash history, legacy tasks, milestones and project boundaries. See [EXECUTION_CALENDAR.md](EXECUTION_CALENDAR.md) for the audited source map, date semantics, permissions and Phase 13 boundary.

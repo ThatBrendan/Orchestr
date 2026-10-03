@@ -11,3 +11,12 @@ export async function listMyTimelineEvents(startIso: string, endIso: string): Pr
   if (error) throw toAppError(error);
   return (data ?? []).sort((a, b) => a.occurs_at.localeCompare(b.occurs_at));
 }
+
+/** Source-authoritative execution projection; range is [start,end) in project dates. */
+export async function listProjectCalendar(project: string, start: string, end: string) {
+  const { data, error } = await supabase.rpc('get_project_calendar', {
+    p_project: project, p_range_start: start, p_range_end: end,
+  });
+  if (error) throw toAppError(error);
+  return data ?? [];
+}

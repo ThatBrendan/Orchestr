@@ -13,6 +13,7 @@ const TABS = [
   { name: "project.commitments", label: "Activities", module: "commitments" },
   { name: "project.decisions", label: "Decisions", module: "decisions" },
   { name: "project.budget", label: "Budget", module: "budget" },
+  { name: "project.calendar", label: "Calendar", module: "timeline" },
   { name: "project.timeline", label: "Timeline", module: "timeline" },
   { name: "project.people", label: "People", module: "people" },
   { name: "project.notes", label: "Notes", module: "notes" },

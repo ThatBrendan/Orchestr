@@ -682,3 +682,8 @@ No live browser/backend E2E was possible either, for the same reason.
 `CommitmentFormDialog` and `TasksPanel` expose Repeat options: Does not repeat, Every week, Every 2 weeks, Every month. The frontend sends structured recurrence fields (`recurrence_frequency`, `recurrence_interval`, `recurrence_start_date`) and never creates future duplicate Activity/Task rows.
 
 Project Timeline, Overview Upcoming, and Global Calendar call bounded timeline RPCs so Postgres derives only the occurrences in the requested window. Activity detail can complete/skip the next generated occurrence and stop a series after a selected date. Standalone recurring task checkboxes complete the next occurrence rather than marking the entire task series done.
+
+
+## Phase 12 execution Calendar
+
+Project Calendar adds bounded Month/Agenda navigation over a security-invoker domain-date RPC. It has no independent persistence or mutations. Activity, Decision and payment-schedule source forms remain authoritative; existing timeline query invalidation refreshes the Calendar. The existing Timeline retains cash history, legacy tasks, milestones and project boundaries. See [EXECUTION_CALENDAR.md](EXECUTION_CALENDAR.md) for the audited source map, date semantics, permissions and Phase 13 boundary.
