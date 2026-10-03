@@ -5,6 +5,7 @@ export type PaymentAcknowledgement = {
 export type PaymentAcknowledgementHistory = Pick<PaymentAcknowledgement, 'id' | 'acknowledged_at' | 'withdrawn_at'>;
 export type ReimbursementPaymentStatus = {
   reimbursement_request_id: string; active_acknowledgement_id: string | null;
+  confirmation_id: string | null; confirmed_at: string | null; confirmation_state: 'settled' | 'reversed' | null; can_confirm: boolean;
   can_acknowledge: boolean; can_withdraw: boolean; history: PaymentAcknowledgementHistory[];
 };
 export type PaymentAcknowledgementNotification = {

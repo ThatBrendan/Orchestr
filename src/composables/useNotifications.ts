@@ -36,13 +36,14 @@ export function useNotifications() {
   });
   const decisions = useQuery({ queryKey: computed(() => [...qk.me.notifications(), "decisions", auth.userId]), queryFn: activityNotifications.listDecisionNotifications, enabled: computed(() => auth.isAuthenticated), refetchInterval: 30_000 });
   const payments = useQuery({ queryKey: computed(() => [...qk.me.notifications(), "payments", auth.userId]), queryFn: activityNotifications.listPaymentNotifications, enabled: computed(() => auth.isAuthenticated), refetchInterval: 30_000 });
+  const receipts = useQuery({ queryKey: computed(() => [...qk.me.notifications(), "receipts", auth.userId]), queryFn: activityNotifications.listReceiptConfirmationNotifications, enabled: computed(() => auth.isAuthenticated), refetchInterval: 30_000 });
   const acknowledgements = useQuery({ queryKey: computed(() => [...qk.me.notifications(), "acknowledgements", auth.userId]), queryFn: activityNotifications.listPaymentAcknowledgementNotifications, enabled: computed(() => auth.isAuthenticated), refetchInterval: 30_000 });
   const reimbursements = useQuery({ queryKey: computed(() => [...qk.me.notifications(), "reimbursements", auth.userId]), queryFn: activityNotifications.listReimbursementNotifications, enabled: computed(() => auth.isAuthenticated), refetchInterval: 30_000 });
   const markRead = useMutation({
     mutationFn: activityNotifications.markNotificationRead,
     onSuccess: () => client.invalidateQueries({ queryKey: qk.me.notifications() }),
   });
-  const unreadCount = computed(() => (pending.data.value?.length ?? 0) + (activity.data.value?.unreadCount ?? 0) + (joins.data.value?.unreadCount ?? 0) + (decisions.data.value?.unreadCount ?? 0) + (payments.data.value?.unreadCount ?? 0) + (reimbursements.data.value?.unreadCount ?? 0) + (acknowledgements.data.value?.unreadCount ?? 0));
+  const unreadCount = computed(() => (pending.data.value?.length ?? 0) + (activity.data.value?.unreadCount ?? 0) + (joins.data.value?.unreadCount ?? 0) + (decisions.data.value?.unreadCount ?? 0) + (payments.data.value?.unreadCount ?? 0) + (reimbursements.data.value?.unreadCount ?? 0) + (acknowledgements.data.value?.unreadCount ?? 0) + (receipts.data.value?.unreadCount ?? 0));
   const respond = useMutation({
     mutationFn: ({ token, action }: { token: string; action: "accept" | "decline" }) =>
       action === "accept" ? invitations.acceptInvitation(token) : invitations.declineInvitation(token),
@@ -51,5 +52,5 @@ export function useNotifications() {
       qk.me.attention(), qk.me.calendarRoot(), ["invitation"],
     ].map((queryKey) => client.invalidateQueries({ queryKey }))),
   });
-  return { pending, respond, activity, joins, decisions, payments, reimbursements, acknowledgements, markRead, unreadCount };
+  return { pending, respond, activity, joins, decisions, payments, reimbursements, acknowledgements, receipts, markRead, unreadCount };
 }

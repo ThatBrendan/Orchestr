@@ -72,3 +72,13 @@ Paid/Settled. Phase 10 may attach receipt confirmation to the immutable active c
 ID, revalidate current request/participants under these same locks, prevent withdrawal
 of confirmed claims, and then use the existing settlement semantics. No confirmation
 schema, button, API, rejection workflow or settlement implementation is added now.
+
+## Phase 10 extension
+
+[Receipt confirmations](REIMBURSEMENT_CONFIRMATIONS.md) now attaches immutable creditor
+confirmation to the exact active acknowledgement and records one authoritative settlement.
+Undo is denied server-side after confirmation, including after later settlement correction.
+Old withdrawn acknowledgements can never be confirmed after re-acknowledgement. Payment-sent
+claims still have no financial effect before confirmation. Creditor-only actionable Health
+now exists while confirmation is eligible; after confirmation the UI shows Settled and the
+existing request status removes debtor/creditor payment attention and normal payment actions.

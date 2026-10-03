@@ -200,3 +200,18 @@ remain Activity `section=reimbursements`. Facts and audit remain historical.
 These events are claims, never proof of receipt. They do not call a settlement RPC,
 write payments or change balances. There is no creditor confirmation action, new
 Timeline item or scheduled evaluator. See [Payment acknowledgements](PAYMENT_ACKNOWLEDGEMENTS.md).
+
+## Phase 10: confirmed receipt
+
+`20261003120000_reimbursement_receipt_confirmations.sql` adds
+`reimbursement.receipt_confirmed`, resource `reimbursement_receipt_confirmation`, key
+`confirmed`. Its exact payload contains `activity_id`, `reimbursement_request_id` and
+`acknowledgement_id`. The actor is the actual creditor; trusted composition creates one
+existing settlement pair and immutable confirmation linkage in the same transaction.
+
+`notify_receipt_debtor` sends one in-app notification to the debtor only. Processing/action
+receipts preserve event retry semantics. Settlement creation itself has no generic domain
+settlement event, so no second event is emitted. A request's transition to settled does not
+emit the older cancellation event. Existing acknowledgement notifications hide once settled;
+receipt notifications resolve authorized current state and use correction copy if the pair
+was later reversed. See [Receipt confirmations](REIMBURSEMENT_CONFIRMATIONS.md).

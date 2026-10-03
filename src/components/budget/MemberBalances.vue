@@ -25,7 +25,7 @@ const creditors=computed(()=>(lines.data.value??[]).filter(l=>l.commitment_id===
 function memberLines(id:string){return (lines.data.value??[]).filter(l=>l.member_id===id&&(!props.itemId||l.commitment_id===props.itemId));}
 function areaGroups(id:string){const result=new Map<string,ReturnType<typeof memberLines>>();for(const line of memberLines(id)){const key=line.area_title??'Activities without a Category';result.set(key,[...(result.get(key)??[]),line]);}return [...result];}
 function open(line:NonNullable<typeof selected.value>){selected.value=line;payee.value=creditors.value[0]?.member_id??'';amount.value=String(toMajor(Math.min(line.remaining_minor,-(creditors.value[0]?.remaining_minor??0)),props.currency));date.value=DateTime.now().setZone(project.value?.timezone??'UTC').toISODate()!;error.value='';}
-async function refresh(){await Promise.all([client.invalidateQueries({queryKey:['settlement']}),invalidatePlanning(client,props.projectId)]);}
+async function refresh(){await Promise.all([client.invalidateQueries({queryKey:['settlement']}),client.invalidateQueries({queryKey:['reimbursement-payment-status']}),invalidatePlanning(client,props.projectId)]);}
 async function save(){if(!selected.value||busy.value)return;busy.value=true;error.value='';try{const minor=toMinor(amount.value,props.currency);if(!minor||!payee.value||!date.value)throw new Error('Choose a person, amount and date.');const {error:e}=await supabase.rpc('record_item_settlement',{p_item:selected.value.commitment_id,p_from:selected.value.member_id,p_to:payee.value,p_amount:minor,p_date:date.value});if(e)throw e;await refresh();selected.value=null;}catch(e){error.value=toAppError(e).message;}finally{busy.value=false;}}
 const cancelling=ref<string|null>(null);
 async function cancel(){if(!cancelling.value)return;busy.value=true;error.value='';try{const {error:e}=await supabase.rpc('cancel_item_settlement',{p_group:cancelling.value});if(e)throw e;await refresh();cancelling.value=null;}catch(e){error.value=toAppError(e).message;}finally{busy.value=false;}}
@@ -123,7 +123,7 @@ async function cancel(){if(!cancelling.value)return;busy.value=true;error.value=
             class="block rounded-lg border border-line p-3 focus-ring [overflow-wrap:anywhere]"
           >
             <span class="block font-medium">{{ request.activity_title }}</span>
-            <span>{{ request.status==='cancelled'||request.needs_review ? request.debtor_name+' → '+request.creditor_name : request.is_debtor ? 'You owe '+request.creditor_name : request.is_creditor ? request.debtor_name+' owes you' : request.debtor_name+' owes '+request.creditor_name }} · {{ format(request.amount_minor,currency) }}</span>
+            <span>{{ request.status!=='open'||request.needs_review ? request.debtor_name+' → '+request.creditor_name : request.is_debtor ? 'You owe '+request.creditor_name : request.is_creditor ? request.debtor_name+' owes you' : request.debtor_name+' owes '+request.creditor_name }} · {{ format(request.amount_minor,currency) }}</span>
             <ReimbursementStatusLabel :request="request" />
           </RouterLink>
         </section>

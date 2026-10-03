@@ -5,6 +5,7 @@
  * computed server-side; nothing here re-derives business meaning.
  */
 export const HEALTH_CODE_TITLES: Record<string, string> = {
+  reimbursement_confirmation: "Confirm reimbursement receipt",
   reimbursement_outstanding: "Reimbursement outstanding",
   decision_needs_resolution: "Decision needs resolving",
   missing_owner: "Missing owner",

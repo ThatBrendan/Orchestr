@@ -66,3 +66,16 @@ hides debtor Health and payment links, and notifies only the creditor. Undo rest
 Outstanding when eligible. Stale and cancelled requests retain claim history; existing
 cancellation remains available with a warning that no settlement is recorded. A claim
 is not proof of payment, and creditor confirmation remains Phase 10.
+
+## Phase 10: confirmed receipt and settlement
+
+[Receipt confirmations](REIMBURSEMENT_CONFIRMATIONS.md) implements actual creditor confirmation
+against an exact active acknowledgement. It reuses the original settlement bounds/pair engine,
+links an immutable confirmation to that group, and marks the request settled atomically.
+Settled requests no longer reserve open-request capacity or show Review needed because of their
+own transfer. Other affected open requests still require conservative reconciliation.
+
+Settled requests cannot be normally cancelled or acknowledged again. Existing Organizer
+settlement correction retains confirmation history and presents Settlement reversed. Later
+supplier refunds or share edits flow through the existing balance engine without rewriting
+historical confirmation. Project spend excludes the internal pair as before.

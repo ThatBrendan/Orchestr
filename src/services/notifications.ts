@@ -71,3 +71,10 @@ export async function listPaymentAcknowledgementNotifications() {
   if (error) throw toAppError(error);
   return { items: data ?? [], unreadCount: count ?? 0 };
 }
+
+export type ReceiptConfirmationNotification = Database['public']['Views']['v_my_receipt_confirmation_notifications']['Row'];
+export async function listReceiptConfirmationNotifications() {
+ const { data, count, error } = await supabase.from('v_my_receipt_confirmation_notifications').select('*', { count: 'exact' }).is('read_at', null).order('created_at', { ascending: false }).order('id', { ascending: false }).limit(50);
+ if (error) throw toAppError(error);
+ return { items: data ?? [], unreadCount: count ?? 0 };
+}

@@ -5,7 +5,7 @@ import { qk } from "@/composables/keys";
 import { useRouter } from "vue-router";
 import { useMoney } from "@/composables/useMoney";
 import { DateTime } from "luxon";
-import { reimbursementNotificationRoute, type ReimbursementNotification, type PaymentAcknowledgementNotification, paymentNotificationRoute, type PaymentNotification, decisionNotificationRoute, type DecisionNotification, activityNotificationRoute, joinNotificationRoute, type JoinNotification, type ActivityNotification } from "@/services/notifications";
+import { reimbursementNotificationRoute, type ReimbursementNotification, type PaymentAcknowledgementNotification, type ReceiptConfirmationNotification, paymentNotificationRoute, type PaymentNotification, decisionNotificationRoute, type DecisionNotification, activityNotificationRoute, joinNotificationRoute, type JoinNotification, type ActivityNotification } from "@/services/notifications";
 import { useNotifications } from "@/composables/useNotifications";
 import { toAppError } from "@/lib/errors";
 import AppModal from "@/components/ui/AppModal.vue";
@@ -17,7 +17,7 @@ const open = ref(false);
 const message = ref("");
 const router = useRouter();
 const client = useQueryClient();
-const { pending, respond, activity, joins, decisions, payments, reimbursements, acknowledgements, markRead, unreadCount } = useNotifications();
+const { pending, respond, activity, joins, decisions, payments, reimbursements, acknowledgements, receipts, markRead, unreadCount } = useNotifications();
 async function answer(token: string, action: "accept" | "decline") {
   message.value = "";
   try {
@@ -57,7 +57,7 @@ async function openPayment(item: PaymentNotification) {
   try { await markRead.mutateAsync(item.id); open.value = false; await router.push(paymentNotificationRoute(item)); }
   catch (error) { message.value = toAppError(error).message; }
 }
-async function openReimbursement(item: ReimbursementNotification | PaymentAcknowledgementNotification) {
+async function openReimbursement(item: ReimbursementNotification | PaymentAcknowledgementNotification | ReceiptConfirmationNotification) {
   if (markRead.isPending.value) return;
   message.value = "";
   try { await markRead.mutateAsync(item.id); open.value = false; await router.push(reimbursementNotificationRoute(item)); }
@@ -407,6 +407,56 @@ async function openReimbursement(item: ReimbursementNotification | PaymentAcknow
         class="text-13"
       >
         Showing the newest 50. Open notifications to see older reimbursements.
+      </p>
+    </section>
+    <section
+      class="mt-6 space-y-3"
+      aria-labelledby="receipt-notifications-title"
+    >
+      <h2
+        id="receipt-notifications-title"
+        class="text-14 font-semibold"
+      >
+        Confirmed receipts
+      </h2>
+      <p
+        v-if="receipts.isPending.value"
+        class="text-14"
+      >
+        Loading reimbursements…
+      </p>
+      <p
+        v-else-if="receipts.isError.value"
+        class="text-14"
+      >
+        Could not load receipts. <button
+          class="underline focus-ring"
+          @click="receipts.refetch()"
+        >
+          Retry
+        </button>
+      </p>
+      <p
+        v-else-if="!receipts.data.value?.unreadCount"
+        class="text-14 text-muted"
+      >
+        No unread receipts.
+      </p>
+      <button
+        v-for="item in receipts.data.value?.items"
+        :key="item.id"
+        :disabled="markRead.isPending.value"
+        class="block w-full text-left border border-line rounded-lg p-4 focus-ring [overflow-wrap:anywhere]"
+        @click="openReimbursement(item)"
+      >
+        <span class="block font-semibold">{{ item.confirmation_state==='reversed' ? 'Settlement corrected' : 'Reimbursement settled' }}</span>
+        <span class="block text-14">{{ item.confirmation_state==='reversed' ? item.activity_title+': the settlement was corrected. Review current balances.' : item.creditor_name+' confirmed receipt of your '+format(item.amount_minor,item.currency)+' payment for '+item.activity_title+'.' }}</span>
+      </button>
+      <p
+        v-if="(receipts.data.value?.unreadCount ?? 0) > 50"
+        class="text-13"
+      >
+        Showing the newest 50. Open notifications to see older receipts.
       </p>
     </section>
     <section

@@ -1,5 +1,9 @@
 <script setup lang="ts">
 import { computed, nextTick, ref } from 'vue';
+import { useQueryClient } from '@tanstack/vue-query';
+import { invalidatePlanning } from '@/composables/invalidation';
+import { qk } from '@/composables/keys';
+import { confirmReceipt } from '@/services/receiptConfirmations';
 import { DialogDescription } from '@headlessui/vue';
 import { useProjectContext } from '@/composables/useProjectContext';
 import { useMoney } from '@/composables/useMoney';
@@ -16,11 +20,12 @@ const emit = defineEmits<{ cancel: [request: Reimbursement, acknowledged: boolea
 const { project } = useProjectContext();
 const { format } = useMoney();
 const status = usePaymentStatus(() => props.r.id);
+const queryClient = useQueryClient();
 const refresh = useRefreshPaymentStatus(props.r.project_id);
 const active = computed(() => status.data.value?.active_acknowledgement_id);
 const cardElement = ref<HTMLElement | null>(null);
 let opener: HTMLElement | null = null;
-function showConfirmation(kind: 'acknowledge' | 'withdraw', event: MouseEvent) {
+function showConfirmation(kind: 'acknowledge' | 'withdraw' | 'receipt', event: MouseEvent) {
   opener = event.currentTarget as HTMLElement;
   undoTarget.value = active.value ?? null;
   modal.value = kind; error.value = '';
@@ -31,17 +36,23 @@ async function restoreFocus() {
 }
 const undoTarget = ref<string | null>(null);
 const actionable = computed(() => props.r.status === 'open' && !props.r.needs_review && project.value?.status !== 'archived');
-const modal = ref<'acknowledge' | 'withdraw' | null>(null), busy = ref(false), error = ref('');
+const modal = ref<'acknowledge' | 'withdraw' | 'receipt' | null>(null), busy = ref(false), error = ref('');
 function perspective(r: Reimbursement) { return r.is_debtor ? `You owe ${r.creditor_name}` : r.is_creditor ? `${r.debtor_name} owes you` : `${r.debtor_name} owes ${r.creditor_name}`; }
 async function confirm() {
   if (busy.value || !modal.value) return;
+  const isReceipt = modal.value === 'receipt';
   busy.value = true; error.value = '';
   try {
     if (modal.value === 'acknowledge') await acknowledgePayment(props.r.id);
+    else if (undoTarget.value && isReceipt) await confirmReceipt(undoTarget.value);
     else if (undoTarget.value) await withdrawPayment(undoTarget.value);
     modal.value = null;
   } catch (e) { error.value = toAppError(e).message; }
-  finally { await refresh(); busy.value = false; }
+  finally {
+    await refresh();
+    if (isReceipt) await invalidatePlanning(queryClient, props.r.project_id, [qk.commitment.financials(props.r.commitment_id), qk.commitment.payments(props.r.commitment_id), qk.commitment.paymentSchedules(props.r.commitment_id)]);
+    busy.value = false;
+  }
 }
 </script>
 <template>
@@ -52,12 +63,12 @@ async function confirm() {
     :data-reimbursement-id="r.id"
   >
     <p class="font-medium">
-      {{ r.status === 'cancelled' || r.needs_review ? `${r.debtor_name} → ${r.creditor_name}` : perspective(r) }}
+      {{ r.status !== 'open' || r.needs_review ? `${r.debtor_name} → ${r.creditor_name}` : perspective(r) }}
     </p>
     <div class="flex flex-wrap items-center gap-2">
       <span>{{ r.needs_review ? 'Original request: ' : '' }}{{ format(r.amount_minor, r.currency) }}</span>
       <StatusBadge
-        :label="r.status === 'cancelled' ? 'Cancelled' : r.needs_review ? 'Review needed' : status.isError.value ? 'Status unavailable' : status.isPending.value ? 'Checking payment status' : active ? 'Payment sent' : 'Outstanding'"
+        :label="r.status === 'cancelled' ? 'Cancelled' : r.needs_review ? 'Review needed' : status.isError.value ? 'Status unavailable' : status.isPending.value ? 'Checking payment status' : status.data.value?.confirmation_state === 'reversed' ? 'Settlement reversed' : r.status === 'settled' ? 'Settled' : active ? 'Payment sent' : 'Outstanding'"
         tone="neutral"
       />
     </div>
@@ -85,7 +96,13 @@ async function confirm() {
       Loading payment status…
     </p>
     <template v-else>
-      <p v-if="active && (r.needs_review || r.status==='cancelled')">
+      <p v-if="status.data.value?.confirmation_state === 'reversed'">
+        The settlement was corrected. Receipt confirmation remains in history; review the current balances.
+      </p>
+      <p v-else-if="r.status === 'settled'">
+        {{ r.is_creditor ? 'You confirmed receipt.' : r.creditor_name+' confirmed receipt.' }}
+      </p>
+      <p v-else-if="active && (r.needs_review || r.status==='cancelled')">
         Payment was previously marked as sent. No settlement has been recorded.
       </p>
       <p
@@ -95,6 +112,13 @@ async function confirm() {
         {{ r.is_creditor ? r.debtor_name+" says they've paid. Awaiting your confirmation." : 'Awaiting '+r.creditor_name+"'s confirmation." }} This has not been recorded as settled.
       </p>
       <div class="flex flex-wrap gap-2">
+        <AppButton
+          v-if="actionable && status.data.value?.can_confirm"
+          size="sm"
+          @click="showConfirmation('receipt', $event)"
+        >
+          Confirm received
+        </AppButton>
         <AppButton
           v-if="actionable && status.data.value?.can_acknowledge"
           size="sm"
@@ -138,6 +162,9 @@ async function confirm() {
       <summary class="cursor-pointer focus-ring">
         Payment-sent history
       </summary>
+      <p v-if="status.data.value?.confirmed_at">
+        Receipt confirmed {{ new Date(status.data.value.confirmed_at).toLocaleString() }}.
+      </p>
       <ul class="mt-2 space-y-2">
         <li
           v-for="entry in status.data.value.history"
@@ -151,13 +178,13 @@ async function confirm() {
   </div>
   <AppModal
     :open="!!modal"
-    :title="modal==='withdraw' ? 'Undo payment sent?' : 'Mark payment as sent?'"
+    :title="modal==='receipt' ? 'Confirm receipt?' : modal==='withdraw' ? 'Undo payment sent?' : 'Mark payment as sent?'"
     :busy="busy"
     @close="modal=null"
     @after-close="restoreFocus"
   >
     <DialogDescription>
-      {{ modal==='withdraw' ? r.creditor_name+' will see that this payment is no longer marked as sent.' : "This tells "+r.creditor_name+" you've sent the full "+format(r.amount_minor,r.currency)+". It won't be recorded as settled until they confirm receipt." }}
+      {{ modal==='receipt' ? "Confirm you've received "+format(r.amount_minor,r.currency)+' from '+r.debtor_name+'? This will record the reimbursement as settled and update member balances. If you have not received it, leave this unconfirmed.' : modal==='withdraw' ? r.creditor_name+' will see that this payment is no longer marked as sent.' : "This tells "+r.creditor_name+" you've sent the full "+format(r.amount_minor,r.currency)+". It won't be recorded as settled until they confirm receipt." }}
     </DialogDescription>
     <p
       v-if="error"
@@ -178,7 +205,7 @@ async function confirm() {
         :loading="busy"
         @click="confirm"
       >
-        {{ modal==='withdraw' ? 'Yes, undo' : "Yes, I've paid" }}
+        {{ modal==='receipt' ? 'Confirm received' : modal==='withdraw' ? 'Yes, undo' : "Yes, I've paid" }}
       </AppButton>
     </template>
   </AppModal>

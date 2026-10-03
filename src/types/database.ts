@@ -1,3 +1,4 @@
+import type { ReceiptConfirmation, ReceiptConfirmationNotification } from './receiptConfirmations';
 import type { PaymentAcknowledgement, ReimbursementPaymentStatus, PaymentAcknowledgementNotification } from './paymentAcknowledgements';
 import type { PaymentLink, PaymentOption } from "./paymentLinks";
 import type { Reimbursement, ReimbursementSuggestion, ReimbursementNotification, ReimbursementRequest } from "./reimbursements";
@@ -28,13 +29,14 @@ export interface Database {
     Tables: {
       user_payment_links: { Row: PaymentLink; Insert: never; Update: never; Relationships: [] };
       reimbursement_payment_acknowledgements: { Row: PaymentAcknowledgement; Insert: never; Update: never; Relationships: [] };
+      reimbursement_receipt_confirmations: { Row: ReceiptConfirmation; Insert: never; Update: never; Relationships: [] };
       reimbursement_requests: { Row: ReimbursementRequest; Insert: never; Update: never; Relationships: [] };
       resource_comments: { Row: ResourceCommentRow; Insert: never; Update: never; Relationships: [] };
       decisions: { Row: DecisionRow; Insert: never; Update: never; Relationships: [] };
       decision_options: { Row: DecisionOptionRow; Insert: never; Update: never; Relationships: [] };
       decision_votes: { Row: DecisionVoteRow; Insert: never; Update: never; Relationships: [] };
       notifications: {
-        Row: { id: string; project_id: string; commitment_id: string | null; join_request_id: string | null; decision_id: string | null; reimbursement_id: string | null; payment_acknowledgement_id: string | null; payment_schedule_id: string | null; domain_event_id: string | null; recipient_user_id: string; kind: "reimbursement_payment_acknowledged" | "reimbursement_payment_acknowledgement_withdrawn" | "reimbursement_created" | "payment_due_soon" | "activity_created" | "project_join_requested" | "project_member_approved" | "decision_deadline_reached" | "decision_resolved"; created_at: string; read_at: string | null };
+        Row: { id: string; project_id: string; commitment_id: string | null; join_request_id: string | null; decision_id: string | null; reimbursement_id: string | null; payment_acknowledgement_id: string | null; receipt_confirmation_id: string | null; payment_schedule_id: string | null; domain_event_id: string | null; recipient_user_id: string; kind: "reimbursement_receipt_confirmed" | "reimbursement_payment_acknowledged" | "reimbursement_payment_acknowledgement_withdrawn" | "reimbursement_created" | "payment_due_soon" | "activity_created" | "project_join_requested" | "project_member_approved" | "decision_deadline_reached" | "decision_resolved"; created_at: string; read_at: string | null };
         Insert: { id?: string; project_id: string; commitment_id?: string | null; join_request_id?: string | null; recipient_user_id: string; kind?: "reimbursement_created" | "payment_due_soon" | "activity_created" | "project_join_requested" | "project_member_approved" | "decision_deadline_reached" | "decision_resolved"; created_at?: string; read_at?: string | null };
         Update: { read_at?: string | null };
         Relationships: [];
@@ -579,6 +581,7 @@ export interface Database {
     Views: {
       v_reimbursement_payment_status: { Row: ReimbursementPaymentStatus; Relationships: [] };
       v_my_payment_acknowledgement_notifications: { Row: PaymentAcknowledgementNotification; Relationships: [] };
+      v_my_receipt_confirmation_notifications: { Row: ReceiptConfirmationNotification; Relationships: [] };
       v_reimbursements: { Row: Reimbursement; Relationships: [] };
       v_my_reimbursement_notifications: { Row: ReimbursementNotification; Relationships: [] };
       v_my_payment_notifications: { Row: { id: string; project_id: string; created_at: string; read_at: string | null; commitment_id: string; title: string; due_on: string; outstanding_minor: number; currency: string }; Relationships: [] };
@@ -905,6 +908,7 @@ export interface Database {
       save_my_payment_link: { Args: { p_provider: string; p_url: string; p_label?: string | null; p_id?: string | null; p_enabled?: boolean }; Returns: string };
       delete_my_payment_link: { Args: { p_id: string }; Returns: undefined };
       set_default_payment_link: { Args: { p_id?: string | null }; Returns: undefined };
+      confirm_reimbursement_receipt: { Args: { p_acknowledgement: string }; Returns: string };
       acknowledge_reimbursement_payment: { Args: { p_request: string }; Returns: string };
       withdraw_reimbursement_payment_acknowledgement: { Args: { p_acknowledgement: string }; Returns: undefined };
       get_reimbursement_payment_options: { Args: { p_request: string }; Returns: PaymentOption[] };
