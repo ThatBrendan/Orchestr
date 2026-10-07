@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import CalendarSyncSettings from "@/components/settings/CalendarSyncSettings.vue";
 import NotificationSettings from '@/components/settings/NotificationSettings.vue';
 import PaymentLinksSettings from "@/components/settings/PaymentLinksSettings.vue";
 import PasswordForm from "@/components/ui/PasswordForm.vue";
@@ -142,6 +143,7 @@ async function saveName() {
         </div>
       </div>
     </div>
+    <CalendarSyncSettings />
     <NotificationSettings />
     <PaymentLinksSettings />
     <section

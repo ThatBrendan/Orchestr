@@ -1,3 +1,4 @@
+import type { CalendarConnection } from './calendarSync';
 import type { ReceiptConfirmation, ReceiptConfirmationNotification } from './receiptConfirmations';
 import type { PaymentAcknowledgement, ReimbursementPaymentStatus, PaymentAcknowledgementNotification } from './paymentAcknowledgements';
 import type { PaymentLink, PaymentOption } from "./paymentLinks";
@@ -27,6 +28,7 @@ export type Json =
 export interface Database {
   public: {
     Tables: {
+      user_calendar_connections: { Row: CalendarConnection; Insert: never; Update: never; Relationships: [] };
       user_notification_preferences: { Row: { id: string; user_id: string; category: string; enabled: boolean; created_at: string; updated_at: string }; Insert: never; Update: never; Relationships: [] };
       user_payment_links: { Row: PaymentLink; Insert: never; Update: never; Relationships: [] };
       reimbursement_payment_acknowledgements: { Row: PaymentAcknowledgement; Insert: never; Update: never; Relationships: [] };
@@ -906,6 +908,7 @@ export interface Database {
       };
     };
         Functions: {
+      request_calendar_sync: { Args: { p_activities?: boolean; p_decisions?: boolean; p_payments?: boolean }; Returns: undefined };
       get_project_calendar: {
         Args: { p_project: string; p_range_start: string; p_range_end: string };
         Returns: import('./calendar').CalendarEntry[];

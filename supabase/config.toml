@@ -65,3 +65,8 @@ enabled = false
 # the bearer token with auth.getUser and uses caller-scoped RLS.
 [functions.invitations-send]
 verify_jwt = false
+
+# OAuth callback validates single-use browser-bound state. User actions call
+# auth.getUser; worker consumes a private, single-use cron dispatch window.
+[functions.calendar-integration]
+verify_jwt = false
