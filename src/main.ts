@@ -1,6 +1,7 @@
 import { createApp } from "vue";
 import { createPinia } from "pinia";
 import { VueQueryPlugin } from "@tanstack/vue-query";
+import { Analytics } from "@vercel/analytics/vue"
 
 import "@/styles/tailwind.css";
 import App from "@/App.vue";
@@ -18,4 +19,5 @@ initAuth(() => { void router.replace("/reset-password"); });
 
 initAnalytics(router);
 app.use(router);
+app.use(Analytics);
 void router.isReady().then(() => app.mount("#app"));
