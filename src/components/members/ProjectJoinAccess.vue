@@ -5,13 +5,12 @@ import * as joins from "@/services/joinLinks";
 import { toAppError } from "@/lib/errors";
 import { qk } from "@/composables/keys";
 import AppButton from "@/components/ui/AppButton.vue";
-import AppConfirmDialog from "@/components/ui/AppConfirmDialog.vue";
 const props = defineProps<{ projectId: string; readOnly: boolean }>();
 const client = useQueryClient();
 const access = ref<joins.JoinAccess>();
 const loading = ref(false), busy = ref(false), reviewing = ref<string | null>(null);
 const link = ref(""), feedback = ref(""), error = ref("");
-const confirm = ref(false), offset = ref(0);
+const offset = ref(0);
 let generation = 0;
 async function load() {
   const current = ++generation;
@@ -21,13 +20,6 @@ async function load() {
   finally { if (current === generation) loading.value = false; }
 }
 watch(() => props.projectId, () => { link.value = ""; access.value = undefined; offset.value = 0; void load(); }, { immediate: true });
-async function regenerate() {
-  if (busy.value) return;
-  busy.value = true; error.value = ""; feedback.value = "";
-  try { link.value = await joins.regenerateJoinLink(props.projectId); confirm.value = false; await load(); feedback.value = "Join link created."; }
-  catch (e) { error.value = toAppError(e).message; }
-  finally { busy.value = false; }
-}
 async function disable() {
   if (busy.value) return;
   busy.value = true; error.value = "";
@@ -36,9 +28,14 @@ async function disable() {
   finally { busy.value = false; }
 }
 async function copy() {
-  busy.value = true;
-  try { await navigator.clipboard.writeText(link.value); feedback.value = "Link copied"; }
-  catch { feedback.value = "Copy the link from the field below."; }
+  if (busy.value || props.readOnly) return;
+  busy.value = true; error.value = ""; feedback.value = "";
+  try {
+    link.value = await joins.ensureJoinLink(props.projectId);
+    try { await navigator.clipboard.writeText(link.value); feedback.value = "Invite link copied"; }
+    catch { feedback.value = "Copy the invite link from the field below."; }
+    await load();
+  } catch (e) { error.value = toAppError(e).message; }
   finally { busy.value = false; }
 }
 async function review(id: string, approve: boolean) {
@@ -63,7 +60,7 @@ async function page(delta: number) { offset.value = Math.max(0, offset.value + d
       id="join-access-heading"
       class="text-16 font-semibold"
     >
-      Project access
+      Invite link
     </h2>
     <p class="text-13 text-muted">
       Approval required: On · Default role: Member
@@ -95,33 +92,15 @@ async function page(delta: number) { offset.value = Math.max(0, offset.value + d
         v-if="!access.active"
         class="text-14"
       >
-        Join link is disabled. Create a link so people can request access.
+        Copy an invite link so people can request access.
       </p>
       <div class="flex flex-wrap gap-2">
         <AppButton
-          v-if="link"
           :disabled="busy || readOnly"
           :aria-busy="busy"
           @click="copy"
         >
-          Copy join link
-        </AppButton>
-        <AppButton
-          v-if="!access.active"
-          :loading="busy"
-          :aria-busy="busy"
-          :disabled="readOnly"
-          @click="regenerate"
-        >
-          Create join link
-        </AppButton>
-        <AppButton
-          v-else
-          variant="secondary"
-          :disabled="busy || readOnly"
-          @click="confirm = true"
-        >
-          Regenerate link
+          Copy invite link
         </AppButton>
         <AppButton
           v-if="access.active"
@@ -145,15 +124,12 @@ async function page(delta: number) { offset.value = Math.max(0, offset.value + d
           @focus="($event.target as HTMLInputElement).select()"
         >
       </label>
-      <h3 class="font-semibold text-14">
-        Pending requests
-      </h3>
-      <p
-        v-if="!access.pending_count"
-        class="text-14 text-muted"
+      <h3
+        v-if="access.pending_count"
+        class="font-semibold text-14"
       >
-        No pending access requests.
-      </p>
+        Join requests
+      </h3>
       <article
         v-for="item in access.requests"
         :key="item.id"
@@ -214,14 +190,5 @@ async function page(delta: number) { offset.value = Math.max(0, offset.value + d
     >
       {{ feedback }}
     </p>
-    <AppConfirmDialog
-      :open="confirm"
-      title="Regenerate join link?"
-      message="Regenerating will invalidate the current join link. Pending requests and members will stay unchanged."
-      confirm-label="Regenerate"
-      :loading="busy"
-      @close="confirm = false"
-      @confirm="regenerate"
-    />
   </section>
 </template>

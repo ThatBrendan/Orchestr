@@ -21,6 +21,11 @@ export async function getJoinAccess(project: string, offset = 0): Promise<JoinAc
   const result = data as unknown as Omit<JoinAccess, "link"> & { token: string | null };
   return { active: result.active, requests: result.requests, pending_count: result.pending_count, link: result.active && result.token ? new URL(`/join/${result.token}`, config.appUrl).href : null };
 }
+export async function ensureJoinLink(project: string) {
+  const { data, error } = await supabase.rpc("ensure_project_join_link", { p_project: project });
+  if (error) throw toAppError(error);
+  return new URL(`/join/${data}`, config.appUrl).href;
+}
 export async function regenerateJoinLink(project: string) {
   const { data, error } = await supabase.rpc("regenerate_project_join_link", { p_project: project });
   if (error) throw toAppError(error);

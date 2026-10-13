@@ -87,3 +87,18 @@ export function setModuleVisibility(moduleVisibility: Json | null | undefined, m
   current[module] = visible;
   return current as Json;
 }
+
+/** Creation assistance only: selecting a profile never inserts Categories. */
+export const CATEGORY_SUGGESTIONS: Record<ProjectProfile, readonly string[]> = {
+  group_trip: ['Accommodation', 'Transport', 'Food & Dining', 'Activities'],
+  wedding_event: ['Venue', 'Catering', 'Guests', 'Decor', 'Entertainment'],
+  house_move: ['Packing', 'Utilities', 'Transport', 'Cleaning', 'Furniture & Home'],
+  recurring_process: ['Preparation', 'Operations', 'Review', 'Admin'],
+  team_project: ['Planning', 'Delivery', 'Operations', 'Review'],
+  launch: ['Product', 'Marketing', 'Operations', 'Launch', 'Legal & Admin'],
+  blank: [],
+};
+export function categorySuggestions(profile: ProjectProfile, existing: readonly string[]): string[] {
+  const names = new Set(existing.map(name => name.trim().toLowerCase()));
+  return CATEGORY_SUGGESTIONS[profile].filter(name => !names.has(name.toLowerCase()));
+}

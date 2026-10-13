@@ -1,4 +1,4 @@
-export type PaymentProvider = 'monzo' | 'revolut' | 'custom';
+export type PaymentProvider = 'monzo' | 'revolut' | 'paypal' | 'custom';
 export type PaymentLink = {
   id: string; user_id: string; provider: PaymentProvider; payment_url: string;
   display_label: string; is_enabled: boolean; is_default: boolean;

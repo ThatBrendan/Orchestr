@@ -188,9 +188,9 @@ try {
   stage='debtor notification payment destination';
   await memberPage.goto(`${origin}/app/projects/${project}/overview`);
   await memberPage.getByRole('button',{name:'Notifications',exact:true}).click();
-  await memberPage.locator('section[aria-labelledby=reimbursement-notifications-title]').getByRole('button').filter({hasText:'Reimbursement requested'}).click();
+  await memberPage.locator('section[aria-labelledby=inbox-title]').getByRole('button').filter({hasText:'Reimbursement requested'}).filter({hasText:title}).click();
   const reimbursement=memberPage.locator(`[data-reimbursement-id="${request}"]`);
-  await reimbursement.getByRole('heading',{name:/^Pay /}).waitFor();
+  await reimbursement.getByRole('heading',{name:/payment preferences$/}).waitFor();
   const options=reimbursement.locator('section[aria-label="Payment options"]');
   check((await rpc('get_reimbursement_payment_options',{p_request:request},clients[1]))[0].id===revolut,'Debtor default first');
   check(await options.locator('[data-payment-option-id]').first().getAttribute('data-payment-option-id')===revolut,'Default first in UI');
@@ -211,7 +211,7 @@ try {
   pass('Debtor follows notification to default provider; keyboard opens isolated tab, network aborted; no financial Health or notification mutation');
   stage='viewer and unrelated organizer';
   unwrap(await clients[0].from('project_members').update({role:'viewer'}).eq('id',debtor),'Viewer debtor');
-  await open(activity,title,memberPage);await reimbursement.getByRole('link',{name:/Open Revolut/}).waitFor();
+  await open(activity,title,memberPage);await reimbursement.getByRole('link',{name:/Pay with Revolut/}).waitFor();
   check((await rpc('get_reimbursement_payment_options',{p_request:request},clients[1])).length===2,'Viewer debtor scoped options');
   unwrap(await clients[0].from('project_members').update({role:'member'}).eq('id',debtor),'Restore Member');
   await join(2,'member');members=await rows('project_members','project_id',project);const third=uuid(members.find(m=>m.user_id===users[2].id).id);
@@ -224,7 +224,7 @@ try {
   check((await rpc('get_reimbursement_payment_options',{p_request:otherRequest})).length===0,'Organizer cannot see other creditor URL');
   await deny(clients[0],'save_my_payment_link',{p_provider:'monzo',p_url:'https://monzo.me/orchestrio-phase8-other',p_id:memberLink});
   await open(otherActivity,'Member creditor private destination');check(await page.locator('section[aria-label="Payment options"]').count()===0,'Organizer UI no payment destination');
-  await open(otherActivity,'Member creditor private destination',outsiderPage);await outsiderPage.getByRole('link',{name:/Open Monzo payment link/}).waitFor();
+  await open(otherActivity,'Member creditor private destination',outsiderPage);await outsiderPage.getByRole('link',{name:/Pay with Monzo/}).waitFor();
   pass('Viewer debtor can resolve link; Organizer can inspect another debt but cannot see or edit creditor payment preferences');
   stage='live link edits removal no-link fallback';
   const unchanged=await snapshot();
@@ -240,7 +240,7 @@ try {
   unwrap(await clients[0].from('payments').insert({project_id:project,commitment_id:activity,paid_by_member_id:owner,type:'refund',direction:'incoming',status:'paid',amount_minor:10000,paid_on:today}),'Refund');
   const afterRefund=await snapshot();
   await open(activity,title,memberPage);await reimbursement.getByText('This reimbursement needs review before payment.',{exact:true}).waitFor();
-  check(await reimbursement.getByRole('link',{name:/payment link/}).count()===0,'Stale Pay action hidden');check((await rpc('get_reimbursement_payment_options',{p_request:request},clients[1])).length===0,'Stale API suppressed');
+  check(await reimbursement.getByRole('link',{name:/Pay with /}).count()===0,'Stale Pay action hidden');check((await rpc('get_reimbursement_payment_options',{p_request:request},clients[1])).length===0,'Stale API suppressed');
   await fits('Review-needed suppression',memberPage);check((await rpc('list_my_payment_links',{})).length===1,'Creditor global config retained');assert.deepEqual(await snapshot(),afterRefund);
   await rpc('cancel_reimbursement',{p_request:request});const afterCancel=await snapshot();
   await open(activity,title,memberPage);await reimbursement.getByText('Cancelled',{exact:true}).waitFor();check(await reimbursement.getByRole('link').count()===0,'Cancelled no action');check((await rpc('get_reimbursement_payment_options',{p_request:request},clients[1])).length===0,'Cancelled API suppressed');assert.deepEqual(await snapshot(),afterCancel);

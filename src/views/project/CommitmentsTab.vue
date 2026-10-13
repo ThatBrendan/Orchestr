@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { categorySuggestions } from "@/lib/projectProfiles";
 import {computed,ref,watch} from 'vue';
 import {useRoute,useRouter} from 'vue-router';
 import {useQueryClient} from '@tanstack/vue-query';
@@ -45,6 +46,7 @@ const legacy=computed(()=>items.data.value?.find(i=>i.id===route.query.item&&i.s
 const formOpen=ref(false),editing=ref<Commitment|null>(null);
 const areaOpen=ref(false),areaTitle=ref(''),areaNotes=ref(''),areaError=ref(''),saving=ref(false),editingAreaId=ref<string>();
 const deleteCategoryOpen=ref(false);
+const suggestions = computed(() => categorySuggestions(project.value?.profile ?? 'blank', (areas.data.value ?? []).map(a => a.title)));
 function selectArea(id:string|null){void router.replace({query:id?{area:id}:{}});}
 function openItem(item:Item){void router.replace({query:{...route.query,...(item.source==='task'?{item:item.id}:{commitment:item.id})}});}
 function closeDetail(){const q={...route.query};delete q.commitment;delete q.item;delete q.occurrence;void router.replace({query:q});}
@@ -142,7 +144,10 @@ watch(()=>items.data.value,()=>{if(!items.isPending.value&&route.query.item&&!le
             <span class="min-w-0 flex-1">
               <span class="block font-medium break-words">{{ activity.title }}</span>
               <span class="block text-13 text-muted">{{ itemTypeLabel(activity.item_type) }} · {{ members.find(m=>m.member_id===activity.assignee_member_id)?.display_name??'Unassigned' }}<template v-if="activity.item_date"> · {{ new Date(activity.item_date).toLocaleDateString(undefined,{timeZone:timezone}) }}</template></span>
-              <span class="mt-2 inline-flex"><StatusBadge :label="itemStatusLabel(activity)" :tone="activity.status === 'completed' ? 'success' : 'amber'" /></span>
+              <span class="mt-2 inline-flex"><StatusBadge
+                :label="itemStatusLabel(activity)"
+                :tone="activity.status === 'completed' ? 'success' : 'amber'"
+              /></span>
             </span>
             <span class="text-14">{{ activity.cost_minor==null?'No cost':format(activity.cost_minor,currency) }}</span>
           </button>
@@ -182,7 +187,10 @@ watch(()=>items.data.value,()=>{if(!items.isPending.value&&route.query.item&&!le
           <span class="min-w-0 flex-1">
             <span class="block font-medium break-words">{{ item.title }}</span>
             <span class="block text-13 text-muted mt-1">{{ itemTypeLabel(item.item_type) }} · {{ members.find(m=>m.member_id===item.assignee_member_id)?.display_name??'Unassigned' }}<template v-if="item.item_date"> · {{ new Date(item.item_date).toLocaleDateString(undefined,{timeZone:timezone}) }}</template></span>
-            <span class="mt-2 inline-flex"> <StatusBadge :label="itemStatusLabel(item)" :tone="item.status === 'completed' ? 'success' : 'amber'" /> </span>
+            <span class="mt-2 inline-flex"> <StatusBadge
+              :label="itemStatusLabel(item)"
+              :tone="item.status === 'completed' ? 'success' : 'amber'"
+            /> </span>
           </span>
           <span class="text-14">{{ item.cost_minor==null?'No cost':format(item.cost_minor,currency) }}</span>
         </button>
@@ -198,6 +206,26 @@ watch(()=>items.data.value,()=>{if(!items.isPending.value&&route.query.item&&!le
         class="space-y-4"
         @submit.prevent="submitArea"
       >
+        <fieldset
+          v-if="!editingAreaId && suggestions.length"
+          class="space-y-2"
+        >
+          <legend class="text-13 text-muted">
+            Suggested
+          </legend>
+          <div class="flex flex-wrap gap-2">
+            <AppButton
+              v-for="suggestion in suggestions"
+              :key="suggestion"
+              type="button"
+              size="sm"
+              variant="secondary"
+              @click="areaTitle = suggestion"
+            >
+              {{ suggestion }}
+            </AppButton>
+          </div>
+        </fieldset>
         <label class="block text-14">Category name *<input
           v-model="areaTitle"
           required

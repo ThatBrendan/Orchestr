@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { paymentProviders } from '@/lib/paymentProviders';
 import { useReimbursementPaymentOptions } from '@/composables/usePaymentLinks';
 const props = defineProps<{ requestId: string; creditorName: string }>();
 const query = useReimbursementPaymentOptions(() => props.requestId);
@@ -24,7 +25,7 @@ const query = useReimbursementPaymentOptions(() => props.requestId);
     </p>
     <template v-else-if="query.data.value?.length">
       <h4 class="font-medium">
-        Pay {{ creditorName }}
+        {{ creditorName }}'s payment preferences
       </h4>
       <div
         v-for="option in query.data.value"
@@ -38,9 +39,9 @@ const query = useReimbursementPaymentOptions(() => props.requestId);
           target="_blank"
           rel="noopener noreferrer"
           referrerpolicy="no-referrer"
-          class="inline-flex min-h-11 items-center rounded-lg border border-line px-3 py-2 underline focus-ring"
-          :aria-label="`Open ${option.display_label} payment link (opens in a new tab)`"
-        >Open payment link <span class="sr-only">(opens in a new tab)</span></a>
+          class="inline-flex min-h-11 items-center rounded-lg border border-line px-3 py-2 font-medium bg-secondary hover:bg-brand-soft focus-ring"
+          :aria-label="`${option.provider === 'custom' ? 'Open custom link: ' + option.display_label : 'Pay with ' + paymentProviders[option.provider].name} (opens in a new tab)`"
+        >{{ option.provider === 'custom' ? 'Open custom link: ' + option.display_label : 'Pay with ' + paymentProviders[option.provider].name }} <span class="sr-only">(opens in a new tab)</span></a>
       </div>
       <p class="text-muted">
         Payment happens outside Orchestrio. Opening a link does not mark this reimbursement as paid.

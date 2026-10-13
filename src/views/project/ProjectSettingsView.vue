@@ -7,12 +7,11 @@ import { useProject } from "@/composables/useProject";
 import { useUpdateProject, useSetProjectStatus, useDeleteProject } from "@/composables/useProjects";
 import { useToast } from "@/composables/useToast";
 import { toAppError } from "@/lib/errors";
-import { PROJECT_PROFILES, isProjectModuleVisible, profileDefinition, setModuleVisibility } from "@/lib/projectProfiles";
+import { isProjectModuleVisible, setModuleVisibility } from "@/lib/projectProfiles";
 import AppButton from "@/components/ui/AppButton.vue";
 import AppConfirmDialog from "@/components/ui/AppConfirmDialog.vue";
-import ProjectJoinAccess from "@/components/members/ProjectJoinAccess.vue";
 import SectionHeading from "@/components/ui/SectionHeading.vue";
-import type { ProjectProfile, ProjectStatus } from "@/types/database";
+import type { ProjectStatus } from "@/types/database";
 import type { Project } from "@/types/domain";
 
 const route = useRoute();
@@ -38,7 +37,6 @@ const form = reactive({
   description: "",
   starts_on: "",
   ends_on: "",
-  profile: "blank" as ProjectProfile,
   budget_visible: true,
 });
 const fieldError = ref<string | null>(null);
@@ -53,7 +51,6 @@ watch(
     form.description = p.description ?? "";
     form.starts_on = p.starts_on ?? "";
     form.ends_on = p.ends_on ?? "";
-    form.profile = p.profile;
     form.budget_visible = isProjectModuleVisible(p.profile, p.module_visibility, "budget");
   },
   { immediate: true },
@@ -104,22 +101,18 @@ async function saveDetails() {
   }
 }
 
-function onProfileChange() {
-  form.budget_visible = isProjectModuleVisible(form.profile, null, "budget");
-}
-
 async function saveWorkspace() {
   if (update.isPending.value || project.value?.status === "archived") return;
   workspaceError.value = null;
   if (!project.value) return;
   try {
     const saved = await update.mutateAsync({
-      profile: form.profile,
       module_visibility: setModuleVisibility(project.value.module_visibility, "budget", form.budget_visible),
     });
     syncContext(saved);
-    toast.success("Workspace settings saved.");
+    toast.success("Budget visibility saved.");
   } catch (e) {
+    form.budget_visible = isProjectModuleVisible(project.value.profile, project.value.module_visibility, "budget");
     workspaceError.value = toAppError(e).message;
   }
 }
@@ -163,10 +156,6 @@ const status = computed(() => project.value?.status);
     </div>
 
     <template v-else>
-      <ProjectJoinAccess
-        :project-id="projectId"
-        :read-only="status === 'archived'"
-      />
       <div>
         <SectionHeading label="Details" />
         <form
@@ -240,32 +229,17 @@ const status = computed(() => project.value?.status);
       </div>
 
       <div>
-        <SectionHeading label="Workspace" />
+        <SectionHeading label="Modules" />
         <div class="mt-3 space-y-4 rounded-xl border border-line bg-surface p-4">
-          <label class="block">
-            <span class="text-13 font-medium block mb-1.5 text-ink-soft">Project profile</span>
-            <select
-              v-model="form.profile"
-              class="w-full border rounded-lg px-3 py-2.5 text-14 focus-ring border-line bg-surface"
-              @change="onProfileChange"
-            >
-              <option
-                v-for="profileOption in PROJECT_PROFILES"
-                :key="profileOption.value"
-                :value="profileOption.value"
-              >
-                {{ profileOption.label }}
-              </option>
-            </select>
-            <span class="text-13 text-muted mt-1 block">{{ profileDefinition(form.profile).description }}</span>
-          </label>
           <label class="flex items-center gap-2 text-13.5 text-ink-soft">
             <input
               v-model="form.budget_visible"
+              :disabled="update.isPending.value || status === 'archived'"
               type="checkbox"
               class="rounded border-line"
+              @change="saveWorkspace"
             >
-            Show Budget module in this project
+            Show Budget
           </label>
           <p class="text-13 text-muted">
             Changing this only affects navigation and workspace emphasis. Existing data is preserved.
@@ -276,14 +250,6 @@ const status = computed(() => project.value?.status);
           >
             {{ workspaceError }}
           </p>
-          <AppButton
-            size="sm"
-            :loading="update.isPending.value"
-            :disabled="status === 'archived'"
-            @click="saveWorkspace"
-          >
-            Save workspace
-          </AppButton>
         </div>
       </div>
 

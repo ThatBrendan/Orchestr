@@ -70,7 +70,6 @@ const fieldError = ref<string | null>(null);
 const showEndDate = ref(false);
 const showLocation = ref(false);
 const showSupplier = ref(false);
-const showSplit = ref(false);
 const selectedWorkflow = computed(() => activityWorkflow(form.activity_type));
 const dateLabel = computed(() => (form.activity_type === "task" || form.activity_type === "purchase" ? "Due date" : "Date"));
 
@@ -91,7 +90,6 @@ function hasSupplierBooking(c: Commitment): boolean {
 
 function resetFromCommitment() {
   const c = props.commitment;
-  showSplit.value = !!c && c.cost_split_mode !== "none";
   if (!c) {
     Object.assign(form, {
       title: "",
@@ -330,6 +328,16 @@ const isPending = computed(() => create.isPending.value || update.isPending.valu
           class="w-full border rounded-lg px-3.5 py-2.5 text-14 focus-ring border-line"
         >
       </label>
+      <CostSplitEditor
+        v-if="open"
+        ref="splitEditor"
+        :key="commitment?.id ?? 'new'"
+        :commitment="commitment"
+        :cost="splitCost"
+        :currency="currency"
+        :members="memberOptions"
+      />
+
 
       <div
         v-if="props.commitment"
@@ -453,23 +461,6 @@ const isPending = computed(() => create.isPending.value || update.isPending.valu
       </p>
     </form>
 
-    <button
-      v-if="!showSplit && splitCost != null && splitCost > 0 && memberOptions.filter(m=>m.status==='active').length > 1"
-      type="button"
-      class="text-14 text-brand-dark focus-ring mt-3"
-      @click="showSplit = true"
-    >
-      Manage cost sharing
-    </button>
-    <CostSplitEditor
-      v-if="open && showSplit && (splitCost ?? 0) > 0 && memberOptions.filter(m=>m.status==='active').length > 1"
-      ref="splitEditor"
-      :key="commitment?.id ?? 'new'"
-      :commitment="commitment"
-      :cost="splitCost"
-      :currency="currency"
-      :members="memberOptions"
-    />
     <template #footer>
       <AppButton
         variant="secondary"

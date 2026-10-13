@@ -18,6 +18,7 @@ export interface Decision extends DecisionRow {
   vote_count: number; options: (DecisionOptionRow & { vote_count: number })[];
 }
 export interface DecisionInput {
+  preserveDeadline?: boolean;
   title: string; description: string | null; deadline: string | null;
   options: { title: string; estimated_cost_minor: number | null }[] | null;
 }

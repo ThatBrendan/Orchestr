@@ -11,25 +11,22 @@ const props = defineProps<{ projectId: string; currency: string; timezone: strin
 const emit = defineEmits<{ close: []; saved: [id: string] }>();
 const money = useMoney(), id = props.decision?.id ?? crypto.randomUUID();
 const title = ref(props.decision?.title ?? ""), description = ref(props.decision?.description ?? "");
-const deadline = ref(props.decision?.voting_deadline ? DateTime.fromISO(props.decision.voting_deadline, { zone: props.timezone }).toFormat("yyyy-MM-dd'T'HH:mm") : "");
+const deadline = ref(props.decision?.voting_deadline ? DateTime.fromISO(props.decision.voting_deadline, { zone: props.timezone }).toISODate()! : "");
 const initialDeadline = deadline.value;
 const options = ref(props.decision?.options.map(o => ({ title: o.title, cost: String(money.toMajor(o.estimated_cost_minor, props.currency) ?? "") })) ?? [{ title: "", cost: "" }, { title: "", cost: "" }]);
 const busy = ref(false), error = ref("");
 async function save() {
   if (busy.value) return;
   error.value = "";
-  let utc: string | null = null;
-  if (deadline.value) {
-    const date = DateTime.fromISO(deadline.value, { zone: props.timezone });
-    if (!date.isValid || date.toFormat("yyyy-MM-dd'T'HH:mm") !== deadline.value) { error.value = "Choose a valid date and time in the project timezone."; return; }
-    utc = props.decision && deadline.value === initialDeadline ? props.decision.voting_deadline : date.toUTC().toISO();
+  if (deadline.value && !DateTime.fromISO(deadline.value, { zone: props.timezone }).isValid) {
+    error.value = "Choose a valid date in the project timezone."; return;
   }
   let values;
   try { values = options.value.map(o => ({ title: o.title.trim(), estimated_cost_minor: o.cost.trim() ? money.toMinor(o.cost, props.currency) : null })); } catch (e) { error.value = e instanceof Error ? e.message : "Enter valid estimated costs."; return; }
   if (options.value.some((o, i) => o.cost.trim() && values[i]?.estimated_cost_minor == null)) { error.value = "Enter valid estimated costs."; return; }
   busy.value = true;
   try {
-    await saveDecision(props.projectId, id, { title: title.value, description: description.value || null, deadline: utc, options: props.decision?.voting_started ? null : values }, !!props.decision);
+    await saveDecision(props.projectId, id, { title: title.value, description: description.value || null, deadline: deadline.value || null, preserveDeadline: !!props.decision && deadline.value === initialDeadline, options: props.decision?.voting_started ? null : values }, !!props.decision);
     emit("saved", id);
   } catch (e) { error.value = toAppError(e).message; }
   finally { busy.value = false; }
@@ -106,13 +103,22 @@ async function save() {
           Add option
         </AppButton>
       </fieldset>
-      <label class="block text-14">Voting deadline (optional)<input
+      <label class="block text-14">Deadline date (optional)<input
         v-model="deadline"
-        type="datetime-local"
+        type="date"
         class="mt-1 w-full min-w-0 rounded-lg border border-line bg-surface px-3 py-2.5 text-14 focus-ring"
       ></label>
-      <p class="text-13 text-muted">
-        Time in {{ timezone }}. Voting closes at the deadline; the final choice is made manually.
+      <p
+        v-if="!decision || deadline !== initialDeadline"
+        class="text-13 text-muted"
+      >
+        Voting closes at 23:59:59 on this date in {{ timezone }}. The final choice is made manually.
+      </p>
+      <p
+        v-if="decision && deadline === initialDeadline && decision.voting_deadline"
+        class="text-13 text-muted"
+      >
+        Current deadline: {{ DateTime.fromISO(decision.voting_deadline, { zone: timezone }).toFormat('dd LLL yyyy HH:mm:ss') }} ({{ timezone }}). Change the date to use end of day.
       </p>
       <p
         v-if="error"

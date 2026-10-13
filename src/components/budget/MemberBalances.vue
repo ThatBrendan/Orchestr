@@ -23,6 +23,8 @@ const selected=ref<NonNullable<typeof lines.data.value>[number]|null>(null),paye
 const canSettle=computed(()=>isOrganizer.value&&project.value?.status!=='archived');
 const creditors=computed(()=>(lines.data.value??[]).filter(l=>l.commitment_id===selected.value?.commitment_id&&l.remaining_minor<0&&l.member_status==='active'));
 function memberLines(id:string){return (lines.data.value??[]).filter(l=>l.member_id===id&&(!props.itemId||l.commitment_id===props.itemId));}
+function balanceLabel(amount:number){return amount===0?'Settled':(amount>0?'Owes ':'Is owed ')+format(Math.abs(amount),props.currency);}
+function memberBalance(id:string, total:number){return props.itemId ? memberLines(id)[0]?.remaining_minor ?? 0 : total;}
 function areaGroups(id:string){const result=new Map<string,ReturnType<typeof memberLines>>();for(const line of memberLines(id)){const key=line.area_title??'Activities without a Category';result.set(key,[...(result.get(key)??[]),line]);}return [...result];}
 function open(line:NonNullable<typeof selected.value>){selected.value=line;payee.value=creditors.value[0]?.member_id??'';amount.value=String(toMajor(Math.min(line.remaining_minor,-(creditors.value[0]?.remaining_minor??0)),props.currency));date.value=DateTime.now().setZone(project.value?.timezone??'UTC').toISODate()!;error.value='';}
 async function refresh(){await Promise.all([client.invalidateQueries({queryKey:['settlement']}),client.invalidateQueries({queryKey:['reimbursement-payment-status']}),invalidatePlanning(client,props.projectId)]);}
@@ -62,13 +64,14 @@ async function cancel(){if(!cancelling.value)return;busy.value=true;error.value=
       <details
         v-for="member in query.data.value?.members.filter(m=>!itemId||memberLines(m.member_id).length)"
         :key="member.member_id"
-        class="rounded-xl border border-line bg-surface p-4"
+        class="group rounded-xl border border-line bg-surface p-4"
       >
         <summary class="cursor-pointer focus-ring flex flex-wrap justify-between gap-2">
-          <span class="font-medium break-words">{{ member.display_name }}{{ member.member_status==='removed'?' (removed)':'' }}</span><span
-            v-if="!itemId"
-            class="text-14"
-          >{{ member.remaining_minor===0?'Settled':format(Math.abs(member.remaining_minor),currency)+(member.remaining_minor>0?' outstanding':' to receive') }}</span>
+          <span class="min-w-0">
+            <span class="block font-medium break-words">{{ member.display_name }}{{ member.member_status==='removed'?' (removed)':'' }}</span>
+            <span class="block mt-1 text-14">{{ balanceLabel(memberBalance(member.member_id, member.remaining_minor)) }}</span>
+          </span>
+          <span class="text-13 underline self-center"><span class="group-open:hidden">View details</span><span class="hidden group-open:inline">Hide details</span><span class="sr-only"> for {{ member.display_name }}</span></span>
         </summary>
         <div
           v-for="[area,rows] in areaGroups(member.member_id)"
@@ -82,7 +85,7 @@ async function cancel(){if(!cancelling.value)return;busy.value=true;error.value=
             :key="line.commitment_id"
             class="flex flex-wrap items-center justify-between gap-2 text-13 border-t border-line pt-2"
           >
-            <span class="min-w-0 break-words">{{ line.item_title }}</span><span>{{ line.remaining_minor===0?'Settled':format(Math.abs(line.remaining_minor),currency)+(line.remaining_minor<0?' to receive':' outstanding') }}</span><AppButton
+            <span class="min-w-0 break-words">{{ line.item_title }}</span><span>{{ balanceLabel(line.remaining_minor) }}</span><AppButton
               v-if="canSettle&&line.member_status==='active'&&line.remaining_minor>0&&lines.data.value?.some(c=>c.commitment_id===line.commitment_id&&c.remaining_minor<0&&c.member_status==='active')"
               size="sm"
               variant="secondary"
@@ -93,29 +96,13 @@ async function cancel(){if(!cancelling.value)return;busy.value=true;error.value=
           </div>
         </div>
         <section
+          v-if="memberRequests(member.member_id).length"
           class="mt-4 space-y-2 text-13"
           aria-label="Reimbursement requests"
         >
           <h3 class="font-medium">
             Reimbursements
           </h3>
-          <p v-if="reimbursements.isPending.value">
-            Loading reimbursements…
-          </p>
-          <p v-else-if="reimbursements.isError.value">
-            Could not load reimbursements. <button
-              class="underline"
-              @click="reimbursements.refetch()"
-            >
-              Retry
-            </button>
-          </p>
-          <p
-            v-else-if="!memberRequests(member.member_id).length"
-            class="text-muted"
-          >
-            No reimbursement requests.
-          </p>
           <RouterLink
             v-for="request in memberRequests(member.member_id)"
             :key="request.id"
@@ -129,8 +116,20 @@ async function cancel(){if(!cancelling.value)return;busy.value=true;error.value=
         </section>
       </details>
     </template>
+    <p
+      v-if="reimbursements.isError.value"
+      role="alert"
+      class="text-13"
+    >
+      Could not load reimbursement details. <button
+        class="underline focus-ring"
+        @click="reimbursements.refetch()"
+      >
+        Retry
+      </button>
+    </p>
     <details
-      v-if="history.data.value?.length"
+      v-if="history.data.value?.some(r=>!itemId||r.commitment_id===itemId)"
       class="text-13"
     >
       <summary class="cursor-pointer focus-ring">

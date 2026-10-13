@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import ProjectJoinAccess from "@/components/members/ProjectJoinAccess.vue";
 import { useProjectSettlement } from "@/composables/useSettlement";
 import { useMoney } from "@/composables/useMoney";
 import { isProjectModuleVisible } from "@/lib/projectProfiles";
@@ -214,6 +215,13 @@ const statusTone = (s: string) => (s === "invited" ? "amber" : s === "removed" ?
           </p>
         </div>
       </div>
+      <ProjectJoinAccess
+        v-if="allowed('project.invite')"
+        :key="projectId"
+        class="mt-6"
+        :project-id="projectId"
+        :read-only="archived"
+      />
       <section
         v-if="allowed('project.invite')"
         class="mt-6 space-y-3"

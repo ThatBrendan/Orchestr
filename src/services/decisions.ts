@@ -7,10 +7,10 @@ export async function listDecisions(project: string, decision?: string): Promise
   return data as unknown as Decision[];
 }
 export async function saveDecision(project: string, id: string, input: DecisionInput, editing: boolean) {
-  const fields = { p_title: input.title, p_description: input.description, p_deadline: input.deadline, p_options: input.options };
+  const fields = { p_title: input.title, p_description: input.description, p_deadline_date: input.deadline, p_options: input.options };
   const { error } = editing
-    ? await supabase.rpc("edit_decision", { p_decision: id, ...fields })
-    : await supabase.rpc("create_decision", { p_project: project, p_id: id, ...fields });
+    ? await supabase.rpc("edit_decision_date", { p_decision: id, p_preserve_deadline: input.preserveDeadline ?? false, ...fields })
+    : await supabase.rpc("create_decision_date", { p_project: project, p_id: id, ...fields });
   if (error) throw toAppError(error);
   return id;
 }

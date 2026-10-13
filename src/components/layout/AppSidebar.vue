@@ -22,10 +22,10 @@ function isActive(match: readonly string[]) {
 </script>
 
 <template>
-  <aside class="hidden md:flex w-60 shrink-0 border-r border-line bg-surface flex-col">
+  <aside class="hidden md:flex sticky top-0 h-dvh w-60 shrink-0 border-r border-line bg-surface flex-col">
     <RouterLink
       to="/"
-      class="h-16 flex items-center px-5 border-b border-line focus-ring"
+      class="h-16 shrink-0 flex items-center px-5 border-b border-line focus-ring"
     >
       <img
         :src="orchestrioIcon"
@@ -34,7 +34,7 @@ function isActive(match: readonly string[]) {
       >
     </RouterLink>
 
-    <nav class="flex-1 px-3 py-4 space-y-0.5">
+    <nav class="flex-1 min-h-0 overflow-y-auto px-3 py-4 space-y-0.5">
       <RouterLink
         v-for="item in items"
         :key="item.label"
@@ -50,8 +50,9 @@ function isActive(match: readonly string[]) {
       </RouterLink>
     </nav>
 
-    <CurrentProjectLink />
-
-    <UserMenu />
+    <div class="shrink-0">
+      <CurrentProjectLink />
+      <UserMenu />
+    </div>
   </aside>
 </template>

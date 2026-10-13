@@ -93,7 +93,10 @@ const categoriesWithData = computed(() => categories.value.filter((c) => c.targe
         :currency="currency"
       />
     
-      <section class="mt-8">
+      <section
+        class="mt-10 border-t border-line pt-6"
+        aria-label="Category budgets"
+      >
         <SectionHeading label="By category" />
         <SkeletonBlock
           v-if="catPending"

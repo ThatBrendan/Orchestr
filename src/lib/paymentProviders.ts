@@ -3,7 +3,8 @@ import type { PaymentProvider } from '@/types/paymentLinks';
 export const paymentProviders = {
   monzo: { name: 'Monzo', host: 'monzo.me', help: 'Use your personal Monzo.me link from Payments → Request money → By QR code or link.' },
   revolut: { name: 'Revolut', host: 'revolut.me', help: 'Use your generic Revolut.me link from Payments → New → Link → Request money.' },
-  custom: { name: 'Other', host: null, help: 'Paste an HTTPS payment link you want people to use to reimburse you.' },
+  paypal: { name: 'PayPal', host: 'paypal.me', help: 'Use your reusable PayPal.Me profile link, without an amount.' },
+  custom: { name: 'Other / Custom', host: null, help: 'Paste an HTTPS payment link you want people to use to reimburse you.' },
 } as const;
 export function normalizePaymentUrl(provider: PaymentProvider, raw: string): string {
   if (!Object.prototype.hasOwnProperty.call(paymentProviders, provider)) throw new Error('Choose a supported payment provider.');
@@ -21,6 +22,7 @@ export function normalizePaymentUrl(provider: PaymentProvider, raw: string): str
   const rule = paymentProviders[provider];
   if (!rule) throw new Error('Choose a supported payment provider.');
   if (rule.host && (host !== rule.host || !/^\/[^/?#]+/.test(tail))) throw new Error(`Use your personal ${rule.name} payment link.`);
+  if (provider === 'paypal' && !/^\/[A-Za-z0-9]{1,20}\/?$/.test(tail)) throw new Error('Use your reusable PayPal.Me profile link without an amount, query or fragment.');
   // Parse again in the browser, without rewriting opaque path/query/fragment semantics.
   const result = `https://${host}${tail}`;
   if (new URL(result).hostname !== host) throw new Error('That website address is not valid.');

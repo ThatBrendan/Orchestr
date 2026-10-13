@@ -36,7 +36,7 @@ export const ICON_PATHS: Record<IconName, string> = {
     '<rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 9.5h16M8 3v4M16 3v4M8 14h.01M12 14h.01M16 14h.01M8 17h.01M12 17h.01"/>',
   people:
     '<circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="17" cy="9" r="2.6"/><path d="M15.5 14.2c2.5.3 4.5 2.4 4.5 5.3"/>',
-  settings: '<circle cx="12" cy="12" r="3.5"/><path d="M12 3.5v2M12 18.5v2M20.5 12h-2M5.5 12h-2M18 6l-1.4 1.4M7.4 16.6 6 18M18 18l-1.4-1.4M7.4 7.4 6 6"/>',
+  settings: '<path d="m9 3-.5 2.2-1.7 1L4.7 5.5l-2 3.5 1.6 1.5v2L2.7 14l2 3.5 2.1-.7 1.7 1L9 20h4l.5-2.2 1.7-1 2.1.7 2-3.5-1.6-1.5v-2L19.3 9l-2-3.5-2.1.7-1.7-1L13 3Z"/><circle cx="11" cy="11.5" r="3"/>',
   chevronLeft: '<path d="M15 6l-6 6 6 6"/>',
   chevronRight: '<path d="M9 6l6 6-6 6"/>',
   chevronDown: '<path d="M6 9l6 6 6-6"/>',

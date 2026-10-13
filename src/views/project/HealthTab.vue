@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import ListPagination from "@/components/ui/ListPagination.vue";
+import { useListPagination } from "@/composables/useListPagination";
 import { computed, ref } from "vue";
 import { useRoute } from "vue-router";
 import { useProjectHealth, useProjectHealthSummary } from "@/composables/useProject";
@@ -42,6 +44,9 @@ const visible = computed(() =>
       return order[a.severity] - order[b.severity];
     }),
 );
+
+const resetKey = computed(() => `${projectId.value}:${filter.value}:${showResolved.value}`);
+const { page, result: paginated } = useListPagination(visible, 10, resetKey);
 
 const TABS: { key: Filter; label: string }[] = [
   { key: "all", label: "All" },
@@ -119,12 +124,19 @@ const TABS: { key: Filter; label: string }[] = [
       class="border rounded-xl divide-y border-line bg-surface"
     >
       <FindingCard
-        v-for="f in visible"
+        v-for="f in paginated.items"
         :key="f.code + (f.subject_id ?? '') + f.subject_type"
         :finding="f"
         :project-id="projectId"
         :can-dismiss="canDismiss"
       />
     </div>
+    <ListPagination
+      v-if="!health.isPending.value && !health.isError.value"
+      v-model:page="page"
+      :previous="paginated.canGoPrevious"
+      :next="paginated.canGoNext"
+      label="Health findings pages"
+    />
   </div>
 </template>

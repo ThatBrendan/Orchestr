@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, reactive, ref, watch } from "vue";
+import { computed, reactive, ref, watch, useId } from "vue";
 import { useCostShares } from "@/composables/useCostShares";
 import { useMoney } from "@/composables/useMoney";
 import { currencyDigits } from "@/lib/money";
@@ -9,6 +9,7 @@ import type { MemberDirectoryEntry } from "@/types/derived";
 import type { Json } from "@/types/database";
 import AppButton from "@/components/ui/AppButton.vue";
 const props = defineProps<{ commitment?: Commitment | null; cost: number | null; currency: string; members: MemberDirectoryEntry[]; readonly?: boolean }>();
+const splitGroup = useId();
 const query = useCostShares(() => props.commitment?.id);
 const { format, toMinor } = useMoney();
 const mode = ref(props.commitment ? props.commitment.cost_split_mode ?? 'legacy' : 'none');
@@ -85,19 +86,34 @@ defineExpose({ getSplit });
         {{ mode === 'none' ? 'No split' : mode === 'legacy' ? 'Existing participant allocation' : mode === 'even' ? 'Split evenly' : 'Custom split' }}
       </p>
       <template v-else>
-        <label class="block text-13">Split cost
-          <select
-            v-model="mode"
-            class="block mt-1 w-full border border-line rounded-lg p-2 bg-surface"
-            @change="changeMode"
-          >
-            <option
+        <fieldset class="space-y-2">
+          <legend class="text-13 font-medium">
+            Split cost?
+          </legend>
+          <div class="flex flex-wrap gap-3">
+            <label
               v-if="commitment && commitment.cost_split_mode == null"
+              class="flex items-center gap-2 text-13"
+            ><input
+              v-model="mode"
+              type="radio"
+              :name="splitGroup"
               value="legacy"
-            >Keep existing allocation</option>
-            <option value="none">No split</option><option value="even">Split evenly</option><option value="custom">Custom split</option>
-          </select>
-        </label>
+              @change="changeMode"
+            >Keep existing allocation</label>
+            <label
+              v-for="choice in [{value:'none',label:'No split'},{value:'even',label:'Evenly'},{value:'custom',label:'Custom'}]"
+              :key="choice.value"
+              class="flex items-center gap-2 text-13"
+            ><input
+              v-model="mode"
+              type="radio"
+              :name="splitGroup"
+              :value="choice.value"
+              @change="changeMode"
+            >{{ choice.label }}</label>
+          </div>
+        </fieldset>
         <p
           v-if="changedCost && mode !== 'none'"
           class="text-13 text-amber"

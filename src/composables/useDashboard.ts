@@ -1,4 +1,4 @@
-import { computed } from "vue";
+import { computed, ref, watch } from "vue";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/vue-query";
 import { qk } from "./keys";
 import { useAuth } from "./useAuth";
@@ -34,28 +34,31 @@ export function useUpdateMyDisplayName() {
 }
 
 /**
- * Dashboard "Needs attention" — ONE set-based call to public.get_my_attention()
- * (was: get_project_health per project → client N+1). Count comes from
- * v_my_projects.attention_count, so no extra round-trip for the headline number.
+ * Dashboard attention: bounded five-row pages in the authoritative RPC order.
+ * PostgREST returns the exact count with the same response; no client N+1.
  */
 export function useDashboardAttention() {
   const { activeProjects: projects } = useMyProjects();
-
+  const { userId } = useAuth();
+  const page = ref(1);
+  watch(() => `${userId.value}:${projects.value.map(p => p.project_id).sort().join(',')}`, () => { page.value = 1; });
   const q = useQuery({
-    queryKey: qk.me.attention(),
-    queryFn: derived.getMyAttention,
+    queryKey: computed(() => [...qk.me.attention(), userId.value, page.value]),
+    queryFn: () => derived.getMyAttention(page.value),
+    enabled: computed(() => !!userId.value),
     staleTime: 0,
   });
-
-  const findings = computed(() => q.data.value ?? []);
-  const totalCount = computed(() =>
-    projects.value.reduce((sum, p) => sum + (p.attention_count ?? 0), 0),
-  );
-
+  watch(q.data, data => {
+    if (data) page.value = Math.min(data.page, Math.max(1, Math.ceil(data.total / 5)));
+  });
+  const findings = computed(() => q.data.value?.items ?? []);
+  const totalCount = computed(() => q.data.value?.total ?? projects.value.reduce((sum, p) => sum + (p.attention_count ?? 0), 0));
   return {
-    findings,
-    totalCount,
+    findings, totalCount, page,
+    canGoPrevious: computed(() => page.value > 1),
+    canGoNext: computed(() => page.value * 5 < totalCount.value),
     isPending: q.isPending,
+    isFetching: q.isFetching,
     isError: q.isError,
     error: q.error,
     refetch: q.refetch,

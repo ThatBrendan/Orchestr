@@ -930,6 +930,8 @@ export interface Database {
       delete_resource_comment: { Args: { p_resource_type: string; p_resource_id: string; p_comment: string }; Returns: undefined };
       get_resource_comments: { Args: { p_resource_type: string; p_resource_id: string; p_before_at?: string; p_before_id?: string }; Returns: Json };
       get_decisions: { Args: { p_project: string; p_decision?: string }; Returns: Json };
+      create_decision_date: { Args: { p_project: string; p_title: string; p_description: string | null; p_deadline_date: string | null; p_options: Json; p_id?: string }; Returns: string };
+      edit_decision_date: { Args: { p_decision: string; p_title: string; p_description: string | null; p_deadline_date: string | null; p_options?: Json; p_preserve_deadline?: boolean }; Returns: undefined };
       create_decision: { Args: { p_project: string; p_title: string; p_description: string | null; p_deadline: string | null; p_options: Json; p_id?: string }; Returns: string };
       edit_decision: { Args: { p_decision: string; p_title: string; p_description: string | null; p_deadline: string | null; p_options?: Json }; Returns: undefined };
       cast_decision_vote: { Args: { p_decision: string; p_option: string | null }; Returns: undefined };
@@ -942,6 +944,7 @@ export interface Database {
       disable_resource_share_link: { Args: { p_resource_type: string; p_resource_id: string }; Returns: undefined };
       resolve_shared_resource: { Args: { p_token: string }; Returns: Json };
       get_project_join_access: { Args: { p_project: string; p_offset?: number }; Returns: Json };
+      ensure_project_join_link: { Args: { p_project: string }; Returns: string };
       regenerate_project_join_link: { Args: { p_project: string }; Returns: string };
       disable_project_join_link: { Args: { p_project: string }; Returns: undefined };
       resolve_project_join_link: { Args: { p_token: string }; Returns: Json };

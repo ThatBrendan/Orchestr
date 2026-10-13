@@ -38,10 +38,10 @@ function save() {
       id="payment-links-title"
       class="font-display text-lg font-semibold"
     >
-      Payment links
+      My payment preferences
     </h2>
     <p class="text-13 text-muted">
-      Add a payment link so people can easily reimburse you. Only people with a current reimbursement to pay you can see it.
+      Add multiple payment preferences so people can choose how to reimburse you. Only people with an eligible reimbursement to pay you can see them. For Starling Settle Up, choose Other / Custom.
     </p>
     <p v-if="query.isPending.value">
       Loading payment links…
@@ -74,9 +74,8 @@ function save() {
           v-if="link.is_default"
           class="text-13 text-muted"
         >· Default</span><span
-          v-if="!link.is_enabled"
           class="text-13 text-muted"
-        >· Disabled</span>
+        >· {{ link.is_enabled ? 'Enabled' : 'Disabled' }}</span>
       </p>
       <p class="text-13 break-all">
         {{ link.payment_url }}
