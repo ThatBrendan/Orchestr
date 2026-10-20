@@ -11,7 +11,7 @@ const crashed = ref<string | null>(null);
 onErrorCaptured((err) => {
   const e = toAppError(err);
   logger.error("render error captured", { kind: e.kind, code: e.code });
-  crashed.value = e.message;
+  crashed.value = "Please reload the page and try again.";
   return false;
 });
 

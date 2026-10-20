@@ -30,13 +30,15 @@ export function useNotifications() {
     getNextPageParam: page => page.next,
     enabled: computed(() => auth.isAuthenticated), refetchInterval: 30_000,
   });
-  const count = useQuery({ queryKey: computed(() => [...qk.me.notifications(), 'unread', auth.userId]), queryFn: activityNotifications.notificationUnreadCount, enabled: computed(() => auth.isAuthenticated), refetchInterval: 30_000 });
+  const unread = useQuery({ queryKey: computed(() => [...qk.me.notifications(), 'unread-state', auth.userId]), queryFn: activityNotifications.notificationUnreadState, enabled: computed(() => auth.isAuthenticated), refetchInterval: 30_000 });
   const markAllRead = useMutation({ mutationFn: activityNotifications.markAllNotificationsRead, onSuccess: () => client.invalidateQueries({ queryKey: qk.me.notifications() }) });
   const markRead = useMutation({
     mutationFn: activityNotifications.markNotificationRead,
     onSuccess: () => client.invalidateQueries({ queryKey: qk.me.notifications() }),
   });
-  const unreadCount = computed(() => (pending.data.value?.length ?? 0) + (count.data.value ?? 0));
+  const unreadUnavailable = computed(() => pending.isError.value || unread.isError.value);
+  const hasUnread = computed(() => unreadUnavailable.value || pending.isPending.value || unread.isPending.value
+    ? null : (pending.data.value?.length ?? 0) > 0 || unread.data.value === true);
   const respond = useMutation({
     mutationFn: ({ token, action }: { token: string; action: "accept" | "decline" }) =>
       action === "accept" ? invitations.acceptInvitation(token) : invitations.declineInvitation(token),
@@ -45,5 +47,5 @@ export function useNotifications() {
       qk.me.attention(), qk.me.calendarRoot(), ["invitation"],
     ].map((queryKey) => client.invalidateQueries({ queryKey }))),
   });
-  return { pending, respond, inbox, count, markRead, markAllRead, unreadCount };
+  return { pending, respond, inbox, unread, markRead, markAllRead, hasUnread, unreadUnavailable };
 }

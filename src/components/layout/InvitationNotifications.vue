@@ -11,7 +11,7 @@ import AppButton from '@/components/ui/AppButton.vue';
 import { presentLabel } from '@/lib/presentation';
 const open = ref(false), message = ref('');
 const router = useRouter(), client = useQueryClient();
-const { pending, respond, inbox, count, markRead, markAllRead, unreadCount } = useNotifications();
+const { pending, respond, inbox, unread, markRead, markAllRead, hasUnread, unreadUnavailable } = useNotifications();
 const items = computed(() => inbox.data.value?.pages.flatMap(page => page.items) ?? []);
 async function answer(token: string, action: 'accept' | 'decline') {
  message.value = '';
@@ -50,9 +50,21 @@ async function markAll() {
     ><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" /></svg>
     <span class="hidden sm:inline">Notifications</span>
     <span
-      v-if="unreadCount"
+      v-if="hasUnread === true"
+      role="status"
+      aria-label="Unread notifications"
       class="rounded-full bg-brand px-2 text-white"
-    >{{ unreadCount }}</span>
+    >●</span>
+    <span
+      v-else-if="unreadUnavailable"
+      role="status"
+      aria-label="Notification status unavailable"
+    >!</span>
+    <span
+      v-else-if="hasUnread === null"
+      role="status"
+      aria-label="Checking notifications"
+    >…</span>
   </button>
   <AppModal
     :open="open"
@@ -122,6 +134,17 @@ async function markAll() {
       class="mt-6 space-y-3"
       aria-labelledby="inbox-title"
     >
+      <p
+        v-if="unread.isError.value"
+        role="alert"
+      >
+        Could not check unread notifications. <button
+          class="underline focus-ring"
+          @click="unread.refetch()"
+        >
+          Retry unread status
+        </button>
+      </p>
       <div class="flex flex-wrap items-center justify-between gap-3">
         <h2
           id="inbox-title"
@@ -132,7 +155,7 @@ async function markAll() {
         <AppButton
           variant="secondary"
           size="sm"
-          :disabled="!count.data.value || markAllRead.isPending.value"
+          :disabled="unreadUnavailable || inbox.isError.value || !unread.data.value || markAllRead.isPending.value"
           @click="markAll"
         >
           Mark all as read

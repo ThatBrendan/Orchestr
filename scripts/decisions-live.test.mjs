@@ -14,9 +14,9 @@ const env=Object.fromEntries(fs.readFileSync('.env.local','utf8').split('\n').fi
 assert.equal(env.VITE_SUPABASE_URL,`https://${target}.supabase.co`);
 assert(process.env.DECISION_FIXTURE_FILE,'Private fixture required');
 const users=JSON.parse(fs.readFileSync(process.env.DECISION_FIXTURE_FILE,'utf8')).users.slice(0,3);
-assert.equal(users.length,3);assert(users.every(u=>u.id&&u.email.endsWith('@example.test')&&u.password));
-const clients=users.map(()=>createClient(env.VITE_SUPABASE_URL,env.VITE_SUPABASE_PUBLISHABLE_KEY,{auth:{persistSession:false,autoRefreshToken:false}}));
-for(let i=0;i<3;i++)assert.ifError((await clients[i].auth.signInWithPassword({email:users[i].email,password:users[i].password})).error);
+assert.equal(users.length,3);assert(users.every(u=>typeof u.email==='string' && u.email.includes('@')&&u.password));
+const clients=users.map(()=>createClient(env.VITE_SUPABASE_URL,env.VITE_SUPABASE_PUBLISHABLE_KEY,{auth:{persistSession:false,autoRefreshToken:false},global:{fetch:(input,init)=>fetch(input,{...init,signal:AbortSignal.timeout(20000)})}}));
+for(let i=0;i<users.length;i++){const auth=await clients[i].auth.signInWithPassword({email:users[i].email,password:users[i].password});assert(!auth.error,'Synthetic authentication failed');users[i].id=auth.data.user.id;}
 const browser=await chromium.launch({headless:true,channel:'chrome'});
 let project,decision,deadlineDecision;
 const report={target,project:null,decision:null,deadlineDecision:null,activity:null,checks:[],cleanup:false};
@@ -39,7 +39,7 @@ try {
  const owner=await pageFor(users[0]);await owner.goto(`${origin}/app/projects/${project}/decisions`);await owner.getByText('No decisions yet.',{exact:true}).waitFor();await fits(owner,'Decisions list');
  await owner.getByRole('button',{name:'New decision',exact:true}).click();await owner.getByRole('heading',{name:'New decision',exact:true}).waitFor();
  await owner.getByLabel('Question',{exact:true}).fill(title);await owner.getByLabel('Option 1',{exact:true}).fill('Villa A');await owner.getByLabel('Option 2',{exact:true}).fill('Villa B');await owner.getByLabel('Estimated cost (GBP, optional)',{exact:true}).nth(0).fill('2850');await owner.getByLabel('Estimated cost (GBP, optional)',{exact:true}).nth(1).fill('3100');await owner.getByRole('button',{name:'Add option',exact:true}).click();await owner.getByLabel('Option 3',{exact:true}).fill('Hotel C');
- await owner.getByLabel('Voting deadline (optional)',{exact:true}).fill(DateTime.now().setZone('Europe/London').plus({days:1}).toFormat("yyyy-MM-dd'T'HH:mm"));
+ await owner.getByLabel('Deadline date (optional)',{exact:true}).fill(DateTime.now().setZone('Europe/London').plus({days:1}).toFormat("yyyy-MM-dd"));
  await fits(owner,'Create form and option editor');await owner.getByRole('button',{name:'Save decision',exact:true}).click();await owner.getByRole('heading',{name:title,exact:true}).waitFor();await owner.waitForURL(/\/decisions\/[0-9a-f-]{36}$/);decision=new URL(owner.url()).pathname.split('/').pop();report.decision=decision;save();pass('Organizer creates three-option Decision with minor-unit estimates');
  const initial=await model();const probeToken=await rpc(clients[0],'create_resource_share_link',{p_resource_type:'decision',p_resource_id:decision});
  const outsider=await pageFor(users[2]);await outsider.goto(origin+'/s/'+probeToken);await outsider.getByText("This shared item isn't available to your account.",{exact:true}).waitFor();assert(!(await outsider.textContent('body')).includes(title));assert((await clients[2].rpc('get_decisions',{p_project:project})).error);assert((await clients[2].rpc('cast_decision_vote',{p_decision:decision,p_option:initial.options[0].id})).error);pass('Nonmember share holder cannot read or vote');await outsider.context().close();

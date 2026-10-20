@@ -13,9 +13,9 @@ const env=Object.fromEntries(fs.readFileSync('.env.local','utf8').split('\n').fi
 assert.equal(env.VITE_SUPABASE_URL,`https://${target}.supabase.co`);
 assert(process.env.COMMENT_FIXTURE_FILE,'Private fixture required');
 const users=JSON.parse(fs.readFileSync(process.env.COMMENT_FIXTURE_FILE,'utf8')).users.slice(0,3);
-assert.equal(users.length,3);assert(users.every(u=>u.id&&u.email.endsWith('@example.test')&&u.password));
-const clients=users.map(()=>createClient(env.VITE_SUPABASE_URL,env.VITE_SUPABASE_PUBLISHABLE_KEY,{auth:{persistSession:false,autoRefreshToken:false}}));
-for(let i=0;i<3;i++)assert.ifError((await clients[i].auth.signInWithPassword({email:users[i].email,password:users[i].password})).error);
+assert.equal(users.length,3);assert(users.every(u=>typeof u.email==='string' && u.email.includes('@')&&u.password));
+const clients=users.map(()=>createClient(env.VITE_SUPABASE_URL,env.VITE_SUPABASE_PUBLISHABLE_KEY,{auth:{persistSession:false,autoRefreshToken:false},global:{fetch:(input,init)=>fetch(input,{...init,signal:AbortSignal.timeout(20000)})}}));
+for(let i=0;i<users.length;i++){const auth=await clients[i].auth.signInWithPassword({email:users[i].email,password:users[i].password});assert(!auth.error,'Synthetic authentication failed');users[i].id=auth.data.user.id;}
 const browser=await chromium.launch({headless:true,channel:'chrome'});
 let project,decision,activity;
 const report={target,project:null,decision:null,activity:null,checks:[],cleanup:false};

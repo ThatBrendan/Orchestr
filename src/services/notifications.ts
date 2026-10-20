@@ -89,10 +89,11 @@ export async function listNotificationInbox(cursor?: NotificationCursor) {
   const items = (data ?? []).slice(0, 20);
   return { items, next: (data?.length ?? 0) > 20 ? items.at(-1) : undefined };
 }
-export async function notificationUnreadCount() {
-  const { count, error } = await supabase.from('v_my_notification_inbox').select('id', { count: 'exact', head: true }).is('read_at', null);
+export async function notificationUnreadState() {
+  const { data, error } = await supabase.rpc('get_my_notification_unread_state');
   if (error) throw toAppError(error);
-  return count ?? 0;
+  if (typeof data !== 'boolean') throw new AppError('server', 'Could not check unread notifications.');
+  return data;
 }
 export async function markAllNotificationsRead() {
   const { data, error } = await supabase.rpc('mark_all_notifications_read');
@@ -102,6 +103,6 @@ export async function markAllNotificationsRead() {
 export function notificationRoute(item: InboxNotification) {
   if (item.resource_type === 'activity') return { name: 'project.commitments', params: { projectId: item.project_id }, query: { commitment: item.resource_id, ...(item.section === 'payments' || item.section === 'reimbursements' ? { section: item.section } : {}) } };
   if (item.resource_type === 'decision') return { name: 'project.decision', params: { projectId: item.project_id, decisionId: item.resource_id } };
-  if (item.resource_type === 'project') return { name: 'project.overview', params: { projectId: item.project_id }, query: item.section === 'people' ? { settings: '1' } : {} };
+  if (item.resource_type === 'project') return { name: item.section === 'people' ? 'project.people' : 'project.overview', params: { projectId: item.project_id } };
   throw new AppError('not_found', 'This notification is no longer available.');
 }

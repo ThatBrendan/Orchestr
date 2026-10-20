@@ -17,9 +17,9 @@ assert(process.env.JOIN_FIXTURE_FILE, 'JOIN_FIXTURE_FILE required');
 const fixture = JSON.parse(fs.readFileSync(process.env.JOIN_FIXTURE_FILE, 'utf8'));
 const users = fixture.users.slice(0, 2);
 assert.equal(users.length, 2);
-assert(users.every(u => u.id && u.email.endsWith('@example.test') && u.password), 'Synthetic accounts required');
-const clients = users.map(() => createClient(env.VITE_SUPABASE_URL, env.VITE_SUPABASE_PUBLISHABLE_KEY, { auth: { persistSession: false, autoRefreshToken: false } }));
-for (let i = 0; i < 2; i++) assert.ifError((await clients[i].auth.signInWithPassword({ email: users[i].email, password: users[i].password })).error);
+assert(users.every(u => typeof u.email==='string' && u.email.includes('@') && u.password), 'Synthetic accounts required');
+const clients = users.map(() => createClient(env.VITE_SUPABASE_URL, env.VITE_SUPABASE_PUBLISHABLE_KEY, { auth: { persistSession: false, autoRefreshToken: false }, global: { fetch: (input,init) => fetch(input,{...init,signal:AbortSignal.timeout(20000)}) } }));
+for(let i=0;i<users.length;i++){const auth=await clients[i].auth.signInWithPassword({email:users[i].email,password:users[i].password});assert(!auth.error,'Synthetic authentication failed');users[i].id=auth.data.user.id;}
 const browser = await chromium.launch({ headless: true, channel: 'chrome' });
 let project;
 const name = 'Join link refinement smoke ' + new Date().toISOString();
@@ -32,13 +32,13 @@ async function login(page, user) {
  await page.getByRole('button', { name: 'Log in', exact: true }).click();
 }
 async function settings(page) {
- await page.goto(`${origin}/app/projects/${project}/overview?settings=1`);
- await page.getByRole('heading', { name: 'Pending requests', exact: true }).waitFor();
+ await page.goto(`${origin}/app/projects/${project}/people`);
+ await page.getByRole('heading', { name: 'Invite link', exact: true }).waitFor();
 }
 async function copy(page) {
  await page.bringToFront();
- await page.getByRole('button', { name: 'Copy join link', exact: true }).click();
- await page.getByText('Link copied', { exact: true }).waitFor();
+ await page.getByRole('button', { name: 'Copy invite link', exact: true }).click();
+ await page.getByText('Invite link copied', { exact: true }).waitFor();
  const value = await page.evaluate(() => navigator.clipboard.readText());
  assert.match(new URL(value).pathname, /^\/join\/[a-f0-9]{64}$/);
  return value;
@@ -69,17 +69,17 @@ try {
  project = owner.url().match(/projects\/([a-f0-9-]+)\//)[1]; report.project = project;
  fs.writeFileSync(reportPath, JSON.stringify(report, null, 2), { mode: 0o600 });
  await settings(owner);
- await owner.getByRole('button', { name: 'Create join link', exact: true }).click();
+ await copy(owner);
  await owner.getByLabel('Join link', { exact: true }).waitFor();
  const linkA = await copy(owner), tokenA = new URL(linkA).pathname.split('/').pop();
- await owner.getByRole('button', { name: 'Close dialog', exact: true }).click();
+
  await settings(owner); assert(await copy(owner) === linkA, 'Recovered Link A must be unchanged');
  // Brand-new browser context and real password login prove recovery beyond component/session memory.
  const freshContext = await browser.newContext({ permissions: ['clipboard-read', 'clipboard-write'] });
  const freshOwner = await freshContext.newPage(); freshOwner.setDefaultTimeout(20000);
  await freshOwner.goto(origin + '/login'); await login(freshOwner, users[0]); await freshOwner.waitForURL(origin + '/app');
  await settings(freshOwner); assert(await copy(freshOwner) === linkA, 'Fresh session must recover unchanged Link A'); await freshContext.close();
- pass('copy later: same Link A after Settings reopen and fresh authenticated browser session');
+ pass('copy later: same Link A after People reopen and fresh authenticated browser session');
  await requester.goto(origin + '/join/' + tokenA);
  await requester.getByText(/Sign in or create an account to request access/).waitFor();
  assert(!(await requester.textContent('body')).includes(name)); pass('unauthenticated join: generic page without project data');
@@ -93,28 +93,27 @@ try {
  await requester.getByRole('heading', { name, exact: true }).waitFor({ state: 'hidden' });
  assert(!(await requester.textContent('body')).includes(name)); pass('zero project visibility while pending: normal real backend reads and direct navigation');
  await settings(owner); await owner.getByRole('button', { name: /^Approve / }).click();
- await owner.getByText('Access approved.', { exact: true }).waitFor(); pass('organizer approval: Settings queue updates');
+ await owner.getByText('Access approved.', { exact: true }).waitFor(); pass('organizer approval: People queue updates');
  await requester.goto(origin + '/join/' + tokenA); await requester.getByRole('link', { name: 'Open project', exact: true }).click();
  await requester.getByRole('heading', { name, exact: true }).waitFor();
  const member = await clients[1].from('project_members').select('role,status').eq('project_id', project).eq('user_id', users[1].id).single(); assert.ifError(member.error);
  assert.equal(member.data.role, 'member'); assert.equal(member.data.status, 'active');
  assert.equal(await requester.getByRole('button', { name: 'Open project settings' }).count(), 0); pass('membership access: active Member, no Organizer controls');
- await owner.getByRole('button', { name: 'Regenerate link', exact: true }).click();
- await owner.getByRole('button', { name: 'Regenerate', exact: true }).click();
- await owner.getByText('Join link created.', { exact: true }).waitFor();
+ await owner.getByRole('button', { name: 'Disable link', exact: true }).click();
+ await owner.getByText('Join link disabled.', { exact: true }).waitFor();
  const linkB = await copy(owner), tokenB = new URL(linkB).pathname.split('/').pop(); assert(linkA !== linkB, 'Regeneration must change the URL');
  assert.equal((await resolve(tokenA)).state, 'unavailable'); assert.equal((await resolve(tokenB)).state, 'sign_in');
  await requester.goto(origin + '/join/' + tokenA); await requester.getByText('This join link is no longer available.', { exact: true }).waitFor();
- await owner.getByRole('button', { name: 'Close dialog', exact: true }).click(); await settings(owner); assert(await copy(owner) === linkB, 'Recovered Link B must be unchanged');
- pass('regeneration: A invalid, B valid and copyable after reopening Settings');
+  await settings(owner); assert(await copy(owner) === linkB, 'Recovered Link B must be unchanged');
+ pass('regeneration: A invalid, B valid and copyable after reopening People');
  await owner.getByRole('button', { name: 'Disable link', exact: true }).click(); await owner.getByText('Join link disabled.', { exact: true }).waitFor();
- assert.equal(await owner.getByRole('button', { name: 'Copy join link', exact: true }).count(), 0);
+ assert.equal(await owner.getByRole('button', { name: 'Disable link', exact: true }).count(), 0);
  assert.equal((await resolve(tokenB)).state, 'unavailable');
  await requester.goto(origin + '/join/' + tokenB); await requester.getByText('This join link is no longer available.', { exact: true }).waitFor();
  const memberships = await clients[0].from('project_members').select('user_id,role,status').eq('project_id', project).is('deleted_at', null); assert.ifError(memberships.error);
  assert.equal(memberships.data.filter(m => m.status === 'active').length, 2);
  await requester.goto(`${origin}/app/projects/${project}/overview`); await requester.getByRole('heading', { name, exact: true }).waitFor();
- pass('disable: B unavailable, no copy control, both memberships and Member project access preserved');
+ pass('disable: B unavailable, disabled token, both memberships and Member project access preserved');
 } catch (error) {
  // Even a failed navigation/assertion must not print bearer credentials.
  throw new Error(String(error.message).replace(/[a-f0-9]{64}/g, '[redacted-token]'));

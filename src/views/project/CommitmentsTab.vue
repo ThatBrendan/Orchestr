@@ -55,6 +55,9 @@ function editItem(){editing.value=detail.value??null;closeDetail();formOpen.valu
 function editLedger(id:string){editing.value=commitments.value.find(c=>c.id===id)??null;closeDetail();formOpen.value=true;}
 function canDelete(c:Commitment){return canEdit.value&&(context.value?.role==='organizer'||c.created_by===context.value?.memberId||c.owner_member_id===context.value?.memberId);}
 function openArea(edit=false){editingAreaId.value=edit?selectedArea.value?.id:undefined;areaTitle.value=edit?selectedArea.value?.title??'':'';areaNotes.value=edit?selectedArea.value?.notes??'':'';areaError.value='';areaOpen.value=true;}
+watch(()=>[route.query.createCategory,canEdit.value],()=>{
+ if(route.query.createCategory==='1'&&canEdit.value){openArea();const query={...route.query};delete query.createCategory;void router.replace({query});}
+},{immediate:true});
 async function submitArea(){if(saving.value)return;saving.value=true;areaError.value='';try{const area=await saveArea(projectId.value,areaTitle.value.trim(),areaNotes.value,editingAreaId.value);await client.invalidateQueries({queryKey:['project',projectId.value,'areas']});areaOpen.value=false;selectArea(area.id);toast.success('Category saved.');}catch(e){areaError.value=toAppError(e).message;}finally{saving.value=false;}}
 async function removeCategory(){if(!selectedArea.value||saving.value)return;saving.value=true;try{await deleteArea(selectedArea.value.id);await client.invalidateQueries({queryKey:['project',projectId.value,'areas']});deleteCategoryOpen.value=false;selectArea(null);toast.success('Category deleted.');}catch(e){toast.error(toAppError(e).message);}finally{saving.value=false;}}
 watch(()=>items.data.value,()=>{if(!items.isPending.value&&route.query.item&&!legacy.value)closeDetail();});

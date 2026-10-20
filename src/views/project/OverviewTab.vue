@@ -2,6 +2,9 @@
 import {computed, ref, watch} from 'vue';
 import {useRoute} from 'vue-router';
 import {useProjectContext} from '@/composables/useProjectContext';
+import {useQuery} from '@tanstack/vue-query';
+import {supabase} from '@/lib/supabase';
+import {toAppError} from '@/lib/errors';
 import {useProjectHealth,useUpcoming,useProjectFinancials} from '@/composables/useProject';
 import {useMoney} from '@/composables/useMoney';
 import { paginateList } from '@/lib/pagination';
@@ -13,7 +16,16 @@ import AttentionRow from '@/components/health/AttentionRow.vue';
 import UpcomingList from '@/components/timeline/UpcomingList.vue';
 import MemberBalances from '@/components/budget/MemberBalances.vue';
 const route=useRoute(),projectId=computed(()=>String(route.params.projectId));
-const {project}=useProjectContext(),{format}=useMoney();
+const {project,allowed}=useProjectContext(),{format}=useMoney();
+const planningEmpty=useQuery({queryKey:computed(()=>['project',projectId.value,'planning-empty']),staleTime:0,queryFn:async()=>{
+ const results=await Promise.all([
+  supabase.from('project_areas').select('id').eq('project_id',projectId.value).limit(1),
+  supabase.from('v_project_items').select('id').eq('project_id',projectId.value).limit(1),
+ ]);
+ for(const result of results)if(result.error)throw toAppError(result.error);
+ return results.every(result=>result.data?.length===0);
+}});
+const needsFirstCategory=computed(()=>planningEmpty.data.value===true);
 const financials=useProjectFinancials(projectId),health=useProjectHealth(projectId),upcoming=useUpcoming(projectId);
 const currency=computed(()=>project.value?.currency??'GBP');
 const page = ref(1);
@@ -30,7 +42,35 @@ watch(() => health.needsAttention.value.length, () => {
 </script>
 <template>
   <div class="space-y-8 fade-in">
-    <section aria-label="Project spending">
+    <section
+      v-if="needsFirstCategory"
+      aria-label="Get started"
+      class="rounded-xl border border-line bg-surface p-6 space-y-3"
+    >
+      <h2 class="font-display text-xl font-semibold">
+        Start planning your project
+      </h2>
+      <p class="text-muted">
+        Group your activities in a Category, then add what needs doing.
+      </p>
+      <RouterLink
+        v-if="allowed('commitment.edit') && project?.status !== 'archived'"
+        :to="{name:'project.commitments',params:{projectId},query:{createCategory:'1'}}"
+        class="inline-flex rounded-lg bg-ink px-4 py-3 text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+      >
+        Create your first category
+      </RouterLink>
+      <p
+        v-else
+        class="text-muted"
+      >
+        Your project team hasn't added any activities yet.
+      </p>
+    </section>
+    <section
+      v-else
+      aria-label="Project spending"
+    >
       <p v-if="financials.isPending.value">
         Loading spending…
       </p>
@@ -63,7 +103,10 @@ watch(() => health.needsAttention.value.length, () => {
         :currency="currency"
       />
     </section>
-    <div class="grid md:grid-cols-2 gap-8">
+    <div
+      v-if="!needsFirstCategory"
+      class="grid md:grid-cols-2 gap-8"
+    >
       <!-- Needs attention -->
       <div>
         <SectionHeading label="Needs attention" />

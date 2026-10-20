@@ -64,20 +64,20 @@ function selectDay(day: string) { selectedDay.value = day; }
     </header>
     <div class="flex flex-wrap items-center gap-2">
       <button
-        class="calendar-button"
+        class="focus-ring calendar-button"
         aria-label="Previous month"
         @click="move(-1)"
       >
         Previous
       </button>
       <button
-        class="calendar-button"
+        class="focus-ring calendar-button"
         @click="goToday"
       >
         Today
       </button>
       <button
-        class="calendar-button"
+        class="focus-ring calendar-button"
         aria-label="Next month"
         @click="move(1)"
       >
@@ -89,14 +89,14 @@ function selectDay(day: string) { selectedDay.value = day; }
         aria-label="Calendar view"
       >
         <button
-          class="calendar-button"
+          class="focus-ring calendar-button"
           :aria-pressed="view === 'month'"
           @click="selectedView = 'month'"
         >
           Month
         </button>
         <button
-          class="calendar-button"
+          class="focus-ring calendar-button"
           :aria-pressed="view === 'agenda'"
           @click="selectedView = 'agenda'"
         >
@@ -112,7 +112,7 @@ function selectDay(day: string) { selectedDay.value = day; }
       <button
         v-for="f in filters"
         :key="f.id"
-        class="calendar-button"
+        class="focus-ring calendar-button"
         :aria-pressed="filter === f.id"
         @click="filter = f.id"
       >
@@ -129,7 +129,7 @@ function selectDay(day: string) { selectedDay.value = day; }
     >
       <p>Calendar couldn't be loaded.</p>
       <button
-        class="calendar-button mt-2"
+        class="focus-ring calendar-button mt-2"
         @click="calendar.refetch()"
       >
         Retry
@@ -219,7 +219,7 @@ function selectDay(day: string) { selectedDay.value = day; }
       >
         <button
           v-if="selectedDay"
-          class="calendar-button"
+          class="focus-ring calendar-button"
           @click="selectedDay = null"
         >
           Show all dates
@@ -260,6 +260,6 @@ function selectDay(day: string) { selectedDay.value = day; }
 </template>
 
 <style scoped>
-.calendar-button { @apply focus-ring rounded border border-line px-3 py-2 text-xs; }
+.calendar-button { @apply rounded border border-line px-3 py-2 text-xs; }
 .calendar-button[aria-pressed="true"] { @apply bg-ink text-white; }
 </style>

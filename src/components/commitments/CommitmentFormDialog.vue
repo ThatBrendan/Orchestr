@@ -455,6 +455,7 @@ const isPending = computed(() => create.isPending.value || update.isPending.valu
 
       <p
         v-if="fieldError"
+        role="alert"
         class="text-13 text-danger"
       >
         {{ fieldError }}

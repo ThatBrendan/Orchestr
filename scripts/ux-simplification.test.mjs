@@ -2,6 +2,14 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { build } from 'vite';
 import { paginateList } from '../src/lib/pagination.ts';
+test('project access notifications open People; other project notices open Overview',async()=>{
+ const path=await import('node:path');
+ const built=await build({configFile:false,logLevel:'silent',plugins:[{name:'notification-test-client',enforce:'pre',resolveId(id){if(id==='@/lib/supabase')return '\0notification-client';},load(id){if(id==='\0notification-client')return 'export const supabase = {};';}}],resolve:{alias:{'@/lib/errors':path.resolve('src/lib/errors.ts')}},build:{write:false,minify:false,lib:{entry:'src/services/notifications.ts',formats:['es']}}});
+ const api=await import(`data:text/javascript;base64,${Buffer.from((Array.isArray(built)?built[0]:built).output.find(i=>i.type==='chunk').code).toString('base64')}`);
+ assert.deepEqual(api.notificationRoute({resource_type:'project',project_id:'project',section:'people'}),{name:'project.people',params:{projectId:'project'}});
+ assert.deepEqual(api.notificationRoute({resource_type:'project',project_id:'project',section:null}),{name:'project.overview',params:{projectId:'project'}});
+ assert.throws(()=>api.notificationRoute({resource_type:'unknown'}));
+});
 const result = await build({ configFile:false, logLevel:'silent', build:{write:false,minify:false,lib:{entry:'src/lib/projectProfiles.ts',formats:['es']}} });
 const { PROJECT_PROFILES, CATEGORY_SUGGESTIONS, categorySuggestions } = await import(`data:text/javascript;base64,${Buffer.from((Array.isArray(result)?result[0]:result).output.find(i=>i.type==='chunk').code).toString('base64')}`);
 test('all profiles offer small optional registries; Blank is empty; existing names excluded',()=>{

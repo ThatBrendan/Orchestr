@@ -908,6 +908,7 @@ export interface Database {
       };
     };
         Functions: {
+      get_my_notification_unread_state: { Args: Record<PropertyKey, never>; Returns: boolean };
       request_calendar_sync: { Args: { p_activities?: boolean; p_decisions?: boolean; p_payments?: boolean }; Returns: undefined };
       get_project_calendar: {
         Args: { p_project: string; p_range_start: string; p_range_end: string };

@@ -252,6 +252,19 @@ try {
   check(await confirm(active)===confirmation.id,'Retry after reversal never recreates pair');
   await open(c.activity,c.title,memberPage);await card(memberPage,c.request).getByText('Settlement reversed',{exact:true}).waitFor();check(await card(memberPage,c.request).getByRole('button',{name:/I've paid|Undo|Confirm received/}).count()===0,'Reversed history does not reopen old request');
   pass('Later supplier refund and existing settlement correction retain immutable confirmation and do not replay settlement');
+  stage='partial settlement balances';
+  const partial=await createActivity('Partial balance recovery check',90000);
+  check((await rows('commitments','id',partial))[0].cost_split_mode==='none','New cost defaults to no split');
+  await rpc('set_activity_cost_split',{p_commitment:partial,p_split:{mode:'custom',cost:90000,members:[owner,debtor],amounts:{[owner]:60000,[debtor]:30000}}});
+  assert.deepEqual((await rows('v_activity_cost_shares','commitment_id',partial)).map(s=>s.amount_minor).sort((a,b)=>a-b),[30000,60000]);
+  unwrap(await clients[0].from('payments').insert({project_id:project,commitment_id:partial,paid_by_member_id:owner,type:'full',direction:'outgoing',status:'paid',amount_minor:90000,paid_on:today}),'Partial source');
+  const remaining=async()=>(await rows('v_activity_member_settlements','commitment_id',partial)).filter(m=>[owner,debtor].includes(m.member_id)).map(m=>m.remaining_minor).sort((a,b)=>a-b);
+  assert.deepEqual(await remaining(),[-30000,30000]);
+  await rpc('record_item_settlement',{p_item:partial,p_from:debtor,p_to:owner,p_amount:10000,p_date:today});
+  assert.deepEqual(await remaining(),[-20000,20000]);
+  await rpc('record_item_settlement',{p_item:partial,p_from:debtor,p_to:owner,p_amount:20000,p_date:today});
+  assert.deepEqual(await remaining(),[0,0]);
+  pass('No split and custom cost allocation; authoritative creditor/debtor balances progress through partial to settled');
   report.historyBeforeCleanup=historyCounts();save();pass('Full actual develop Phase10 smoke complete');
 } catch (error) {
   // Do not emit Playwright call logs, assertion values, fixture contents or tokens.

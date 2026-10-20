@@ -174,7 +174,7 @@ try {
   check(await card(memberPage).getByRole('link').count()===0,'No Pay link after acknowledgement');
   check((await options()).length===0,'No server options');
   check(!(await health(clients[1])).some(f=>f.code==='reimbursement_outstanding'&&f.subject_id===request),'Debtor Health suppressed');
-  check(!(await health(clients[0])).some(f=>f.subject_id===request),'No creditor Health action');
+  check((await health(clients[0])).some(f=>f.subject_id===request&&f.code==='reimbursement_confirmation'),'Creditor receipt confirmation Health action');
   await memberPage.reload();await card(memberPage).getByText('Payment sent',{exact:true}).waitFor();
   await fits('Payment sent and awaiting confirmation',memberPage);
   await unchanged('Explicit no-link claim and refresh');
@@ -186,10 +186,10 @@ try {
   await poll(()=>page.url().includes('section=reimbursements'));
   await card(page).getByText(/says they've paid/).waitFor();
   check(await card(page).getByRole('button',{name:"I've paid",exact:true}).count()===0,'Creditor no acknowledge');
-  check(await card(page).getByRole('button',{name:/Confirm received|Reject payment/}).count()===0,'No Phase10 controls');
+  check(await card(page).getByRole('button',{name:'Confirm received',exact:true}).count()===1,'Creditor can confirm receipt');
   check(await page.locator('#activity-reimbursements').evaluate(el=>el===document.activeElement),'Deep link focuses reimbursements');
   await fits('Creditor claim copy and notification destination',page);
-  pass('Creditor-only deduplicated notification; Activity deep link; no confirmation action');
+  pass('Creditor-only deduplicated notification; Activity deep link; receipt confirmation action');
   stage='browser undo and payment options';
   const link=uuid(await rpc('save_my_payment_link',{p_provider:'monzo',p_url:'https://monzo.me/orchestrio-phase9-synthetic'}));createdLinks.push([link,0]);
   check((await options()).length===0,'Configured link still suppressed during claim');

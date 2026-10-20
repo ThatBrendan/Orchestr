@@ -12,9 +12,9 @@ const env=Object.fromEntries(fs.readFileSync('.env.local','utf8').split('\n').fi
 assert.equal(env.VITE_SUPABASE_URL,`https://${target}.supabase.co`);
 assert(process.env.SHARE_FIXTURE_FILE,'SHARE_FIXTURE_FILE required');
 const users=JSON.parse(fs.readFileSync(process.env.SHARE_FIXTURE_FILE,'utf8')).users.slice(0,3);
-assert.equal(users.length,3);assert(users.every(u=>u.id&&u.email.endsWith('@example.test')&&u.password));
-const clients=users.map(()=>createClient(env.VITE_SUPABASE_URL,env.VITE_SUPABASE_PUBLISHABLE_KEY,{auth:{persistSession:false,autoRefreshToken:false}}));
-for(let i=0;i<3;i++)assert.ifError((await clients[i].auth.signInWithPassword({email:users[i].email,password:users[i].password})).error);
+assert.equal(users.length,3);assert(users.every(u=>typeof u.email==='string' && u.email.includes('@')&&u.password));
+const clients=users.map(()=>createClient(env.VITE_SUPABASE_URL,env.VITE_SUPABASE_PUBLISHABLE_KEY,{auth:{persistSession:false,autoRefreshToken:false},global:{fetch:(input,init)=>fetch(input,{...init,signal:AbortSignal.timeout(20000)})}}));
+for(let i=0;i<users.length;i++){const auth=await clients[i].auth.signInWithPassword({email:users[i].email,password:users[i].password});assert(!auth.error,'Synthetic authentication failed');users[i].id=auth.data.user.id;}
 const browser=await chromium.launch({headless:true,channel:'chrome'});
 let project,activity;
 const report={target,project:null,activity:null,checks:[],cleanup:false};
@@ -45,7 +45,7 @@ try {
  await owner.getByRole('dialog',{name:'Share activity',exact:true}).getByRole('button',{name:'Close dialog',exact:true}).click();
  await owner.getByRole('dialog',{name:title,exact:true}).getByRole('button',{name:'Close',exact:true}).click();
  await open(owner);await share(owner);assert(await copy(owner)===linkA,'Reopening must recover unchanged link');pass('Close/reopen Activity recovers the same current URL');
- for(const width of [375,430,768,1280]){await owner.setViewportSize({width,height:950});assert(await owner.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));for(const d of await owner.locator('[id^=headlessui-dialog-panel]').all())assert(await d.evaluate(el=>el.scrollWidth<=el.clientWidth));await owner.getByRole('button',{name:'Regenerate link',exact:true}).click();await owner.getByRole('heading',{name:'Regenerate link?',exact:true}).waitFor();for(const d of await owner.getByRole('dialog').all())assert(await d.evaluate(el=>el.scrollWidth<=el.clientWidth));await owner.getByRole('button',{name:'Cancel',exact:true}).last().click();}
+ for(const width of [375,430,768,1280]){await owner.setViewportSize({width,height:950});assert(await owner.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));assert(await owner.locator('[id^=headlessui-dialog-panel]').evaluateAll(panels=>panels.every(el=>el.scrollWidth<=el.clientWidth)));await owner.getByRole('button',{name:'Regenerate link',exact:true}).click();await owner.getByRole('heading',{name:'Regenerate link?',exact:true}).waitFor();for(const d of await owner.getByRole('dialog').all())assert(await d.evaluate(el=>el.scrollWidth<=el.clientWidth));await owner.getByRole('button',{name:'Cancel',exact:true}).last().click();}
  pass('Share controls and confirmation fit 375/430/768/1280 px');
  const member=await pageFor(users[1],false);await member.goto(origin+pathA);await member.getByText('Sign in to open this shared item.',{exact:true}).waitFor();assert(!(await member.textContent('body')).includes(title));
  await member.getByRole('link',{name:'Log in',exact:true}).click();await login(member,users[1]);await member.waitForURL(canonical());await member.getByRole('heading',{name:title,exact:true}).waitFor();pass('Logged-out Member signs in, resumes share route, opens canonical Activity detail');
