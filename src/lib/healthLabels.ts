@@ -1,10 +1,13 @@
 /**
  * Short display titles for each deterministic health rule code
- * (docs/BUSINESS_RULES.md §9.2 — HLT-1..HLT-17). Titles only — the full
+ * (docs/PRODUCT_ARCHITECTURE.md). Titles only — the full
  * human-readable sentence for a specific finding is always `finding.message`,
  * computed server-side; nothing here re-derives business meaning.
  */
 export const HEALTH_CODE_TITLES: Record<string, string> = {
+  reimbursement_confirmation: "Confirm reimbursement receipt",
+  reimbursement_outstanding: "Reimbursement outstanding",
+  decision_needs_resolution: "Decision needs resolving",
   missing_owner: "Missing owner",
   orphaned_owner: "Owner has left the project",
   payment_overdue: "Overdue payment",

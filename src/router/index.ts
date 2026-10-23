@@ -70,6 +70,10 @@ const routes: RouteRecordRaw[] = [
     meta: { public: true, title: `Invitation · ${APP_NAME}` },
   },
 
+  { path: "/join/:token", name: "join", component: () => import("@/views/auth/JoinProjectView.vue"), meta: { public: true, title: `Join a project · ${APP_NAME}` } },
+
+  { path: "/s/:token", name: "shared-resource", component: () => import("@/views/auth/SharedResourceView.vue"), meta: { public: true, title: `Shared item · ${APP_NAME}` } },
+
   // ---- authenticated application (all under /app) --------------------------
   {
     path: "/app",
@@ -88,8 +92,11 @@ const routes: RouteRecordRaw[] = [
         children: [
           { path: "", redirect: (to) => ({ name: "project.overview", params: to.params }) },
           { path: "overview", name: "project.overview", component: () => import("@/views/project/OverviewTab.vue") },
+          { path: "decisions", name: "project.decisions", component: () => import("@/views/project/DecisionsTab.vue") },
+          { path: "decisions/:decisionId", name: "project.decision", component: () => import("@/views/project/DecisionDetailView.vue") },
           { path: "areas", alias: "activities", name: "project.commitments", component: () => import("@/views/project/CommitmentsTab.vue") },
           { path: "budget", name: "project.budget", component: () => import("@/views/project/BudgetTab.vue") },
+          { path: "calendar", name: "project.calendar", component: () => import("@/views/project/CalendarTab.vue") },
           { path: "timeline", name: "project.timeline", component: () => import("@/views/project/TimelineTab.vue") },
           { path: "people", name: "project.people", component: () => import("@/views/project/PeopleTab.vue") },
           { path: "notes", name: "project.notes", component: () => import("@/views/project/NotesTab.vue") },

@@ -1,4 +1,4 @@
-/** Query-key factory (docs/TECHNICAL_ARCHITECTURE.md §4.2). */
+/** Query-key factory (docs/FRONTEND_AND_UX.md). */
 export const qk = {
   invitation: (token: string) => ["invitation", token] as const,
   me: {
@@ -33,6 +33,7 @@ export const qk = {
     participants: (id: string) => ["commitment", id, "participants"] as const,
     financials: (id: string) => ["commitment", id, "financials"] as const,
     payments: (id: string) => ["commitment", id, "payments"] as const,
+    paymentSchedules: (id: string) => ["commitment", id, "payment-schedules"] as const,
     occurrencesRoot: (id: string) => ["commitment", id, "occurrences"] as const,
     occurrences: (id: string, start: string, end: string) => ["commitment", id, "occurrences", start, end] as const,
   },

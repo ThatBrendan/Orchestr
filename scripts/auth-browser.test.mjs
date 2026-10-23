@@ -36,6 +36,7 @@ async function fixture(options = {}) {
       }
       return reply({});
     }
+    if (url.pathname.endsWith('/get_my_notification_unread_state')) return reply(false);
     if (url.pathname.endsWith('/get_invitation')) return reply([{ project_name: 'Shared test project', inviter_name: 'Inviter', role:'member', status:'pending' }]);
     if (url.pathname.endsWith('/accept_invitation')) return reply('00000000-0000-4000-8000-000000000003');
     if (url.pathname.endsWith('/users')) return reply({ id:state.user.id, email:state.user.email, display_name:'Beta', timezone:'Europe/London', default_currency:'GBP' });

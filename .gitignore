@@ -2,8 +2,8 @@ node_modules/
 dist/
 .DS_Store
 
-# Documentation
-docs/
+# Documentation — local development reference only
+docs/*
 
 # env — keep the example only
 .env
@@ -17,3 +17,5 @@ supabase/.temp/
 # editor / tooling
 *.log
 .vite/
+
+

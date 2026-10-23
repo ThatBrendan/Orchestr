@@ -41,7 +41,7 @@ export async function createProject(input: ProjectInsert): Promise<{ id: string 
   return { id: data };
 }
 
-/** Editable field update — organizer only (enforced by RLS, docs/SECURITY_RLS.md §5.2). */
+/** Editable field update — organizer only (enforced by RLS, docs/BACKEND_SECURITY_AND_DATA.md). */
 export async function updateProject(
   projectId: string,
   patch: Omit<TablesUpdate<"projects">, "status" | "deleted_at">,
@@ -65,7 +65,7 @@ export async function setProjectStatus(projectId: string, status: ProjectStatus,
   return data;
 }
 
-/** Soft delete — organizer only. There is no hard-delete client path (docs/SECURITY_RLS.md §5.2). */
+/** Soft delete — organizer only. There is no hard-delete client path (docs/BACKEND_SECURITY_AND_DATA.md). */
 export async function softDeleteProject(projectId: string): Promise<void> {
   const { data, error } = await supabase.rpc("soft_delete_project", { p_project: projectId });
   if (error) throw toAppError(error);

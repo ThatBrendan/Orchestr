@@ -30,6 +30,14 @@
     {
       "source": "/reset-password",
       "destination": "/spa"
+    },
+    {
+      "source": "/join/:path*",
+      "destination": "/spa"
+    },
+    {
+      "source": "/s/:path*",
+      "destination": "/spa"
     }
   ],
   "headers": [

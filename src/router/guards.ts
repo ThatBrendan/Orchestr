@@ -71,7 +71,7 @@ export const requireGuest: NavigationGuardWithThis<undefined> = async (to) => {
  * Global guard: keep useProjectContext in sync with :projectId.
  * Runs on every navigation (incl. project↔project param changes, which a
  * route `beforeEnter` would miss). Redirects to not-found if the caller isn't
- * an active member (RLS returns nothing anyway). docs/TECHNICAL_ARCHITECTURE.md §3.
+ * an active member (RLS returns nothing anyway). See docs/FRONTEND_AND_UX.md.
  */
 export async function hydrateProjectContext(to: RouteLocationNormalized) {
   const ctxStore = useProjectContextStore();

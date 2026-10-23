@@ -3,7 +3,7 @@ import { ref } from "vue";
 import type { ProjectContext } from "@/types/domain";
 
 /**
- * The currently-open project (docs/TECHNICAL_ARCHITECTURE.md §4).
+ * The currently-open project (docs/FRONTEND_AND_UX.md).
  * Hydrated by the `hydrateProjectContext` router guard; cleared when leaving the project area.
  */
 export const useProjectContextStore = defineStore("project-context", () => {

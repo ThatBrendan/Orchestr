@@ -1,5 +1,5 @@
 /**
- * Money formatting ONLY — no arithmetic on business figures (docs/TECHNICAL_ARCHITECTURE.md §5).
+ * Money formatting ONLY — no arithmetic on business figures (docs/FRONTEND_AND_UX.md).
  * All amounts are integer minor units in the project's single currency.
  */
 import { currencyDigits, parseMoney } from "@/lib/money";

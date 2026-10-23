@@ -6,7 +6,7 @@ import AppIcon from "./AppIcon.vue";
 const props = withDefaults(defineProps<{ open: boolean; title: string; size?: "md" | "lg"; busy?: boolean }>(), {
   size: "md",
 });
-const emit = defineEmits<{ close: [] }>();
+const emit = defineEmits<{ close: []; afterClose: [] }>();
 
 const widthClass = computed(() => (props.size === "lg" ? "max-w-2xl" : "max-w-md"));
 </script>
@@ -15,6 +15,7 @@ const widthClass = computed(() => (props.size === "lg" ? "max-w-2xl" : "max-w-md
   <TransitionRoot
     :show="props.open"
     as="template"
+    @after-leave="emit('afterClose')"
   >
     <Dialog
       class="relative z-40"

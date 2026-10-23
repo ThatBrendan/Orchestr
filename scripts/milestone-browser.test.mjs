@@ -37,6 +37,7 @@ async function fixture(options = {}) {
       }
       return reply({});
     }
+    if(url.pathname.endsWith('/get_resource_comments')) return reply({items:[],next_cursor:null,can_comment:true});
     if (url.pathname.endsWith('/projects')) {
       if(req.method()==='PATCH') {
         assert.equal(url.searchParams.get('status'), `eq.${state.project.status}`);
@@ -48,7 +49,9 @@ async function fixture(options = {}) {
     if(url.pathname.endsWith('/project_members')) return reply([{id:'00000000-0000-4000-8000-000000000020',project_id:project.id,user_id:user.id,role:state.role,status:'active',deleted_at:null}]);
     if(url.pathname.endsWith('/v_my_projects')) return reply([{...state.project,project_id:project.id,progress_pct:0,attention_count:0}]);
     if(url.pathname.endsWith('/v_my_activity_notifications')) return route.fulfill({status:200,contentType:'application/json',headers:{'content-range':state.unread?'0-0/1':'*/0','access-control-expose-headers':'content-range'},body:JSON.stringify(state.unread?[{id:'00000000-0000-4000-8000-000000000030',project_id:project.id,commitment_id:'00000000-0000-4000-8000-000000000040',activity_title:'Book restaurant',project_name:project.name,created_at:new Date().toISOString(),read_at:null}]:[])});
+    if(url.pathname.endsWith('/v_my_notification_inbox')) return route.fulfill({status:200,contentType:'application/json',headers:{'content-range':state.unread?'0-0/1':'*/0','access-control-expose-headers':'content-range'},body:JSON.stringify(state.unread?[{id:'00000000-0000-4000-8000-000000000030',project_id:project.id,resource_type:'activity',resource_id:'00000000-0000-4000-8000-000000000040',title:'Book restaurant',body:'Activity created',kind:'activity_created',category:'activities',created_at:new Date().toISOString(),read_at:null}]:[])});
     if(url.pathname.endsWith('/mark_notification_read')) {state.unread=false;return reply(body.p_notification);}
+    if (url.pathname.endsWith('/get_my_notification_unread_state')) return reply(state.unread);
     if (url.pathname.endsWith('/get_invitation')) return reply([{ project_name: 'Shared test project', inviter_name: 'Inviter', role:'member', status:'pending' }]);
     if (url.pathname.endsWith('/accept_invitation')) return reply('00000000-0000-4000-8000-000000000003');
     if (url.pathname.endsWith('/users')) return reply({ id:state.user.id, email:state.user.email, display_name:'Beta', timezone:'Europe/London', default_currency:'GBP' });
@@ -83,17 +86,17 @@ try {
       await login(page);
       const base='/app/projects/'+state.project.id;
       await go(page,base+'/settings');
-      await page.locator('#app').getByRole('button',{name:'Complete project',exact:true}).click();
-      const dialog=page.getByRole('dialog');
+      await page.getByRole('dialog',{name:'Project settings',exact:true}).getByRole('button',{name:'Complete project',exact:true}).click();
+      let dialog=page.getByRole('dialog',{name:'Complete this project?',exact:true});
       await dialog.getByText('Complete this project?',{exact:true}).waitFor();
       await fits(page,'confirmation');
       assert.equal(state.calls.filter(c=>c.method==='PATCH').length,0);
       await dialog.getByRole('button',{name:'Cancel',exact:true}).click();
       assert.equal(state.project.status,'active');
-      await page.locator('#app').getByRole('button',{name:'Complete project',exact:true}).click();
+      await page.getByRole('dialog',{name:'Project settings',exact:true}).getByRole('button',{name:'Complete project',exact:true}).click();
       await dialog.getByRole('button',{name:'Complete project',exact:true}).click();
       await dialog.waitFor({state:'hidden'});
-      await page.locator('#app').getByRole('button',{name:'Reopen project',exact:true}).waitFor();
+      await page.getByRole('dialog',{name:'Project settings',exact:true}).getByRole('button',{name:'Reopen project',exact:true}).waitFor();
       assert.equal(state.project.status,'completed');
       assert.equal(state.project.ends_on,null);
       await go(page,'/app/projects');
@@ -103,27 +106,27 @@ try {
       await fits(page,'past cards');
       await page.getByRole('link').filter({hasText:'Beta Trip'}).click();
       await go(page,base+'/settings');
-      await page.locator('#app').getByRole('button',{name:'Reopen project',exact:true}).click();
-      await dialog.getByRole('button',{name:'Reopen project',exact:true}).click();
+      await page.getByRole('dialog',{name:'Project settings',exact:true}).getByRole('button',{name:'Reopen project',exact:true}).click();
+      dialog=page.getByRole('dialog',{name:'Reopen this project?',exact:true});await dialog.getByRole('button',{name:'Reopen project',exact:true}).click();
       await dialog.waitFor({state:'hidden'});
-      await page.locator('#app').getByRole('button',{name:'Complete project',exact:true}).waitFor();
+      await page.getByRole('dialog',{name:'Project settings',exact:true}).getByRole('button',{name:'Complete project',exact:true}).waitFor();
       await fits(page,'complete CTA');
       await go(page,'/app/projects');
       await page.getByRole('button',{name:'Active',exact:true}).click();
       await page.getByRole('link').filter({hasText:'Beta Trip'}).waitFor();
       await fits(page,'active tabs');
       const bell=page.getByRole('button',{name:'Notifications',exact:true,includeHidden:true});
-      assert((await bell.textContent()).includes('1'));
-      await bell.click();
+      await bell.getByLabel('Unread notifications',{exact:true}).waitFor();
+      await bell.click();dialog=page.getByRole('dialog');
       await dialog.getByRole('button').filter({hasText:'Book restaurant'}).waitFor();
       await fits(page,'notification');
       await page.waitForTimeout(400); // Let the modal enter animation finish for visual verification.
       await page.screenshot({path:`/tmp/orchestrio-notifications-${width}.png`});
       await dialog.getByRole('button').filter({hasText:'Book restaurant'}).click();
-      await page.waitForURL(baseURL=>baseURL.pathname===base+'/activities' && baseURL.searchParams.get('commitment')==='00000000-0000-4000-8000-000000000040');
+      await page.waitForURL(baseURL=>[base+'/activities',base+'/areas'].includes(baseURL.pathname) && baseURL.searchParams.get('commitment')==='00000000-0000-4000-8000-000000000040');
       await page.getByRole('dialog').getByText('Book restaurant',{exact:true}).first().waitFor();
       assert.equal(state.unread,false);
-      assert(!(await bell.textContent()).includes('1'));
+      await bell.getByLabel('Unread notifications',{exact:true}).waitFor({state:'hidden'});
       await fits(page,'notification destination');
     });
   }
@@ -131,9 +134,10 @@ try {
     state.role=role;
     await login(page);
     await go(page,'/app/projects/'+state.project.id+'/settings');
-    await page.getByText('Only an organizer can change project settings.').waitFor();
-    assert.equal(await page.locator('#app').getByRole('button',{name:'Complete project',exact:true}).count(),0);
-    assert.equal(await page.locator('#app').getByRole('button',{name:'Reopen project',exact:true}).count(),0);
+    await page.getByRole('heading',{name:'Beta Trip',exact:true}).waitFor();
+    assert.equal(await page.getByRole('button',{name:'Open project settings',exact:true}).count(),0);
+    assert.equal(await page.getByRole('dialog',{name:'Project settings',exact:true}).getByRole('button',{name:'Complete project',exact:true}).count(),0);
+    assert.equal(await page.getByRole('dialog',{name:'Project settings',exact:true}).getByRole('button',{name:'Reopen project',exact:true}).count(),0);
   });
 } finally {await browser.close();}
 console.log(`${passed} milestone browser scenarios passed; backend mocked.`);

@@ -1,7 +1,7 @@
 import type { PostgrestError } from "@supabase/supabase-js";
 
 /**
- * Error taxonomy (docs/TECHNICAL_ARCHITECTURE.md §16).
+ * Error taxonomy (docs/FRONTEND_AND_UX.md).
  * Services throw these; composables/vue-query surface them.
  */
 export type AppErrorKind =
@@ -33,7 +33,7 @@ export class AppError extends Error {
   }
 }
 
-/** Trigger / RPC exceptions use `orchestr:<code>:<human text>` (docs/DATABASE_SCHEMA.md §7). */
+/** Trigger / RPC exceptions use `orchestr:<code>:<human text>` (docs/BACKEND_SECURITY_AND_DATA.md). */
 function parseOrchestrMessage(msg: string): { code: string; text: string } | null {
   const m = /^orchestr:([a-z_]+):(.*)$/s.exec(msg);
   return m ? { code: m[1]!, text: m[2]!.trim() } : null;

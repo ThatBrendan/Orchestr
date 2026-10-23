@@ -9,6 +9,7 @@ import { normalizeHealthCopy } from "@/lib/presentation";
 /** Structural prop — accepts a project HealthFinding or a DashboardFinding. */
 interface FindingLike {
   severity: FindingSeverity;
+  subject_type?: string;
   message: string;
   resolution: string;
 }
@@ -20,8 +21,8 @@ const props = defineProps<{
   to?: RouteLocationRaw;
 }>();
 
-const message = computed(() => normalizeHealthCopy(props.finding.message));
-const resolution = computed(() => normalizeHealthCopy(props.finding.resolution));
+const message = computed(() => props.finding.subject_type === "reimbursement" ? props.finding.message : normalizeHealthCopy(props.finding.message));
+const resolution = computed(() => props.finding.subject_type === "reimbursement" ? props.finding.resolution : normalizeHealthCopy(props.finding.resolution));
 </script>
 
 <template>

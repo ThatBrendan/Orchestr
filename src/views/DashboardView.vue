@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import ListPagination from "@/components/ui/ListPagination.vue";
 import { computed } from "vue";
 import { useRouter } from "vue-router";
 import { useMyProjects } from "@/composables/useProjects";
@@ -115,6 +116,14 @@ const attentionLine = computed(() => {
           :to="{ name: 'project.overview', params: { projectId: f.project_id } }"
         />
       </div>
+      <ListPagination
+        v-if="!attention.isPending.value && !attention.isError.value"
+        v-model:page="attention.page.value"
+        :previous="attention.canGoPrevious.value"
+        :next="attention.canGoNext.value"
+        :busy="attention.isFetching.value"
+        label="Needs attention pages"
+      />
     </div>
   </PageContainer>
 </template>

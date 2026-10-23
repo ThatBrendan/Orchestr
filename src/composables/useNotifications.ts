@@ -1,5 +1,5 @@
 import { computed, toValue, type MaybeRefOrGetter } from "vue";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/vue-query";
+import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/vue-query";
 import { useAuthStore } from "@/stores/auth";
 import * as activityNotifications from "@/services/notifications";
 import * as invitations from "@/services/invitations";
@@ -23,17 +23,22 @@ export function useNotifications() {
     enabled: computed(() => auth.isAuthenticated),
     refetchInterval: 30_000,
   });
-  const activity = useQuery({
-    queryKey: computed(() => [...qk.me.notifications(), "activities", auth.userId]),
-    queryFn: activityNotifications.listActivityNotifications,
-    enabled: computed(() => auth.isAuthenticated),
-    refetchInterval: 30_000,
+  const inbox = useInfiniteQuery({
+    queryKey: computed(() => [...qk.me.notifications(), 'inbox', auth.userId]),
+    initialPageParam: undefined as activityNotifications.NotificationCursor | undefined,
+    queryFn: ({ pageParam }) => activityNotifications.listNotificationInbox(pageParam),
+    getNextPageParam: page => page.next,
+    enabled: computed(() => auth.isAuthenticated), refetchInterval: 30_000,
   });
+  const unread = useQuery({ queryKey: computed(() => [...qk.me.notifications(), 'unread-state', auth.userId]), queryFn: activityNotifications.notificationUnreadState, enabled: computed(() => auth.isAuthenticated), refetchInterval: 30_000 });
+  const markAllRead = useMutation({ mutationFn: activityNotifications.markAllNotificationsRead, onSuccess: () => client.invalidateQueries({ queryKey: qk.me.notifications() }) });
   const markRead = useMutation({
     mutationFn: activityNotifications.markNotificationRead,
     onSuccess: () => client.invalidateQueries({ queryKey: qk.me.notifications() }),
   });
-  const unreadCount = computed(() => (pending.data.value?.length ?? 0) + (activity.data.value?.unreadCount ?? 0));
+  const unreadUnavailable = computed(() => pending.isError.value || unread.isError.value);
+  const hasUnread = computed(() => unreadUnavailable.value || pending.isPending.value || unread.isPending.value
+    ? null : (pending.data.value?.length ?? 0) > 0 || unread.data.value === true);
   const respond = useMutation({
     mutationFn: ({ token, action }: { token: string; action: "accept" | "decline" }) =>
       action === "accept" ? invitations.acceptInvitation(token) : invitations.declineInvitation(token),
@@ -42,5 +47,5 @@ export function useNotifications() {
       qk.me.attention(), qk.me.calendarRoot(), ["invitation"],
     ].map((queryKey) => client.invalidateQueries({ queryKey }))),
   });
-  return { pending, respond, activity, markRead, unreadCount };
+  return { pending, respond, inbox, unread, markRead, markAllRead, hasUnread, unreadUnavailable };
 }

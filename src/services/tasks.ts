@@ -7,7 +7,7 @@ import type { TaskOccurrence } from "@/types/derived";
 export type Task = Tables<"tasks">;
 export type TaskStatus = Enums<"task_status">;
 
-/** All non-deleted tasks for a project (docs/SECURITY_RLS.md §5.9). */
+/** All non-deleted tasks for a project (docs/BACKEND_SECURITY_AND_DATA.md). */
 export async function listTasks(projectId: string): Promise<Task[]> {
   const { data, error } = await supabase
     .from("tasks")
@@ -73,7 +73,7 @@ export async function skipTaskOccurrence(taskId: string, occurrenceDate: string)
   if (error) throw toAppError(error);
 }
 
-/** Soft delete — organizer, creator, or assignee only (docs/SECURITY_RLS.md §5.9). */
+/** Soft delete — organizer, creator, or assignee only (docs/BACKEND_SECURITY_AND_DATA.md). */
 export async function softDeleteTask(id: string): Promise<void> {
   const { data, error } = await supabase.rpc("soft_delete_task", { p_task: id });
   if (error) throw toAppError(error);

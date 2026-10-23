@@ -11,7 +11,7 @@ import type {
   BudgetCategoryActual,
 } from "@/types/derived";
 
-/** Derived read-models — all read-only (docs/DATABASE_SCHEMA.md §5). */
+/** Derived read-models — all read-only (docs/BACKEND_SECURITY_AND_DATA.md). */
 
 export async function getProjectFinancials(projectId: string): Promise<ProjectFinancials | null> {
   const { data, error } = await supabase
@@ -46,10 +46,13 @@ export async function getProjectHealthSummary(projectId: string): Promise<Health
 }
 
 /** Dashboard "Needs attention", every project, ONE call (no client N+1). */
-export async function getMyAttention(): Promise<DashboardFinding[]> {
-  const { data, error } = await supabase.rpc("get_my_attention");
+export async function getMyAttention(page = 1): Promise<{ items: DashboardFinding[]; total: number; page: number }> {
+  const start = (page - 1) * 5;
+  const { data, error, count } = await supabase.rpc("get_my_attention", undefined, { count: "exact" }).range(start, start + 4);
+  // PostgREST rejects an offset past the end after findings disappear.
+  if (error?.code === "PGRST103" && page > 1) return getMyAttention(1);
   if (error) throw toAppError(error);
-  return (data ?? []) as DashboardFinding[];
+  return { items: (data ?? []) as DashboardFinding[], total: count ?? 0, page };
 }
 
 /** Per-commitment outstanding balance etc. — always read, never recomputed in Vue. */

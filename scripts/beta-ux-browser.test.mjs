@@ -14,7 +14,7 @@ async function fixture(options = {}) {
   const page = await context.newPage();
   page.setDefaultTimeout(10000);
   const project = {id:'00000000-0000-4000-8000-000000000010',name:'Beta Trip',status:'active',profile:'group_trip',module_visibility:{},currency:'GBP',timezone:'UTC',starts_on:null,ends_on:null,description:null,deleted_at:null};
-  const state = { project, categories: [], activities: [], tasks: [], payments: [], deleteFail: false, role:'organizer', unread:true, user: structuredClone(user), calls: [], signupSession: false, error: null, nonceRequired: false };
+  const state = { project, categories: [], activities: [], tasks: [], payments: [], deleteFail: false, role:'organizer', unread:true, notificationUnread:false, invitations:[], user: structuredClone(user), calls: [], signupSession: false, error: null, nonceRequired: false };
   const token = () => {
     const payload = { sub: state.user.id, exp: Math.floor(Date.now()/1000)+3600, role: 'authenticated', aud: 'authenticated' };
     return { access_token: `e30.${Buffer.from(JSON.stringify(payload)).toString('base64url')}.signature`, refresh_token: 'mock-refresh-token', expires_in: 3600, token_type: 'bearer', user: state.user };
@@ -26,6 +26,11 @@ async function fixture(options = {}) {
     const body = req.postDataJSON();
     state.calls.push({ path: url.pathname, query: Object.fromEntries(url.searchParams), body, method: req.method() });
     const reply = (data, status = 200) => route.fulfill({ status, headers: {'x-supabase-api-version':'2024-01-01','access-control-expose-headers':'x-supabase-api-version'}, contentType: 'application/json', body: JSON.stringify(data) });
+    if (state.failReads && (url.pathname.endsWith('/get_project_health') || url.pathname.endsWith('/get_my_notification_unread_state') || url.pathname.endsWith('/v_my_notification_inbox'))) return reply({code:'57014',message:'PRIVATE SQL statement timeout',details:'PRIVATE QUERY'},500);
+    if(url.pathname.endsWith('/get_my_notification_unread_state')) return reply(state.notificationUnread);
+    if(url.pathname.endsWith('/list_my_invitations')) return reply(state.invitations);
+    if(url.pathname.endsWith('/mark_all_notifications_read')) {state.notificationUnread=false;return reply(2);}
+    if(url.pathname.endsWith('/v_my_notification_inbox') && req.method()==='HEAD') return route.fulfill({status:200,headers:{'content-range':'*/0','access-control-expose-headers':'content-range'},body:''});
     if (url.pathname.startsWith('/auth/v1/')) {
       const endpoint = url.pathname.split('/').at(-1);
       if (state.error?.endpoint === endpoint) return reply({ code: state.error.code, msg: 'SECRET PROVIDER DETAIL' }, state.error.status || 400);
@@ -81,6 +86,7 @@ async function fixture(options = {}) {
     if(url.pathname.endsWith('/create_task_with_cost')) {const t={id:crypto.randomUUID(),status:'open',project_id:project.id,recurrence_frequency:null,...body.p_fields};state.tasks.push(t);return reply(t);}
     if(url.pathname.endsWith('/complete_assigned_task')) {const t=state.tasks.find(t=>t.id===body.p_task);assert.equal(t.assignee_member_id,mid);t.status='done';return reply(null);}
     if(url.pathname.endsWith('/tasks')) return reply(state.tasks);
+    if(url.pathname.endsWith('/get_resource_comments')) return reply({items:[],next_cursor:null,can_comment:true});
     if (url.pathname.endsWith('/projects')) {
       if(req.method()==='PATCH') {
         assert.equal(url.searchParams.get('status'), `eq.${state.project.status}`);
@@ -120,6 +126,40 @@ async function fits(page,label) {
   assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),label);
 }
 try {
+ await test('Boolean unread clears after mark-all and invitations remain separate',async({page,state})=>{
+  state.notificationUnread=true;await login(page);await page.getByLabel('Unread notifications',{exact:true}).waitFor();
+  await page.getByRole('button',{name:'Notifications',exact:true}).click();const dialog=page.getByRole('dialog');
+  await dialog.getByRole('button',{name:'Mark all as read',exact:true}).click();await page.getByLabel('Unread notifications',{exact:true}).waitFor({state:'hidden'});
+  assert.equal(state.calls.filter(c=>c.path.endsWith('/v_my_notification_inbox')&&c.method==='HEAD').length,0);
+  assert(state.calls.some(c=>c.path.endsWith('/get_my_notification_unread_state')));
+  await dialog.getByRole('button',{name:'Close dialog',exact:true}).click();
+  state.invitations=[{token:'fixture-invitation',project_id:state.project.id,project_name:'Another project',role:'member',inviter_name:'Organizer',expires_at:new Date(Date.now()+86400000).toISOString()}];
+  await page.reload();await page.getByLabel('Unread notifications',{exact:true}).waitFor();
+  await page.getByRole('button',{name:'Notifications',exact:true}).click();assert.equal(await page.getByRole('button',{name:'Mark all as read',exact:true}).isDisabled(),true);
+ });
+ await test('Critical read failures are safe and manually retryable',async({page,state})=>{
+  state.failReads=true;await login(page);await go(page,'/app/projects/'+state.project.id+'/health');
+  await page.getByRole('button',{name:'Try again',exact:true}).waitFor();
+  assert(!(await page.locator('body').innerText()).includes('PRIVATE'));
+  await page.getByLabel('Notification status unavailable',{exact:true}).waitFor();
+  await page.getByRole('button',{name:'Notifications',exact:true}).click();
+  const dialog=page.getByRole('dialog');await dialog.getByText('Could not load updates.',{exact:false}).waitFor();
+  assert.equal(state.calls.filter(c=>c.path.endsWith('/mark_notification_read')||c.path.endsWith('/mark_all_notifications_read')).length,0);
+  assert.equal(await dialog.getByRole('button',{name:'Mark all as read',exact:true}).isDisabled(),true);
+  state.failReads=false;await dialog.getByRole('button',{name:'Retry unread status',exact:true}).click();await dialog.getByRole('button',{name:'Retry',exact:true}).click();
+  await dialog.getByText('No updates yet.',{exact:true}).waitFor();await page.getByLabel('Notification status unavailable',{exact:true}).waitFor({state:'hidden'});
+  await dialog.getByRole('button',{name:'Close dialog',exact:true}).click();await page.getByRole('button',{name:'Try again',exact:true}).click();await page.getByText('Nothing here — all clear for this filter.',{exact:true}).waitFor();
+ });
+ await test('Empty project leads directly to first Category at all widths',async({page,state})=>{
+  await login(page);await go(page,'/app/projects/'+state.project.id+'/overview');
+  const action=page.getByRole('link',{name:'Create your first category',exact:true});await action.waitFor();
+  for(const width of [375,430,768,1280]){await page.setViewportSize({width,height:width===1280?640:720});await fits(page,'Empty project '+width);await page.screenshot({path:`/tmp/orchestrio-onboarding-${width}.png`});}
+  await action.focus();await page.keyboard.press('Enter');const dialog=page.getByRole('dialog');await dialog.getByLabel('Category name *',{exact:true}).fill('First plans');await dialog.getByRole('button',{name:'Save category',exact:true}).click();await dialog.waitFor({state:'hidden'});
+  assert.equal(state.categories.length,1);assert.equal(state.activities.length,0);await go(page,'/app/projects/'+state.project.id+'/overview');await action.waitFor({state:'hidden'});
+ });
+ await test('Viewer empty project offers no creation action',async({page,state})=>{
+  state.role='viewer';await login(page);await go(page,'/app/projects/'+state.project.id+'/overview');await page.getByText("Your project team hasn't added any activities yet.",{exact:true}).waitFor();assert.equal(await page.getByRole('link',{name:'Create your first category',exact:true}).count(),0);
+ });
  for(const width of [375,430,768,1280]) {
   await test('Activity/payment/delete at '+width+'px',async({page,state})=>{
    await page.setViewportSize({width,height:900});await login(page);
@@ -159,9 +199,9 @@ try {
    await dialog.getByRole('button',{name:'Add payment',exact:true}).click();
    await page.waitForFunction(()=>document.body.textContent.includes('£0.00'));
    await dialog.getByRole('button',{name:'Complete',exact:true}).click();
-   await dialog.getByText('Completed',{exact:true}).waitFor();
+   await dialog.getByText('Complete',{exact:true}).waitFor();
   await fits(page,'Area dialog fits');
-   await dialog.getByText('More',{exact:true}).click();
+   state.activities[0].status='idea';await page.reload();await dialog.getByText('More',{exact:true}).click();
    state.deleteFail=true;
   await dialog.getByRole('button',{name:'Delete activity',exact:true}).click();
    await page.getByRole('button',{name:'Delete',exact:true}).click();
@@ -198,7 +238,7 @@ try {
   assert.equal(state.calls.find(c=>c.path.endsWith('/create_activity_in_category')).body.p_fields.estimated_cost_minor,1250);
   state.role='viewer';const item=state.activities[0];item.estimated_cost_minor=null;item.owner_member_id='00000000-0000-4000-8000-000000000020';
   await page.reload();await page.getByText('Cost activity',{exact:true}).waitFor();await go(page,'/app/projects/'+state.project.id+'/areas?commitment='+item.id);d=page.getByRole('dialog');
-  assert.equal(await d.getByRole('button',{name:'Edit',exact:true}).count(),0);await d.getByRole('button',{name:'Complete',exact:true}).click();await d.getByText('Completed',{exact:true}).waitFor();
+  assert.equal(await d.getByRole('button',{name:'Edit',exact:true}).count(),0);await d.getByRole('button',{name:'Complete',exact:true}).click();await d.getByText('Complete',{exact:true}).waitFor();
   assert(state.calls.some(c=>c.path.endsWith('/complete_assigned_item')));
   item.status='idea';item.owner_member_id=null;await page.reload();d=page.getByRole('dialog');await d.getByText('Cost activity',{exact:true}).waitFor();assert.equal(await d.getByRole('button',{name:'Complete',exact:true}).count(),0);
  });

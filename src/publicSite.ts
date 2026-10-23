@@ -34,7 +34,7 @@ export function pageMetadata(path: string, production: boolean, fallbackTitle = 
 
 export function robotsContent(production: boolean) {
   return production
-    ? `User-agent: *\nAllow: /\nDisallow: /app\nDisallow: /admin\nDisallow: /auth/\nDisallow: /invite/\n\nSitemap: ${PUBLIC_ORIGIN}/sitemap.xml\n`
+    ? `User-agent: *\nAllow: /\nDisallow: /app\nDisallow: /admin\nDisallow: /auth/\nDisallow: /invite/\nDisallow: /s/\nDisallow: /join/\n\nSitemap: ${PUBLIC_ORIGIN}/sitemap.xml\n`
     : "User-agent: *\nDisallow: /\n";
 }
 

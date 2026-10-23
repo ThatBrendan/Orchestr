@@ -1,11 +1,13 @@
 import { trackProductEvent } from "@/lib/analytics";
 import { supabase } from "@/lib/supabase";
 import { toAppError } from "@/lib/errors";
-import type { Tables, TablesInsert, TablesUpdate } from "@/types/database";
+import type { Tables, TablesInsert, TablesUpdate, Views } from "@/types/database";
 
 export type Payment = Tables<"payments">;
+export type PaymentSchedule = Tables<"activity_payment_schedules">;
+export type PaymentScheduleFinancial = Views<"v_activity_payment_schedule_financials">;
 
-/** All non-deleted payments for a commitment (docs/SECURITY_RLS.md §5.8). */
+/** All non-deleted payments for a commitment (docs/BACKEND_SECURITY_AND_DATA.md). */
 export async function listPayments(commitmentId: string): Promise<Payment[]> {
   const { data, error } = await supabase
     .from("payments")
@@ -16,6 +18,34 @@ export async function listPayments(commitmentId: string): Promise<Payment[]> {
     .order("created_at", { ascending: true });
   if (error) throw toAppError(error);
   return data ?? [];
+}
+
+export async function listPaymentSchedules(commitmentId: string): Promise<PaymentScheduleFinancial[]> {
+  const { data, error } = await supabase
+    .from("v_activity_payment_schedule_financials")
+    .select("*")
+    .eq("commitment_id", commitmentId)
+    .order("sort_order", { ascending: true })
+    .order("due_on", { ascending: true });
+  if (error) throw toAppError(error);
+  return data ?? [];
+}
+
+export async function createPaymentSchedule(input: TablesInsert<"activity_payment_schedules">): Promise<PaymentSchedule> {
+  const { data, error } = await supabase.from("activity_payment_schedules").insert(input).select("*").single();
+  if (error) throw toAppError(error);
+  return data;
+}
+
+export async function updatePaymentSchedule(id: string, patch: TablesUpdate<"activity_payment_schedules">): Promise<PaymentSchedule> {
+  const { data, error } = await supabase.from("activity_payment_schedules").update(patch).eq("id", id).select("*").single();
+  if (error) throw toAppError(error);
+  return data;
+}
+
+export async function deletePaymentSchedule(id: string): Promise<void> {
+  const { error } = await supabase.rpc("soft_delete_payment_schedule", { p_schedule: id });
+  if (error) throw toAppError(error);
 }
 
 export async function createPayment(input: TablesInsert<"payments">): Promise<Payment> {

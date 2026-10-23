@@ -55,7 +55,7 @@ select lives_ok($$update public.commitments set title='Book restaurant updated',
 select lives_ok($$insert into public.commitment_participants(project_id,commitment_id,member_id) select ctx.id,c.id,m.id from ctx,created_activity c,public.project_members m where m.project_id=ctx.id and m.user_id='29000000-0000-0000-0000-000000000003'$$,'Adding assigned participant succeeds');
 set local role postgres;
 select is((select count(*)::int from public.notifications where commitment_id=(select id from created_activity)),3,'Edits and participants do not duplicate notifications');
-select lives_ok($$insert into public.notifications(project_id,commitment_id,recipient_user_id) select project_id,commitment_id,recipient_user_id from public.notifications on conflict(recipient_user_id,commitment_id,kind) do nothing$$,'Fan-out retry is idempotent');
+select lives_ok($$insert into public.notifications(project_id,commitment_id,recipient_user_id) select project_id,commitment_id,recipient_user_id from public.notifications where commitment_id=(select id from created_activity) and kind='activity_created' on conflict(recipient_user_id,commitment_id,kind) do nothing$$,'Fan-out retry is idempotent');
 select is((select count(*)::int from public.notifications where commitment_id=(select id from created_activity)),3,'Unique event/recipient constraint prevents duplicates');
 select pg_temp.login(1);
 create temporary table project_before as select to_jsonb(p) - array['status','updated_at'] as fields from public.projects p where id=(select id from ctx);

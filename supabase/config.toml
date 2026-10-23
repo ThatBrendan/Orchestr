@@ -1,12 +1,12 @@
 # Supabase local config — Orchestrio
-# See docs/TECHNICAL_ARCHITECTURE.md §22 for environment strategy.
+# See docs/OPERATIONS_AND_RELEASE.md for environment strategy.
 project_id = "orchestr"
 
 [api]
 enabled = true
 port = 54321
 # Only `public` is exposed to PostgREST. RLS helpers live in `app` and are NOT reachable
-# via supabase.rpc(); client-facing RPCs are created in `public`. (docs/SECURITY_RLS.md §4)
+# via supabase.rpc(); client-facing RPCs are created in `public`. (docs/BACKEND_SECURITY_AND_DATA.md)
 schemas = ["public", "graphql_public"]
 extra_search_path = ["public", "extensions"]
 max_rows = 1000
@@ -64,4 +64,9 @@ enabled = false
 # OPTIONS reaches the handler without gateway JWT rejection. POST validates
 # the bearer token with auth.getUser and uses caller-scoped RLS.
 [functions.invitations-send]
+verify_jwt = false
+
+# OAuth callback validates single-use browser-bound state. User actions call
+# auth.getUser; worker consumes a private, single-use cron dispatch window.
+[functions.calendar-integration]
 verify_jwt = false

@@ -2,7 +2,7 @@ import { QueryClient } from "@tanstack/vue-query";
 import { toAppError } from "./errors";
 import { logger } from "./logger";
 
-/** vue-query defaults (docs/TECHNICAL_ARCHITECTURE.md §4, §16). */
+/** vue-query defaults (docs/FRONTEND_AND_UX.md). */
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {

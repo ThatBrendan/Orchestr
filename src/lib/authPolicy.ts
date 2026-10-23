@@ -21,7 +21,7 @@ export function safeRedirect(raw: unknown): string | null {
     if (hasUnsafeCharacters(decoded)) return null;
     const url = new URL(raw, "https://auth.invalid");
     if (url.origin !== "https://auth.invalid" || !raw.startsWith("/")) return null;
-    if (!/^\/(?:(?:app|admin)(?:\/|$)|invite\/[^/]+$)/.test(url.pathname)) return null;
+    if (!/^\/(?:(?:app|admin)(?:\/|$)|invite\/[^/]+$|(?:join|s)\/[0-9a-f]{64}$)/.test(url.pathname)) return null;
     if (url.pathname.includes("%") || /(?:^|\/)\.{1,2}(?:\/|$)/.test(raw.split(/[?#]/)[0]!)) return null;
     return url.pathname + url.search + url.hash;
   } catch { return null; }

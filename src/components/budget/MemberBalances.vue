@@ -1,7 +1,9 @@
 <script setup lang="ts">
+import ReimbursementStatusLabel from "@/components/commitments/ReimbursementStatusLabel.vue";
 import {computed,ref} from 'vue';
 import {useQuery,useQueryClient} from '@tanstack/vue-query';
 import {DateTime} from 'luxon';
+import {useReimbursements} from '@/composables/useReimbursements';
 import {useProjectSettlement} from '@/composables/useSettlement';
 import {useProjectContext} from '@/composables/useProjectContext';
 import {useMoney} from '@/composables/useMoney';
@@ -11,6 +13,8 @@ import {toAppError} from '@/lib/errors';
 import AppButton from '@/components/ui/AppButton.vue';
 import AppModal from '@/components/ui/AppModal.vue';
 const props=defineProps<{projectId:string;currency:string;itemId?:string}>();
+const reimbursements=useReimbursements(()=>props.projectId);
+function memberRequests(id:string){return (reimbursements.data.value??[]).filter(r=>(r.debtor_member_id===id||r.creditor_member_id===id)&&(!props.itemId||r.commitment_id===props.itemId));}
 const query=useProjectSettlement(()=>props.projectId),client=useQueryClient();
 const {project,isOrganizer}=useProjectContext();const {format,toMinor,toMajor}=useMoney();
 const lines=useQuery({queryKey:computed(()=>['settlement','items',props.projectId]),queryFn:async()=>{const {data,error}=await supabase.from('v_item_member_balances').select('*').eq('project_id',props.projectId);if(error)throw toAppError(error);return data;}});
@@ -19,9 +23,11 @@ const selected=ref<NonNullable<typeof lines.data.value>[number]|null>(null),paye
 const canSettle=computed(()=>isOrganizer.value&&project.value?.status!=='archived');
 const creditors=computed(()=>(lines.data.value??[]).filter(l=>l.commitment_id===selected.value?.commitment_id&&l.remaining_minor<0&&l.member_status==='active'));
 function memberLines(id:string){return (lines.data.value??[]).filter(l=>l.member_id===id&&(!props.itemId||l.commitment_id===props.itemId));}
+function balanceLabel(amount:number){return amount===0?'Settled':(amount>0?'Owes ':'Is owed ')+format(Math.abs(amount),props.currency);}
+function memberBalance(id:string, total:number){return props.itemId ? memberLines(id)[0]?.remaining_minor ?? 0 : total;}
 function areaGroups(id:string){const result=new Map<string,ReturnType<typeof memberLines>>();for(const line of memberLines(id)){const key=line.area_title??'Activities without a Category';result.set(key,[...(result.get(key)??[]),line]);}return [...result];}
 function open(line:NonNullable<typeof selected.value>){selected.value=line;payee.value=creditors.value[0]?.member_id??'';amount.value=String(toMajor(Math.min(line.remaining_minor,-(creditors.value[0]?.remaining_minor??0)),props.currency));date.value=DateTime.now().setZone(project.value?.timezone??'UTC').toISODate()!;error.value='';}
-async function refresh(){await Promise.all([client.invalidateQueries({queryKey:['settlement']}),invalidatePlanning(client,props.projectId)]);}
+async function refresh(){await Promise.all([client.invalidateQueries({queryKey:['settlement']}),client.invalidateQueries({queryKey:['reimbursement-payment-status']}),invalidatePlanning(client,props.projectId)]);}
 async function save(){if(!selected.value||busy.value)return;busy.value=true;error.value='';try{const minor=toMinor(amount.value,props.currency);if(!minor||!payee.value||!date.value)throw new Error('Choose a person, amount and date.');const {error:e}=await supabase.rpc('record_item_settlement',{p_item:selected.value.commitment_id,p_from:selected.value.member_id,p_to:payee.value,p_amount:minor,p_date:date.value});if(e)throw e;await refresh();selected.value=null;}catch(e){error.value=toAppError(e).message;}finally{busy.value=false;}}
 const cancelling=ref<string|null>(null);
 async function cancel(){if(!cancelling.value)return;busy.value=true;error.value='';try{const {error:e}=await supabase.rpc('cancel_item_settlement',{p_group:cancelling.value});if(e)throw e;await refresh();cancelling.value=null;}catch(e){error.value=toAppError(e).message;}finally{busy.value=false;}}
@@ -58,13 +64,14 @@ async function cancel(){if(!cancelling.value)return;busy.value=true;error.value=
       <details
         v-for="member in query.data.value?.members.filter(m=>!itemId||memberLines(m.member_id).length)"
         :key="member.member_id"
-        class="rounded-xl border border-line bg-surface p-4"
+        class="group rounded-xl border border-line bg-surface p-4"
       >
         <summary class="cursor-pointer focus-ring flex flex-wrap justify-between gap-2">
-          <span class="font-medium break-words">{{ member.display_name }}{{ member.member_status==='removed'?' (removed)':'' }}</span><span
-            v-if="!itemId"
-            class="text-14"
-          >{{ member.remaining_minor===0?'Settled':format(Math.abs(member.remaining_minor),currency)+(member.remaining_minor>0?' outstanding':' to receive') }}</span>
+          <span class="min-w-0">
+            <span class="block font-medium break-words">{{ member.display_name }}{{ member.member_status==='removed'?' (removed)':'' }}</span>
+            <span class="block mt-1 text-14">{{ balanceLabel(memberBalance(member.member_id, member.remaining_minor)) }}</span>
+          </span>
+          <span class="text-13 underline self-center"><span class="group-open:hidden">View details</span><span class="hidden group-open:inline">Hide details</span><span class="sr-only"> for {{ member.display_name }}</span></span>
         </summary>
         <div
           v-for="[area,rows] in areaGroups(member.member_id)"
@@ -78,7 +85,7 @@ async function cancel(){if(!cancelling.value)return;busy.value=true;error.value=
             :key="line.commitment_id"
             class="flex flex-wrap items-center justify-between gap-2 text-13 border-t border-line pt-2"
           >
-            <span class="min-w-0 break-words">{{ line.item_title }}</span><span>{{ line.remaining_minor===0?'Settled':format(Math.abs(line.remaining_minor),currency)+(line.remaining_minor<0?' to receive':' outstanding') }}</span><AppButton
+            <span class="min-w-0 break-words">{{ line.item_title }}</span><span>{{ balanceLabel(line.remaining_minor) }}</span><AppButton
               v-if="canSettle&&line.member_status==='active'&&line.remaining_minor>0&&lines.data.value?.some(c=>c.commitment_id===line.commitment_id&&c.remaining_minor<0&&c.member_status==='active')"
               size="sm"
               variant="secondary"
@@ -88,10 +95,41 @@ async function cancel(){if(!cancelling.value)return;busy.value=true;error.value=
             </AppButton>
           </div>
         </div>
+        <section
+          v-if="memberRequests(member.member_id).length"
+          class="mt-4 space-y-2 text-13"
+          aria-label="Reimbursement requests"
+        >
+          <h3 class="font-medium">
+            Reimbursements
+          </h3>
+          <RouterLink
+            v-for="request in memberRequests(member.member_id)"
+            :key="request.id"
+            :to="{name:'project.commitments',params:{projectId},query:{commitment:request.commitment_id,section:'reimbursements'}}"
+            class="block rounded-lg border border-line p-3 focus-ring [overflow-wrap:anywhere]"
+          >
+            <span class="block font-medium">{{ request.activity_title }}</span>
+            <span>{{ request.status!=='open'||request.needs_review ? request.debtor_name+' → '+request.creditor_name : request.is_debtor ? 'You owe '+request.creditor_name : request.is_creditor ? request.debtor_name+' owes you' : request.debtor_name+' owes '+request.creditor_name }} · {{ format(request.amount_minor,currency) }}</span>
+            <ReimbursementStatusLabel :request="request" />
+          </RouterLink>
+        </section>
       </details>
     </template>
+    <p
+      v-if="reimbursements.isError.value"
+      role="alert"
+      class="text-13"
+    >
+      Could not load reimbursement details. <button
+        class="underline focus-ring"
+        @click="reimbursements.refetch()"
+      >
+        Retry
+      </button>
+    </p>
     <details
-      v-if="history.data.value?.length"
+      v-if="history.data.value?.some(r=>!itemId||r.commitment_id===itemId)"
       class="text-13"
     >
       <summary class="cursor-pointer focus-ring">

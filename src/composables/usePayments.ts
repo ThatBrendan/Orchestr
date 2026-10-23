@@ -19,6 +19,14 @@ export function usePayments(commitmentId: MaybeRefOrGetter<string>) {
   };
 }
 
+export function usePaymentSchedules(commitmentId: MaybeRefOrGetter<string>) {
+  const q = useQuery({
+    queryKey: computed(() => qk.commitment.paymentSchedules(toValue(commitmentId))),
+    queryFn: () => paymentsService.listPaymentSchedules(toValue(commitmentId)),
+  });
+  return { schedules: computed(() => q.data.value ?? []), isPending: q.isPending, isError: q.isError, error: q.error, refetch: q.refetch };
+}
+
 /** projectId is only used to also invalidate project-level financials/health after a mutation. */
 function invalidatePaymentEffects(
   client: ReturnType<typeof useQueryClient>,
@@ -27,8 +35,33 @@ function invalidatePaymentEffects(
 ) {
   return invalidatePlanning(client, projectId, [
     qk.commitment.payments(commitmentId), qk.commitment.financials(commitmentId),
+    qk.commitment.paymentSchedules(commitmentId),
     qk.project.budgetCategories(projectId), ["settlement"],
   ]);
+}
+
+export function useCreatePaymentSchedule(projectId: string, commitmentId: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (input: TablesInsert<"activity_payment_schedules">) => paymentsService.createPaymentSchedule(input),
+    onSuccess: () => invalidatePaymentEffects(client, projectId, commitmentId),
+  });
+}
+
+export function useUpdatePaymentSchedule(projectId: string, commitmentId: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { id: string; patch: TablesUpdate<"activity_payment_schedules"> }) => paymentsService.updatePaymentSchedule(input.id, input.patch),
+    onSuccess: () => invalidatePaymentEffects(client, projectId, commitmentId),
+  });
+}
+
+export function useDeletePaymentSchedule(projectId: string, commitmentId: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => paymentsService.deletePaymentSchedule(id),
+    onSuccess: () => invalidatePaymentEffects(client, projectId, commitmentId),
+  });
 }
 
 export function useCreatePayment(projectId: string, commitmentId: string) {

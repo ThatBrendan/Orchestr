@@ -7,7 +7,7 @@ import type { CommitmentOccurrence } from "@/types/derived";
 export type Commitment = Tables<"commitments">;
 export type CommitmentParticipant = Tables<"commitment_participants">;
 
-/** All non-deleted commitments for a project (docs/SECURITY_RLS.md §5.5). */
+/** All non-deleted commitments for a project (docs/BACKEND_SECURITY_AND_DATA.md). */
 export async function listCommitments(projectId: string): Promise<Commitment[]> {
   const { data, error } = await supabase
     .from("commitments")
@@ -94,7 +94,7 @@ export async function stopCommitmentRecurrence(commitmentId: string, stopAfter: 
   if (error) throw toAppError(error);
 }
 
-/** Soft delete — organizer, creator, or owner only (docs/SECURITY_RLS.md §5.5). */
+/** Soft delete — organizer, creator, or owner only (docs/BACKEND_SECURITY_AND_DATA.md). */
 export async function softDeleteCommitment(id: string): Promise<void> {
   const { data, error } = await supabase.rpc("soft_delete_commitment", { p_commitment: id });
   if (error) throw toAppError(error);
@@ -118,7 +118,7 @@ export async function addParticipant(
   return data;
 }
 
-/** Hard delete — correct for participants (docs/SECURITY_RLS.md §5.6). */
+/** Hard delete — correct for participants (docs/BACKEND_SECURITY_AND_DATA.md). */
 export async function removeParticipant(participantId: string): Promise<void> {
   const { error, count } = await supabase.from("commitment_participants").delete({ count: "exact" }).eq("id", participantId);
   if (error) throw toAppError(error);

@@ -1,6 +1,6 @@
 import type { Json, ProjectProfile } from "@/types/database";
 
-export type ProjectModule = "overview" | "commitments" | "budget" | "timeline" | "people" | "notes" | "health";
+export type ProjectModule = "overview" | "decisions" | "commitments" | "budget" | "timeline" | "people" | "notes" | "health";
 
 export interface ProjectProfileDefinition {
   value: ProjectProfile;
@@ -9,7 +9,7 @@ export interface ProjectProfileDefinition {
   defaultModules: ProjectModule[];
 }
 
-export const ALL_PROJECT_MODULES: ProjectModule[] = ["overview", "commitments", "budget", "timeline", "people", "notes", "health"];
+export const ALL_PROJECT_MODULES: ProjectModule[] = ["overview", "commitments", "decisions", "budget", "timeline", "people", "notes", "health"];
 
 export const PROJECT_PROFILES: ProjectProfileDefinition[] = [
   {
@@ -28,19 +28,19 @@ export const PROJECT_PROFILES: ProjectProfileDefinition[] = [
     value: "house_move",
     label: "House Move & Checklist",
     description: "Keep activities, deadlines and responsibilities organised.",
-    defaultModules: ["overview", "commitments", "timeline", "people", "notes", "health"],
+    defaultModules: ["overview", "commitments", "decisions", "timeline", "people", "notes", "health"],
   },
   {
     value: "recurring_process",
     label: "Recurring Process",
     description: "Run work that repeats weekly, fortnightly or monthly.",
-    defaultModules: ["overview", "commitments", "timeline", "people", "notes", "health"],
+    defaultModules: ["overview", "commitments", "decisions", "timeline", "people", "notes", "health"],
   },
   {
     value: "team_project",
     label: "Team Project",
     description: "Coordinate owners, deadlines, milestones and execution.",
-    defaultModules: ["overview", "commitments", "timeline", "people", "notes", "health"],
+    defaultModules: ["overview", "commitments", "decisions", "timeline", "people", "notes", "health"],
   },
   {
     value: "launch",
@@ -86,4 +86,19 @@ export function setModuleVisibility(moduleVisibility: Json | null | undefined, m
       : {};
   current[module] = visible;
   return current as Json;
+}
+
+/** Creation assistance only: selecting a profile never inserts Categories. */
+export const CATEGORY_SUGGESTIONS: Record<ProjectProfile, readonly string[]> = {
+  group_trip: ['Accommodation', 'Transport', 'Food & Dining', 'Activities'],
+  wedding_event: ['Venue', 'Catering', 'Guests', 'Decor', 'Entertainment'],
+  house_move: ['Packing', 'Utilities', 'Transport', 'Cleaning', 'Furniture & Home'],
+  recurring_process: ['Preparation', 'Operations', 'Review', 'Admin'],
+  team_project: ['Planning', 'Delivery', 'Operations', 'Review'],
+  launch: ['Product', 'Marketing', 'Operations', 'Launch', 'Legal & Admin'],
+  blank: [],
+};
+export function categorySuggestions(profile: ProjectProfile, existing: readonly string[]): string[] {
+  const names = new Set(existing.map(name => name.trim().toLowerCase()));
+  return CATEGORY_SUGGESTIONS[profile].filter(name => !names.has(name.toLowerCase()));
 }

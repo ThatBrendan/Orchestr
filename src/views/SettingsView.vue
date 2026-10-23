@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import CalendarSyncSettings from "@/components/settings/CalendarSyncSettings.vue";
+import NotificationSettings from '@/components/settings/NotificationSettings.vue';
+import PaymentLinksSettings from "@/components/settings/PaymentLinksSettings.vue";
 import PasswordForm from "@/components/ui/PasswordForm.vue";
 import { computed, ref, watch } from "vue";
 import { useMyProfile, useUpdateMyDisplayName } from "@/composables/useDashboard";
@@ -23,12 +26,6 @@ watch(
   { immediate: true },
 );
 
-const notif = (raw: unknown) => {
-  if (!raw || typeof raw !== "object") return "—";
-  const p = raw as Record<string, unknown>;
-  const on = [p.email ? "Email" : null, p.push ? "Push" : null].filter(Boolean);
-  return on.length ? on.join(" + ") : "Off";
-};
 
 const canSave = computed(() => !!name.value.trim() && !updateName.isPending.value);
 
@@ -144,12 +141,11 @@ async function saveName() {
           <span class="text-14 font-medium text-ink-soft">Currency</span>
           <span class="text-14">{{ profile?.default_currency ?? "—" }}</span>
         </div>
-        <div class="flex items-center justify-between px-5 py-4">
-          <span class="text-14 font-medium text-ink-soft">Notifications</span>
-          <span class="text-14">{{ notif(profile?.notification_prefs) }}</span>
-        </div>
       </div>
     </div>
+    <CalendarSyncSettings />
+    <NotificationSettings />
+    <PaymentLinksSettings />
     <section
       class="mt-8 max-w-sm border rounded-xl p-5 border-line bg-surface"
       aria-labelledby="change-password-title"

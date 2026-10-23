@@ -1,3 +1,10 @@
+import type { CalendarConnection } from './calendarSync';
+import type { ReceiptConfirmation, ReceiptConfirmationNotification } from './receiptConfirmations';
+import type { PaymentAcknowledgement, ReimbursementPaymentStatus, PaymentAcknowledgementNotification } from './paymentAcknowledgements';
+import type { PaymentLink, PaymentOption } from "./paymentLinks";
+import type { Reimbursement, ReimbursementSuggestion, ReimbursementNotification, ReimbursementRequest } from "./reimbursements";
+import type { ResourceCommentRow } from "./comments";
+import type { DecisionRow, DecisionOptionRow, DecisionVoteRow } from "./decisions";
 /**
  * Supabase database types — `public` schema.
  *
@@ -21,9 +28,19 @@ export type Json =
 export interface Database {
   public: {
     Tables: {
+      user_calendar_connections: { Row: CalendarConnection; Insert: never; Update: never; Relationships: [] };
+      user_notification_preferences: { Row: { id: string; user_id: string; category: string; enabled: boolean; created_at: string; updated_at: string }; Insert: never; Update: never; Relationships: [] };
+      user_payment_links: { Row: PaymentLink; Insert: never; Update: never; Relationships: [] };
+      reimbursement_payment_acknowledgements: { Row: PaymentAcknowledgement; Insert: never; Update: never; Relationships: [] };
+      reimbursement_receipt_confirmations: { Row: ReceiptConfirmation; Insert: never; Update: never; Relationships: [] };
+      reimbursement_requests: { Row: ReimbursementRequest; Insert: never; Update: never; Relationships: [] };
+      resource_comments: { Row: ResourceCommentRow; Insert: never; Update: never; Relationships: [] };
+      decisions: { Row: DecisionRow; Insert: never; Update: never; Relationships: [] };
+      decision_options: { Row: DecisionOptionRow; Insert: never; Update: never; Relationships: [] };
+      decision_votes: { Row: DecisionVoteRow; Insert: never; Update: never; Relationships: [] };
       notifications: {
-        Row: { id: string; project_id: string; commitment_id: string; recipient_user_id: string; kind: "activity_created"; created_at: string; read_at: string | null };
-        Insert: { id?: string; project_id: string; commitment_id: string; recipient_user_id: string; kind?: "activity_created"; created_at?: string; read_at?: string | null };
+        Row: { id: string; project_id: string; activity_reminder_id: string | null; commitment_id: string | null; join_request_id: string | null; decision_id: string | null; reimbursement_id: string | null; payment_acknowledgement_id: string | null; receipt_confirmation_id: string | null; payment_schedule_id: string | null; domain_event_id: string | null; recipient_user_id: string; kind: "activity_due_soon" | "reimbursement_receipt_confirmed" | "reimbursement_payment_acknowledged" | "reimbursement_payment_acknowledgement_withdrawn" | "reimbursement_created" | "payment_due_soon" | "activity_created" | "project_join_requested" | "project_member_approved" | "decision_deadline_reached" | "decision_resolved"; created_at: string; read_at: string | null };
+        Insert: { id?: string; project_id: string; commitment_id?: string | null; join_request_id?: string | null; recipient_user_id: string; kind?: "reimbursement_created" | "payment_due_soon" | "activity_created" | "project_join_requested" | "project_member_approved" | "decision_deadline_reached" | "decision_resolved"; created_at?: string; read_at?: string | null };
         Update: { read_at?: string | null };
         Relationships: [];
       };
@@ -192,6 +209,12 @@ export interface Database {
         Update: {title?:string;notes?:string|null};
         Relationships: [];
       };
+      activity_payment_schedules: {
+        Row: { id: string; project_id: string; commitment_id: string; title: string; amount_minor: number; due_on: string; sort_order: number; created_at: string; updated_at: string; deleted_at: string | null };
+        Insert: { project_id: string; commitment_id: string; title: string; amount_minor: number; due_on: string; sort_order?: number; deleted_at?: string | null };
+        Update: { title?: string; amount_minor?: number; due_on?: string; sort_order?: number; deleted_at?: string | null };
+        Relationships: [];
+      };
       commitments: {
         Row: {
           id: string;
@@ -318,6 +341,7 @@ export interface Database {
         Row: {
           id: string;
           settlement_group_id: string | null;
+          payment_schedule_id: string | null;
           project_id: string;
           commitment_id: string;
           type: Database["public"]["Enums"]["payment_type"];
@@ -349,6 +373,7 @@ export interface Database {
           method?: string | null;
           reference?: string | null;
           notes?: string | null;
+          payment_schedule_id?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["payments"]["Insert"]> & {
           deleted_at?: string | null;
@@ -557,6 +582,15 @@ export interface Database {
       };
     };
     Views: {
+      v_my_notification_inbox: { Row: { id: string; project_id: string; created_at: string; read_at: string | null; kind: string; category: string; resource_type: 'activity' | 'decision' | 'project'; resource_id: string; section: 'payments' | 'reimbursements' | 'people' | null; title: string; body: string }; Relationships: [] };
+      v_reimbursement_payment_status: { Row: ReimbursementPaymentStatus; Relationships: [] };
+      v_my_payment_acknowledgement_notifications: { Row: PaymentAcknowledgementNotification; Relationships: [] };
+      v_my_receipt_confirmation_notifications: { Row: ReceiptConfirmationNotification; Relationships: [] };
+      v_reimbursements: { Row: Reimbursement; Relationships: [] };
+      v_my_reimbursement_notifications: { Row: ReimbursementNotification; Relationships: [] };
+      v_my_payment_notifications: { Row: { id: string; project_id: string; created_at: string; read_at: string | null; commitment_id: string; title: string; due_on: string; outstanding_minor: number; currency: string }; Relationships: [] };
+      v_my_decision_notifications: { Row: { id: string; project_id: string; decision_id: string; kind: "decision_deadline_reached" | "decision_resolved"; created_at: string; read_at: string | null; decision_title: string; selected_title: string | null }; Relationships: [] };
+      v_my_join_notifications: { Row: { id: string; project_id: string; join_request_id: string; kind: "project_join_requested" | "project_member_approved"; created_at: string; read_at: string | null; project_name: string }; Relationships: [] };
       v_project_items: { Row: {id:string;project_id:string;area_id:string|null;source:string;financial_id:string|null;title:string;item_type:string;status:string;assignee_member_id:string|null;item_date:string|null;notes:string|null;recurrence_frequency:string|null;cost_minor:number|null;paid_minor:number;outstanding_minor:number;created_at:string}; Relationships: [] };
       v_area_totals: { Row: {project_id:string;area_id:string|null;item_count:number;cost_minor:number;spent_minor:number}; Relationships: [] };
       v_item_member_balances: { Row: Database['public']['Views']['v_activity_member_settlements']['Row'] & {item_id:string;item_title:string;area_id:string|null;area_title:string|null}; Relationships: [] };
@@ -567,6 +601,7 @@ export interface Database {
       v_project_member_settlements: { Row: { project_id: string; member_id: string; display_name: string; member_status: string; currency: string; allocated_minor: number; paid_minor: number; remaining_minor: number }; Relationships: [] };
       v_project_settlement_totals: { Row: { project_id: string; remaining_minor: number; credit_minor: number }; Relationships: [] };
       v_activity_member_settlements: { Row: { project_id: string; commitment_id: string; member_id: string; display_name: string; member_status: string; allocated_minor: number; paid_minor: number; remaining_minor: number }; Relationships: [] };
+      v_activity_payment_schedule_financials: { Row: { payment_schedule_id: string; project_id: string; commitment_id: string; title: string; scheduled_amount_minor: number; due_on: string; sort_order: number; gross_paid_minor: number; refunded_minor: number; net_paid_minor: number; outstanding_minor: number }; Relationships: [] };
       v_activity_cost_shares: {
         Row: { project_id: string; commitment_id: string; member_id: string; amount_minor: number };
         Relationships: [];
@@ -873,6 +908,49 @@ export interface Database {
       };
     };
         Functions: {
+      get_my_notification_unread_state: { Args: Record<PropertyKey, never>; Returns: boolean };
+      request_calendar_sync: { Args: { p_activities?: boolean; p_decisions?: boolean; p_payments?: boolean }; Returns: undefined };
+      get_project_calendar: {
+        Args: { p_project: string; p_range_start: string; p_range_end: string };
+        Returns: import('./calendar').CalendarEntry[];
+      };
+      set_my_notification_preference: { Args: { p_category: string; p_enabled: boolean }; Returns: undefined };
+      mark_all_notifications_read: { Args: Record<string, never>; Returns: number };
+      list_my_payment_links: { Args: Record<string, never>; Returns: PaymentLink[] };
+      save_my_payment_link: { Args: { p_provider: string; p_url: string; p_label?: string | null; p_id?: string | null; p_enabled?: boolean }; Returns: string };
+      delete_my_payment_link: { Args: { p_id: string }; Returns: undefined };
+      set_default_payment_link: { Args: { p_id?: string | null }; Returns: undefined };
+      confirm_reimbursement_receipt: { Args: { p_acknowledgement: string }; Returns: string };
+      acknowledge_reimbursement_payment: { Args: { p_request: string }; Returns: string };
+      withdraw_reimbursement_payment_acknowledgement: { Args: { p_acknowledgement: string }; Returns: undefined };
+      get_reimbursement_payment_options: { Args: { p_request: string }; Returns: PaymentOption[] };
+      get_reimbursement_suggestions: { Args: { p_payment: string }; Returns: ReimbursementSuggestion[] };
+      create_reimbursement: { Args: { p_payment: string; p_debtor: string; p_amount: number }; Returns: string };
+      cancel_reimbursement: { Args: { p_request: string }; Returns: undefined };
+      create_resource_comment: { Args: { p_resource_type: string; p_resource_id: string; p_body: string; p_id?: string }; Returns: Json };
+      delete_resource_comment: { Args: { p_resource_type: string; p_resource_id: string; p_comment: string }; Returns: undefined };
+      get_resource_comments: { Args: { p_resource_type: string; p_resource_id: string; p_before_at?: string; p_before_id?: string }; Returns: Json };
+      get_decisions: { Args: { p_project: string; p_decision?: string }; Returns: Json };
+      create_decision_date: { Args: { p_project: string; p_title: string; p_description: string | null; p_deadline_date: string | null; p_options: Json; p_id?: string }; Returns: string };
+      edit_decision_date: { Args: { p_decision: string; p_title: string; p_description: string | null; p_deadline_date: string | null; p_options?: Json; p_preserve_deadline?: boolean }; Returns: undefined };
+      create_decision: { Args: { p_project: string; p_title: string; p_description: string | null; p_deadline: string | null; p_options: Json; p_id?: string }; Returns: string };
+      edit_decision: { Args: { p_decision: string; p_title: string; p_description: string | null; p_deadline: string | null; p_options?: Json }; Returns: undefined };
+      cast_decision_vote: { Args: { p_decision: string; p_option: string | null }; Returns: undefined };
+      resolve_decision: { Args: { p_decision: string; p_option: string }; Returns: undefined };
+      soft_delete_decision: { Args: { p_decision: string }; Returns: undefined };
+      convert_decision_to_activity: { Args: { p_decision: string; p_category: string; p_activity_type?: string }; Returns: string };
+      get_resource_share_link: { Args: { p_resource_type: string; p_resource_id: string }; Returns: Json };
+      create_resource_share_link: { Args: { p_resource_type: string; p_resource_id: string }; Returns: string };
+      regenerate_resource_share_link: { Args: { p_resource_type: string; p_resource_id: string }; Returns: string };
+      disable_resource_share_link: { Args: { p_resource_type: string; p_resource_id: string }; Returns: undefined };
+      resolve_shared_resource: { Args: { p_token: string }; Returns: Json };
+      get_project_join_access: { Args: { p_project: string; p_offset?: number }; Returns: Json };
+      ensure_project_join_link: { Args: { p_project: string }; Returns: string };
+      regenerate_project_join_link: { Args: { p_project: string }; Returns: string };
+      disable_project_join_link: { Args: { p_project: string }; Returns: undefined };
+      resolve_project_join_link: { Args: { p_token: string }; Returns: Json };
+      request_project_access: { Args: { p_token: string }; Returns: Json };
+      review_project_join_request: { Args: { p_request: string; p_approve: boolean }; Returns: undefined };
           delete_project_category: { Args: { p_category: string }; Returns: string };
           create_activity_in_category: { Args: { p_project: string; p_category: string; p_fields: Json; p_split: Json | null }; Returns: Database["public"]["Tables"]["commitments"]["Row"] };
       complete_assigned_item: { Args: {p_item:string;p_occurrence_date?:string|null}; Returns: undefined };
@@ -898,6 +976,7 @@ export interface Database {
       decline_invitation: { Args: { p_token: string }; Returns: string };
       list_my_invitations: { Args: Record<string, never>; Returns: { id: string; project_id: string; token: string; project_name: string; inviter_name: string | null; role: MemberRole; created_at: string }[] };
 
+      soft_delete_payment_schedule: { Args: { p_schedule: string }; Returns: undefined };
       soft_delete_commitment: { Args: { p_commitment: string }; Returns: string };
       soft_delete_task: { Args: { p_task: string }; Returns: string };
       soft_delete_project: { Args: { p_project: string }; Returns: string };

@@ -12,7 +12,22 @@ const id='31000000-0000-0000-0000-000000000001';
 const rows=[{id,source:'commitment',area_id:id,title:'Taxi, airport',item_type:'booking',status:'completed',assignee_member_id:id,item_date:'2027-06-18T00:00:00Z',cost_minor:10000,paid_minor:10000,outstanding_minor:0},{id:'second',source:'task',title:'Contact club',item_type:'task',status:'in_progress',cost_minor:null,paid_minor:0,outstanding_minor:0}];
 const csv=api.projectCsv({name:'Ibiza 2027',currency:'GBP',timezone:'Europe/London'},rows,[{id,title:'Transport'}],[{member_id:id,display_name:'Brendan'}]);
 assert(csv.startsWith('\uFEFF"Project","Category","Activity","Type"'));
-assert(csv.includes('"Transport","Taxi, airport","Booking","Completed","Brendan","18/06/2027","100.00","100.00","0.00","GBP"'));
-assert(csv.includes('"Contact club","Task","In progress"'));assert(!csv.includes(id));assert(!csv.includes('in_progress'));assert(csv.includes('"","0.00","0.00","GBP"'));
+assert(csv.includes('"Transport","Taxi, airport","Booking","Complete","Brendan","18/06/2027","100.00","100.00","0.00","GBP"'));
+assert(csv.includes('"Contact club","Task","Pending"'));assert(!csv.includes(id));assert(!csv.includes('in_progress'));assert(csv.includes('"","0.00","0.00","GBP"'));
 for(const [currency,minor,expected] of [['JPY',100,'100'],['KWD',1234,'1.234']])assert(api.projectCsv({name:'Test',currency,timezone:'UTC'},[{...rows[0],cost_minor:minor}],[],[]).includes('"'+expected+'"'));
 console.log('PASS CSV escaping, formula defense, human labels, null cost, currency precision, dates and no IDs');
+// Booking progress is separate from the canonical execution status exported here.
+for(const status of ['idea','researching','confirmed','booked']) {
+ const pending=api.projectCsv({name:'Test',currency:'GBP',timezone:'UTC'},[{...rows[0],status}],[],[]);
+ assert(pending.includes('"Booking","Pending"'));
+}
+const privateValue='PRIVATE_EXPORT_SENTINEL';
+const special=api.projectCsv({name:'旅 café',currency:'GBP',timezone:'Europe/London'},[{
+ ...rows[1],title:'Café, "旅"\nnext',item_date:null,assignee_member_id:null,
+ payment_url:privateValue,token:privateValue,reimbursement:privateValue,
+ audit_metadata:privateValue,provider_id:privateValue,
+}],[],[]);
+assert(special.includes('"旅 café","","Café, ""旅""\nnext","Task","Pending","","","","0.00","0.00","GBP"'));
+assert(!special.includes(privateValue));
+assert.equal(api.csvCell(null),'""');assert.equal(api.csvCell(undefined),'""');
+console.log('PASS CSV booking states, Unicode, newlines, blank fields and private-field exclusion');

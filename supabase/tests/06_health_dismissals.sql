@@ -1,4 +1,4 @@
--- pgTAP: the Health system (docs/BUSINESS_RULES.md §9) — findings are recomputed from
+-- pgTAP: the Health system (docs/PRODUCT_ARCHITECTURE.md) — findings are recomputed from
 -- live data (HLT-G), and dismiss/snooze/reactivate only records dismissal state
 -- (HLT-F), never the findings themselves. Blockers stay non-dismissible even via a
 -- direct table write.

@@ -16,7 +16,7 @@ let wired = false;
 const signingOut = ref(false);
 
 /**
- * Auth composable (docs/TECHNICAL_ARCHITECTURE.md §5, §10).
+ * Auth composable (docs/FRONTEND_AND_UX.md).
  * `initAuth()` wires the session listener ONCE at app root.
  */
 export function initAuth(onRecovery: () => void = () => {}) {

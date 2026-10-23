@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/vue-query";
 import { qk } from "./keys";
 import * as invitesService from "@/services/invitations";
 
-/** Invite-accept flow (docs/TECHNICAL_ARCHITECTURE.md §5). */
+/** Invite-accept flow (docs/FRONTEND_AND_UX.md). */
 export function useInvitation(token: MaybeRefOrGetter<string>, opts: { enabled: MaybeRefOrGetter<boolean> }) {
   const client = useQueryClient();
   const preview = useQuery({
