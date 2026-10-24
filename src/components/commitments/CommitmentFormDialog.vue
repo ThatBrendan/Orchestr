@@ -27,7 +27,7 @@ const props = defineProps<{
   /** null = create mode */
   commitment: Commitment | null;
 }>();
-const emit = defineEmits<{ close: [] }>();
+const emit = defineEmits<{ close: []; afterClose: [] }>();
 
 const create = useCreateCommitment(props.projectId);
 const update = useUpdateCommitment(props.projectId);
@@ -214,6 +214,7 @@ const isPending = computed(() => create.isPending.value || update.isPending.valu
     :open="props.open"
     :title="props.commitment ? 'Edit activity' : 'New activity'"
     size="lg"
+    @after-close="emit('afterClose')"
     @close="emit('close')"
   >
     <form
@@ -221,21 +222,21 @@ const isPending = computed(() => create.isPending.value || update.isPending.valu
       @submit.prevent="submit"
     >
       <label class="block">
-        <span class="text-13 font-medium block mb-1.5 text-ink-soft">Activity title *</span>
+        <span class="text-meta font-medium block mb-1.5 text-ink-soft">Activity title *</span>
         <input
           v-model="form.title"
           required
           maxlength="120"
-          class="w-full border rounded-lg px-3.5 py-2.5 text-14 focus-ring border-line"
+          class="w-full border rounded-lg px-3.5 py-2.5 text-sm focus-ring border-line"
         >
       </label>
 
       <div class="grid gap-3 sm:grid-cols-2">
         <label class="block">
-          <span class="text-13 font-medium block mb-1.5 text-ink-soft">Activity type</span>
+          <span class="text-meta font-medium block mb-1.5 text-ink-soft">Activity type</span>
           <select
             v-model="form.activity_type"
-            class="w-full border rounded-lg px-3 py-2.5 text-14 focus-ring border-line bg-surface"
+            class="w-full border rounded-lg px-3 py-2.5 text-sm focus-ring border-line bg-surface"
             @change="onActivityTypeChange"
           >
             <option
@@ -246,58 +247,22 @@ const isPending = computed(() => create.isPending.value || update.isPending.valu
           </select>
 
         </label>
-        <label
-          v-if="props.commitment"
-          class="block"
-        >
-          <span class="text-13 font-medium block mb-1.5 text-ink-soft">Cost category</span>
-          <select
-            v-model="form.kind"
-            class="w-full border rounded-lg px-3 py-2.5 text-14 focus-ring border-line bg-surface"
-          >
-            <option
-              v-for="k in COMMITMENT_CATEGORY_OPTIONS"
-              :key="k.value"
-              :value="k.value"
-            >{{ k.label }}</option>
-          </select>
-
-        </label>
-      </div>
-
-      <div
-        class="grid gap-3 sm:grid-cols-2"
-      >
-        <label class="block">
-          <span class="text-13 font-medium block mb-1.5 text-ink-soft">Assigned to</span>
-          <select
-            v-model="form.owner_member_id"
-            class="w-full border rounded-lg px-3 py-2.5 text-14 focus-ring border-line bg-surface"
-          >
-            <option value="">Unassigned</option>
-            <option
-              v-for="m in ownerCandidates"
-              :key="m.member_id"
-              :value="m.member_id"
-            >{{ m.display_name }}</option>
-          </select>
-        </label>
       </div>
 
       <div class="grid gap-3 sm:grid-cols-2">
         <label class="block">
-          <span class="text-13 font-medium block mb-1.5 text-ink-soft">{{ dateLabel }}</span>
+          <span class="text-meta font-medium block mb-1.5 text-ink-soft">{{ dateLabel }}</span>
           <input
             v-model="form.starts_at"
             type="date"
-            class="w-full border rounded-lg px-3 py-2.5 text-14 focus-ring border-line"
+            class="w-full border rounded-lg px-3 py-2.5 text-sm focus-ring border-line"
           >
         </label>
         <label class="block">
-          <span class="text-13 font-medium block mb-1.5 text-ink-soft">Repeat</span>
+          <span class="text-meta font-medium block mb-1.5 text-ink-soft">Repeat</span>
           <select
             v-model="form.repeat"
-            class="w-full border rounded-lg px-3 py-2.5 text-14 focus-ring border-line bg-surface"
+            class="w-full border rounded-lg px-3 py-2.5 text-sm focus-ring border-line bg-surface"
           >
             <option
               v-for="option in REPEAT_OPTIONS"
@@ -310,22 +275,49 @@ const isPending = computed(() => create.isPending.value || update.isPending.valu
         </label>
       </div>
 
-      <label class="block">
-        <span class="text-13 font-medium block mb-1.5 text-ink-soft">Notes</span>
-        <textarea
-          v-model="form.notes"
-          rows="2"
-          class="w-full border rounded-lg px-3.5 py-2.5 text-14 focus-ring border-line"
-        />
-      </label>
+      <div
+        class="grid gap-3 sm:grid-cols-2"
+      >
+        <label class="block">
+          <span class="text-meta font-medium block mb-1.5 text-ink-soft">Assigned to</span>
+          <select
+            v-model="form.owner_member_id"
+            class="w-full border rounded-lg px-3 py-2.5 text-sm focus-ring border-line bg-surface"
+          >
+            <option value="">Unassigned</option>
+            <option
+              v-for="m in ownerCandidates"
+              :key="m.member_id"
+              :value="m.member_id"
+            >{{ m.display_name }}</option>
+          </select>
+        </label>
+      </div>
 
+      <label
+        v-if="props.commitment"
+        class="block"
+      >
+        <span class="text-meta font-medium block mb-1.5 text-ink-soft">Cost category</span>
+        <select
+          v-model="form.kind"
+          class="w-full border rounded-lg px-3 py-2.5 text-sm focus-ring border-line bg-surface"
+        >
+          <option
+            v-for="k in COMMITMENT_CATEGORY_OPTIONS"
+            :key="k.value"
+            :value="k.value"
+          >{{ k.label }}</option>
+        </select>
+
+      </label>
       <label class="block">
-        <span class="text-13 font-medium block mb-1.5 text-ink-soft">Cost ({{ props.currency }}, optional)</span>
+        <span class="text-meta font-medium block mb-1.5 text-ink-soft">Cost ({{ props.currency }}, optional)</span>
         <input
           v-model="form.estimated_cost_major"
           type="text"
           inputmode="decimal"
-          class="w-full border rounded-lg px-3.5 py-2.5 text-14 focus-ring border-line"
+          class="w-full border rounded-lg px-3.5 py-2.5 text-sm focus-ring border-line"
         >
       </label>
       <CostSplitEditor
@@ -339,18 +331,28 @@ const isPending = computed(() => create.isPending.value || update.isPending.valu
       />
 
 
+      <label class="block">
+        <span class="text-meta font-medium block mb-1.5 text-ink-soft">Notes</span>
+        <textarea
+          v-model="form.notes"
+          rows="2"
+          class="w-full border rounded-lg px-3.5 py-2.5 text-sm focus-ring border-line"
+        />
+      </label>
+
+
       <div
         v-if="props.commitment"
         class="border-t border-line pt-4"
       >
-        <h3 class="text-13 font-semibold text-ink-soft uppercase tracking-wide">
+        <h3 class="text-card-heading font-semibold text-ink-soft">
           Additional details
         </h3>
         <div class="mt-3 space-y-3">
           <section>
             <button
               type="button"
-              class="text-14 font-medium text-brand-dark focus-ring"
+              class="inline-flex min-h-11 items-center text-sm font-medium text-brand focus-ring"
               :aria-expanded="showEndDate"
               @click="showEndDate = !showEndDate"
             >
@@ -360,11 +362,11 @@ const isPending = computed(() => create.isPending.value || update.isPending.valu
               v-if="showEndDate"
               class="block mt-2"
             >
-              <span class="text-13 font-medium block mb-1.5 text-ink-soft">End date</span>
+              <span class="text-meta font-medium block mb-1.5 text-ink-soft">End date</span>
               <input
                 v-model="form.ends_at"
                 type="date"
-                class="w-full border rounded-lg px-3 py-2.5 text-14 focus-ring border-line"
+                class="w-full border rounded-lg px-3 py-2.5 text-sm focus-ring border-line"
               >
             </label>
           </section>
@@ -372,7 +374,7 @@ const isPending = computed(() => create.isPending.value || update.isPending.valu
           <section v-if="props.commitment">
             <button
               type="button"
-              class="text-14 font-medium text-brand-dark focus-ring"
+              class="inline-flex min-h-11 items-center text-sm font-medium text-brand focus-ring"
               :aria-expanded="showLocation"
               @click="showLocation = !showLocation"
             >
@@ -383,17 +385,17 @@ const isPending = computed(() => create.isPending.value || update.isPending.valu
               class="mt-2 grid gap-3 sm:grid-cols-2"
             >
               <label class="block">
-                <span class="text-13 font-medium block mb-1.5 text-ink-soft">Location name</span>
+                <span class="text-meta font-medium block mb-1.5 text-ink-soft">Location name</span>
                 <input
                   v-model="form.location_label"
-                  class="w-full border rounded-lg px-3.5 py-2.5 text-14 focus-ring border-line"
+                  class="w-full border rounded-lg px-3.5 py-2.5 text-sm focus-ring border-line"
                 >
               </label>
               <label class="block">
-                <span class="text-13 font-medium block mb-1.5 text-ink-soft">Address</span>
+                <span class="text-meta font-medium block mb-1.5 text-ink-soft">Address</span>
                 <input
                   v-model="form.location_address"
-                  class="w-full border rounded-lg px-3.5 py-2.5 text-14 focus-ring border-line"
+                  class="w-full border rounded-lg px-3.5 py-2.5 text-sm focus-ring border-line"
                 >
               </label>
             </div>
@@ -402,7 +404,7 @@ const isPending = computed(() => create.isPending.value || update.isPending.valu
           <section>
             <button
               type="button"
-              class="text-14 font-medium text-brand-dark focus-ring"
+              class="inline-flex min-h-11 items-center text-sm font-medium text-brand focus-ring"
               :aria-expanded="showSupplier"
               @click="showSupplier = !showSupplier"
             >
@@ -414,32 +416,32 @@ const isPending = computed(() => create.isPending.value || update.isPending.valu
             >
               <div class="grid gap-3 sm:grid-cols-2">
                 <label class="block">
-                  <span class="text-13 font-medium block mb-1.5 text-ink-soft">Supplier</span>
+                  <span class="text-meta font-medium block mb-1.5 text-ink-soft">Supplier</span>
                   <input
                     v-model="form.supplier_name"
-                    class="w-full border rounded-lg px-3.5 py-2.5 text-14 focus-ring border-line"
+                    class="w-full border rounded-lg px-3.5 py-2.5 text-sm focus-ring border-line"
                   >
                 </label>
                 <label class="block">
-                  <span class="text-13 font-medium block mb-1.5 text-ink-soft">Supplier contact</span>
+                  <span class="text-meta font-medium block mb-1.5 text-ink-soft">Supplier contact</span>
                   <input
                     v-model="form.supplier_contact"
-                    class="w-full border rounded-lg px-3.5 py-2.5 text-14 focus-ring border-line"
+                    class="w-full border rounded-lg px-3.5 py-2.5 text-sm focus-ring border-line"
                   >
                 </label>
               </div>
               <label class="block">
-                <span class="text-13 font-medium block mb-1.5 text-ink-soft">
+                <span class="text-meta font-medium block mb-1.5 text-ink-soft">
                   {{ selectedWorkflow.preferredFields.booking ? "Booking reference" : "Reference" }}
                 </span>
                 <input
                   v-model="form.booking_reference"
-                  class="w-full border rounded-lg px-3.5 py-2.5 text-14 focus-ring border-line"
+                  class="w-full border rounded-lg px-3.5 py-2.5 text-sm focus-ring border-line"
                 >
               </label>
               <label
                 v-if="selectedWorkflow.preferredFields.booking || form.booking_confirmed"
-                class="flex items-center gap-2 text-13.5 text-ink-soft"
+                class="flex items-center gap-2 text-sm text-ink-soft"
               >
                 <input
                   v-model="form.booking_confirmed"
@@ -456,7 +458,7 @@ const isPending = computed(() => create.isPending.value || update.isPending.valu
       <p
         v-if="fieldError"
         role="alert"
-        class="text-13 text-danger"
+        class="text-meta text-danger"
       >
         {{ fieldError }}
       </p>

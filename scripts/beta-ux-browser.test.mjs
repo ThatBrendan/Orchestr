@@ -164,8 +164,8 @@ try {
   await test('Activity/payment/delete at '+width+'px',async({page,state})=>{
    await page.setViewportSize({width,height:900});await login(page);
    await go(page,'/app/projects/'+state.project.id+'/activities');
-  assert.equal(await page.getByRole('button',{name:'Add activity',exact:true}).count(),0);
-  await page.getByRole('button',{name:'New category',exact:true}).click();
+  assert.equal(await page.getByRole('button',{name:'Add activity',exact:true}).count(),1);
+  await page.getByRole('button',{name:'Add activity',exact:true}).click();
   let categoryDialog=page.getByRole('dialog');
   await categoryDialog.getByLabel('Category name').fill('Transport');
   await categoryDialog.getByRole('button',{name:'Save category',exact:true}).click();
@@ -229,7 +229,7 @@ try {
  });
  await test('Activity Cost and assigned Viewer controls',async({page,state})=>{
   await login(page);await go(page,'/app/projects/'+state.project.id+'/areas');
-    await page.getByRole('button',{name:'New category',exact:true}).click();let categoryDialog=page.getByRole('dialog');
+    await page.getByRole('button',{name:'Add activity',exact:true}).click();let categoryDialog=page.getByRole('dialog');
     await categoryDialog.getByLabel('Category name').fill('Transport');
     await categoryDialog.getByRole('button',{name:'Save category',exact:true}).click();
     await page.getByRole('button',{name:'Add activity',exact:true}).click();let d=page.getByRole('dialog');

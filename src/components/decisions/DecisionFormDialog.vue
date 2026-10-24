@@ -43,46 +43,40 @@ async function save() {
       class="space-y-4"
       @submit.prevent="save"
     >
-      <label class="block text-14">Question<input
+      <label class="block text-sm">Question<input
         v-model="title"
-        class="mt-1 w-full min-w-0 rounded-lg border border-line bg-surface px-3 py-2.5 text-14 focus-ring"
+        class="mt-1 w-full min-w-0 rounded-lg border border-line bg-surface px-3 py-2.5 text-sm focus-ring"
         required
         maxlength="200"
         autofocus
       ></label>
-      <label class="block text-14">Description (optional)<textarea
-        v-model="description"
-        class="mt-1 w-full min-w-0 rounded-lg border border-line bg-surface px-3 py-2.5 text-14 focus-ring"
-        maxlength="4000"
-        rows="2"
-      /></label>
       <fieldset
         :disabled="decision?.voting_started"
-        class="space-y-3"
+        class="space-y-4"
       >
-        <legend class="text-14 font-medium">
+        <legend class="text-sm font-medium">
           Options
         </legend>
         <p
           v-if="decision?.voting_started"
-          class="text-13 text-muted"
+          class="text-meta text-muted"
         >
           Options stay fixed once voting has begun.
         </p>
         <div
           v-for="(option, index) in options"
           :key="index"
-          class="rounded-lg border border-line p-3 space-y-2"
+          class="border-t border-line pt-4 space-y-2"
         >
-          <label class="block text-14">Option {{ index + 1 }}<input
+          <label class="block text-sm">Option {{ index + 1 }}<input
             v-model="option.title"
-            class="mt-1 w-full min-w-0 rounded-lg border border-line bg-surface px-3 py-2.5 text-14 focus-ring"
+            class="mt-1 w-full min-w-0 rounded-lg border border-line bg-surface px-3 py-2.5 text-sm focus-ring"
             required
             maxlength="200"
           ></label>
-          <label class="block text-13">Estimated cost ({{ currency }}, optional)<input
+          <label class="block text-meta">Estimated cost ({{ currency }}, optional)<input
             v-model="option.cost"
-            class="mt-1 w-full min-w-0 rounded-lg border border-line bg-surface px-3 py-2.5 text-14 focus-ring"
+            class="mt-1 w-full min-w-0 rounded-lg border border-line bg-surface px-3 py-2.5 text-sm focus-ring"
             inputmode="decimal"
           ></label>
           <AppButton
@@ -103,27 +97,33 @@ async function save() {
           Add option
         </AppButton>
       </fieldset>
-      <label class="block text-14">Deadline date (optional)<input
+      <label class="block text-sm">Deadline date (optional)<input
         v-model="deadline"
         type="date"
-        class="mt-1 w-full min-w-0 rounded-lg border border-line bg-surface px-3 py-2.5 text-14 focus-ring"
+        class="mt-1 w-full min-w-0 rounded-lg border border-line bg-surface px-3 py-2.5 text-sm focus-ring"
       ></label>
       <p
         v-if="!decision || deadline !== initialDeadline"
-        class="text-13 text-muted"
+        class="text-meta text-muted"
       >
         Voting closes at 23:59:59 on this date in {{ timezone }}. The final choice is made manually.
       </p>
       <p
         v-if="decision && deadline === initialDeadline && decision.voting_deadline"
-        class="text-13 text-muted"
+        class="text-meta text-muted"
       >
         Current deadline: {{ DateTime.fromISO(decision.voting_deadline, { zone: timezone }).toFormat('dd LLL yyyy HH:mm:ss') }} ({{ timezone }}). Change the date to use end of day.
       </p>
+      <label class="block text-sm">Description (optional)<textarea
+        v-model="description"
+        class="mt-1 w-full min-w-0 rounded-lg border border-line bg-surface px-3 py-2.5 text-sm focus-ring"
+        maxlength="4000"
+        rows="2"
+      /></label>
       <p
         v-if="error"
         role="alert"
-        class="text-danger text-14"
+        class="text-danger text-sm"
       >
         {{ error }}
       </p>
