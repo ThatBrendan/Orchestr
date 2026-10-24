@@ -12,7 +12,7 @@ import AppButton from "@/components/ui/AppButton.vue";
 import type { ProjectProfile } from "@/types/database";
 
 const props = defineProps<{ open: boolean }>();
-const emit = defineEmits<{ close: [] }>();
+const emit = defineEmits<{ close: []; afterClose: [] }>();
 
 const router = useRouter();
 const toast = useToast();
@@ -98,6 +98,7 @@ async function submit() {
     :open="props.open"
     :title="step === 'profile' ? 'What are you planning?' : 'Project details'"
     size="lg"
+    @after-close="emit('afterClose')"
     @close="emit('close')"
   >
     <div

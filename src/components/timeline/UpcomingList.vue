@@ -6,7 +6,7 @@ import { useProjectTime } from "@/composables/useProjectTime";
 import StatusBadge from "@/components/ui/StatusBadge.vue";
 import { userFacingActivityStatus } from "@/lib/presentation";
 
-const props = defineProps<{ events: TimelineEvent[]; timezone: string }>();
+const props = defineProps<{ events: TimelineEvent[]; timezone: string; compact?: boolean }>();
 const t = computed(() => useProjectTime(props.timezone));
 
 // "Completed items" (BUSINESS_RULES §Timeline): a resolved commitment/payment is shown
@@ -61,11 +61,18 @@ const groups = computed<Group[]>(() => {
       v-for="g in groups"
       :key="g.day"
       class="px-4 py-3.5"
+      :class="compact ? 'sm:flex sm:gap-4' : ''"
     >
-      <div class="text-[12.5px] font-medium mb-2 text-muted">
+      <div
+        :class="compact ? 'text-meta sm:w-32 sm:shrink-0 sm:pt-3' : 'text-[12.5px]'"
+        class="font-medium mb-2 text-muted"
+      >
         {{ g.day }}
       </div>
-      <div class="space-y-2">
+      <div
+        class="space-y-2"
+        :class="compact ? 'min-w-0 flex-1' : ''"
+      >
         <div
           v-for="(i, idx) in g.items"
           :key="idx"
@@ -74,7 +81,7 @@ const groups = computed<Group[]>(() => {
           <span
             v-if="i.time || i.allDay"
             class="tnum w-12 shrink-0"
-            :class="i.overdue ? 'text-danger font-medium' : 'text-ink-soft'"
+            :class="i.overdue ? (compact ? 'text-warning font-medium' : 'text-danger font-medium') : 'text-ink-soft'"
           >
             {{ i.allDay ? "All day" : i.time }}
           </span>
@@ -83,6 +90,7 @@ const groups = computed<Group[]>(() => {
               v-if="i.link"
               :to="i.link"
               class="block focus-ring hover:underline"
+              :style="compact ? { minHeight: '44px' } : undefined"
               :class="i.done ? 'text-success' : ''"
             >
               <span
@@ -102,7 +110,13 @@ const groups = computed<Group[]>(() => {
               v-if="i.status && !i.overdue"
               class="mt-1"
             >
+              <span
+                v-if="compact"
+                class="text-meta"
+                :class="i.done ? 'text-success' : 'text-muted'"
+              >{{ i.schedule ? i.status : userFacingActivityStatus(i.status) }}</span>
               <StatusBadge
+                v-else
                 :label="i.schedule ? i.status : userFacingActivityStatus(i.status)"
                 :tone="i.schedule ? paymentScheduleTone(i.status ?? '') : i.done ? 'success' : 'amber'"
                 class="capitalize"
@@ -112,7 +126,12 @@ const groups = computed<Group[]>(() => {
               v-else-if="i.overdue"
               class="mt-1"
             >
+              <span
+                v-if="compact"
+                class="text-meta text-warning"
+              >Overdue</span>
               <StatusBadge
+                v-else
                 label="Overdue"
                 tone="danger"
               />
