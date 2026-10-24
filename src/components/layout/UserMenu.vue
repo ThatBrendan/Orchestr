@@ -30,7 +30,7 @@ async function handleSignOut(close: () => void) {
   >
     <MenuButton
       aria-label="Account menu"
-      class="min-h-11 min-w-11 flex items-center justify-center gap-2.5 px-2 py-1.5 rounded-lg hover:bg-[#F6F6F4] focus-ring"
+      class="min-h-11 min-w-11 flex items-center justify-center gap-2.5 px-2 py-1.5 rounded-lg hover:bg-secondary focus-ring"
       :class="compact ? '' : 'w-full'"
     >
       <AppAvatar
@@ -52,7 +52,7 @@ async function handleSignOut(close: () => void) {
         <RouterLink
           :to="{ name: 'settings' }"
           class="flex min-h-11 items-center px-3 py-2 text-14"
-          :class="active ? 'bg-[#F6F6F4]' : ''"
+          :class="active ? 'bg-secondary' : ''"
         >
           Settings
         </RouterLink>
@@ -65,7 +65,7 @@ async function handleSignOut(close: () => void) {
           type="button"
           :disabled="signingOut"
           class="min-h-11 w-full text-left px-3 py-2 text-14 text-danger disabled:opacity-50"
-          :class="active ? 'bg-[#F6F6F4]' : ''"
+          :class="active ? 'bg-secondary' : ''"
           @click="handleSignOut(close)"
         >
           Sign out

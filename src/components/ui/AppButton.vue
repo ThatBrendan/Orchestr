@@ -4,7 +4,7 @@ import { RouterLink, type RouteLocationRaw } from "vue-router";
 
 const props = withDefaults(
   defineProps<{
-    variant?: "primary" | "secondary" | "ghost";
+    variant?: "primary" | "secondary" | "ghost" | "danger";
     size?: "sm" | "md" | "lg";
     type?: "button" | "submit";
     disabled?: boolean;
@@ -20,7 +20,7 @@ const props = withDefaults(
 
 const classes = computed(() => {
   const base =
-    "inline-flex min-h-11 sm:min-h-0 max-w-full [overflow-wrap:anywhere] items-center justify-center gap-1.5 font-medium rounded-lg transition-colors focus-ring disabled:opacity-50 disabled:cursor-not-allowed";
+    "inline-flex min-h-11 max-w-full [overflow-wrap:anywhere] items-center justify-center gap-1.5 font-medium rounded-lg transition-colors focus-ring disabled:opacity-50 disabled:cursor-not-allowed";
   const size = {
     sm: "px-3 py-1.5 text-13",
     md: "px-3.5 py-2 text-13.5",
@@ -28,8 +28,9 @@ const classes = computed(() => {
   }[props.size];
   const variant = {
     primary: "bg-brand text-white hover:bg-brand-dark",
-    secondary: "border border-line bg-secondary text-ink hover:bg-brand-soft",
-    ghost: "text-ink-soft hover:bg-brand-soft",
+    secondary: "border border-line bg-surface text-ink hover:bg-secondary",
+    ghost: "text-ink-soft hover:bg-secondary",
+    danger: "bg-danger text-white hover:bg-danger/90",
   }[props.variant];
   return [base, size, variant, props.block ? "w-full" : ""];
 });

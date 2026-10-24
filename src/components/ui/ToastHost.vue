@@ -35,7 +35,8 @@ const { toasts } = storeToRefs(ui);
         </span>
         <span class="flex-1 text-ink-soft">{{ t.message }}</span>
         <button
-          class="text-muted hover:text-ink"
+          aria-label="Dismiss notification"
+          class="flex min-h-11 min-w-11 -my-2 -mr-2 items-center justify-center rounded-lg text-muted hover:text-ink focus-ring"
           @click="ui.dismissToast(t.id)"
         >
           <AppIcon

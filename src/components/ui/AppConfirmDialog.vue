@@ -38,7 +38,7 @@ const emit = defineEmits<{ close: []; confirm: [] }>();
       <AppButton
         size="sm"
         :loading="props.loading"
-        :class="props.danger ? '!bg-danger hover:!bg-danger' : ''"
+        :variant="props.danger ? 'danger' : 'primary'"
         @click="emit('confirm')"
       >
         {{ props.confirmLabel }}

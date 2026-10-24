@@ -22,7 +22,7 @@ function isActive(match: readonly string[]) {
 </script>
 
 <template>
-  <aside class="hidden md:flex sticky top-0 h-dvh w-60 shrink-0 border-r border-line bg-surface flex-col">
+  <aside class="hidden md:flex sticky top-0 h-dvh w-[250px] shrink-0 border-r border-line bg-surface flex-col">
     <RouterLink
       to="/"
       class="h-16 shrink-0 flex items-center px-5 border-b border-line focus-ring"

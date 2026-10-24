@@ -31,8 +31,7 @@ const widthClass = computed(() => (props.size === "lg" ? "max-w-2xl" : "max-w-md
         leave-to="opacity-0"
       >
         <div
-          class="fixed inset-0"
-          style="background: rgba(20, 20, 18, 0.4)"
+          class="fixed inset-0 bg-ink/40"
         />
       </TransitionChild>
 

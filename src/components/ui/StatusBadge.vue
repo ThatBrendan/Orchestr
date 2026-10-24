@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
 
-// Tone-mapped pill, matching the prototype's statusBadge().
+// Color supplements the explicit status label.
 const props = defineProps<{ label: string; tone?: "accent" | "success" | "amber" | "danger" | "neutral" }>();
 
 const cls = computed(
@@ -11,7 +11,7 @@ const cls = computed(
       success: "bg-success-soft text-success",
       amber: "bg-amber-soft text-amber",
       danger: "bg-danger-soft text-danger",
-      neutral: "bg-[#F1F1EF] text-ink-soft",
+      neutral: "bg-secondary text-ink-soft",
     })[props.tone ?? "neutral"],
 );
 </script>

@@ -3,7 +3,7 @@ defineProps<{ title?: string; message: string }>();
 </script>
 
 <template>
-  <div class="border rounded-xl p-10 text-center border-line">
+  <div class="border rounded-xl bg-surface p-6 sm:p-10 text-center border-line">
     <p
       v-if="title"
       class="text-14 font-medium text-ink"

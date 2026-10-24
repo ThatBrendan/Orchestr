@@ -8,7 +8,7 @@ withDefaults(defineProps<{ height?: string; width?: string; rounded?: string }>(
 
 <template>
   <div
-    class="animate-pulse bg-[#ECECE8]"
+    class="animate-pulse bg-line"
     :style="{ height, width, borderRadius: rounded }"
     aria-hidden="true"
   />

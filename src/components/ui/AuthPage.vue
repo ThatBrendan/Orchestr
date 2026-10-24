@@ -18,7 +18,7 @@ defineProps<{ title: string }>();
           class="mx-auto h-12 w-auto"
         >
       </RouterLink>
-      <h1 class="mt-6 text-center font-display text-[19px] font-semibold tracking-tight">
+      <h1 class="mt-6 text-center font-display text-page-title font-semibold tracking-tight">
         {{ title }}
       </h1>
       <div class="mt-6">

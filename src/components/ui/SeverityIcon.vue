@@ -10,7 +10,7 @@ const style = computed(
     ({
       blocker: { box: "bg-danger-soft text-danger", icon: "alert" as const },
       warning: { box: "bg-amber-soft text-amber", icon: "alert" as const },
-      info: { box: "bg-[#EFEFEC] text-ink-soft", icon: "alert" as const },
+      info: { box: "bg-surface-subtle text-ink-soft", icon: "alert" as const },
       ok: { box: "bg-success-soft text-success", icon: "checkCircle" as const },
     })[props.severity],
 );

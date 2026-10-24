@@ -146,13 +146,13 @@ const statusTone = (s: string) => (s === "invited" ? "amber" : s === "removed" ?
           :key="m.member_id"
           class="px-4 py-3.5"
         >
-          <div class="flex items-center gap-3.5">
+          <div class="flex flex-wrap items-center gap-3.5">
             <AppAvatar
               :name="m.display_name"
               :url="m.avatar_url"
               :size="36"
             />
-            <div class="min-w-0 flex-1">
+            <div class="min-w-[8rem] flex-1 [overflow-wrap:anywhere]">
               <div class="text-14 font-medium">
                 {{ m.display_name }}
                 <span
