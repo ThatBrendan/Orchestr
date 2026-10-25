@@ -6,8 +6,8 @@ import { normalizeHealthCopy, relativeDueText, userFacingActivityStatus } from "
 import { useDismissFinding, useSnoozeFinding, useReactivateFinding } from "@/composables/useHealth";
 import { useToast } from "@/composables/useToast";
 import { toAppError } from "@/lib/errors";
-import SeverityIcon from "@/components/ui/SeverityIcon.vue";
-import StatusBadge from "@/components/ui/StatusBadge.vue";
+
+
 import AppButton from "@/components/ui/AppButton.vue";
 
 const props = defineProps<{
@@ -16,6 +16,7 @@ const props = defineProps<{
   canDismiss: boolean;
 }>();
 
+const emit = defineEmits<{ changed: [] }>();
 const dismiss = useDismissFinding(props.projectId);
 const snooze = useSnoozeFinding(props.projectId);
 const reactivate = useReactivateFinding(props.projectId);
@@ -55,6 +56,7 @@ async function doDismiss() {
   try {
     await dismiss.mutateAsync(findingRef.value);
     toast.success("Dismissed.");
+    emit("changed");
   } catch (e) {
     toast.error(toAppError(e).message);
   }
@@ -63,6 +65,7 @@ async function doSnooze() {
   try {
     await snooze.mutateAsync({ finding: findingRef.value, days: 7 });
     toast.success("Snoozed for 7 days.");
+    emit("changed");
   } catch (e) {
     toast.error(toAppError(e).message);
   }
@@ -71,6 +74,7 @@ async function doReactivate() {
   try {
     await reactivate.mutateAsync(findingRef.value);
     toast.success("Restored.");
+    emit("changed");
   } catch (e) {
     toast.error(toAppError(e).message);
   }
@@ -78,60 +82,63 @@ async function doReactivate() {
 </script>
 
 <template>
-  <div class="flex items-start gap-3 px-4 py-3.5">
-    <SeverityIcon :severity="props.finding.severity" />
+  <article class="px-4 py-4">
     <div class="min-w-0 flex-1 [overflow-wrap:anywhere]">
-      <div class="flex items-center gap-2 flex-wrap">
-        <span
-          v-if="!props.finding.subject_label"
-          class="text-14 font-medium"
-        >{{ healthCodeTitle(props.finding.code) }}</span>
-        <StatusBadge
-          v-if="props.finding.subject_label"
-          :label="props.finding.subject_label"
-          tone="neutral"
-        />
-        <StatusBadge
-          v-if="props.finding.dismissed && props.finding.snoozed_until"
-          :label="`Snoozed until ${props.finding.snoozed_until}`"
-          tone="amber"
-        />
-        <StatusBadge
-          v-else-if="props.finding.dismissed"
-          label="Dismissed"
-          tone="neutral"
-        />
-      </div>
-      <p class="text-13.5 text-ink-soft mt-0.5">
+      <p
+        class="text-meta"
+        :class="finding.severity === 'blocker' ? 'text-danger' : finding.severity === 'warning' ? 'text-warning' : finding.severity === 'ok' ? 'text-success' : 'text-muted'"
+      >
+        {{ {blocker:'Blocker',warning:'Warning',info:'Information',ok:'Passed'}[finding.severity] }}<span v-if="finding.dismissed"> · {{ finding.snoozed_until ? 'Snoozed until ' + finding.snoozed_until : 'Dismissed' }}</span>
+      </p>
+      <h4 class="mt-1 text-card-heading font-semibold">
+        {{ healthCodeTitle(finding.code) }}
+      </h4>
+      <p
+        v-if="finding.subject_label"
+        class="mt-1 text-sm text-ink-soft"
+      >
+        {{ finding.subject_label }}
+      </p>
+      <p
+        v-if="displayMessage !== finding.subject_label"
+        class="text-sm text-ink-soft mt-2"
+      >
         {{ displayMessage }}
       </p>
       <RouterLink
         v-if="finding.subject_type === 'decision'"
         :to="{ name: 'project.decision', params: { projectId, decisionId: finding.subject_id } }"
-        class="text-13 underline focus-ring"
+        class="min-h-11 inline-flex items-center rounded-lg text-sm text-brand underline focus-ring"
       >
         Open decision
       </RouterLink>
       <RouterLink
         v-else-if="['payment_schedule', 'reimbursement'].includes(finding.subject_type)"
         :to="{name: 'project.commitments', params: {projectId}, query: {commitment: String(params.activity_id), section: finding.subject_type === 'reimbursement' ? 'reimbursements' : 'payments'}}"
-        class="text-13 underline focus-ring"
+        class="min-h-11 inline-flex items-center rounded-lg text-sm text-brand underline focus-ring"
       >
         Open payments
       </RouterLink>
+      <RouterLink
+        v-else-if="['commitment','task'].includes(finding.subject_type) && finding.subject_id"
+        :to="{name:'project.commitments',params:{projectId},query:{[finding.subject_type==='task'?'item':'commitment']:finding.subject_id}}"
+        class="min-h-11 inline-flex items-center rounded-lg text-sm text-brand underline focus-ring"
+      >
+        Review activity
+      </RouterLink>
       <p
-        v-else-if="displayResolution"
-        class="text-13 text-muted mt-1"
+        v-if="displayResolution"
+        class="text-meta text-muted mt-1"
       >
         {{ displayResolution }}
       </p>
 
       <div
-        v-if="props.canDismiss"
-        class="mt-2 flex gap-2"
+        v-if="props.canDismiss && (finding.severity !== 'ok' || finding.dismissible || finding.dismissed)"
+        class="mt-2 flex flex-wrap gap-2"
       >
         <template v-if="!props.finding.dismissible">
-          <span class="text-13 text-muted italic">Can only be resolved by fixing the underlying issue.</span>
+          <span class="text-meta text-muted italic">Can only be resolved by fixing the underlying issue.</span>
         </template>
         <template v-else-if="props.finding.dismissed">
           <AppButton
@@ -145,9 +152,10 @@ async function doReactivate() {
         </template>
         <template v-else>
           <AppButton
-            variant="secondary"
+            variant="ghost"
             size="sm"
             :loading="dismiss.isPending.value"
+            :aria-label="`Dismiss: ${healthCodeTitle(finding.code)}`"
             @click="doDismiss"
           >
             Dismiss
@@ -156,6 +164,7 @@ async function doReactivate() {
             variant="ghost"
             size="sm"
             :loading="snooze.isPending.value"
+            :aria-label="`Snooze 7 days: ${healthCodeTitle(finding.code)}`"
             @click="doSnooze"
           >
             Snooze 7 days
@@ -163,5 +172,5 @@ async function doReactivate() {
         </template>
       </div>
     </div>
-  </div>
+  </article>
 </template>

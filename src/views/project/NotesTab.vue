@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useExecutionDialogFocus } from "@/composables/useExecutionDialogFocus";
 import { computed, reactive, ref, watch } from "vue";
 import { useRoute } from "vue-router";
 import { useProjectNotes } from "@/composables/useProjectNotes";
@@ -66,17 +67,23 @@ function toggle(id: string) {
   expanded.value = next;
 }
 const date = (value: string) => new Date(value).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
+const focusFallback = ref<HTMLElement | null>(null);
+const restoreDialogFocus = useExecutionDialogFocus(computed(() => dialogOpen.value || !!deleting.value), focusFallback);
 </script>
 
 <template>
   <div class="fade-in max-w-3xl">
     <div class="mb-5 flex flex-wrap items-start justify-between gap-4">
       <div class="min-w-0 flex-1">
-        <h2 class="text-18 font-semibold text-ink">
+        <h2
+          ref="focusFallback"
+          tabindex="-1"
+          class="text-section-heading focus-ring"
+        >
           Notes
         </h2>
-        <p class="mt-1 text-14 text-ink-soft">
-          Keep useful information about this project that doesn't belong to a specific activity.
+        <p class="mt-1 text-sm text-ink-soft">
+          Keep important project information in one place.
         </p>
       </div>
       <AppButton
@@ -88,11 +95,19 @@ const date = (value: string) => new Date(value).toLocaleDateString(undefined, { 
         + Add note
       </AppButton>
     </div>
-    <SkeletonBlock
+    <div
       v-if="list.isPending.value"
-      height="180px"
-      rounded="0.75rem"
-    />
+      role="status"
+      aria-label="Loading notes"
+      class="space-y-3"
+    >
+      <SkeletonBlock
+        v-for="i in 3"
+        :key="i"
+        height="112px"
+        rounded="0.75rem"
+      />
+    </div>
     <ErrorState
       v-else-if="list.isError.value"
       :error="list.error.value"
@@ -102,13 +117,13 @@ const date = (value: string) => new Date(value).toLocaleDateString(undefined, { 
       <p
         v-if="atLimit && canCreate"
         role="status"
-        class="mb-4 text-13 text-muted"
+        class="mb-4 text-meta text-muted"
       >
         You've reached the 20-note limit for this project.
       </p>
       <EmptyState
         v-if="!notes.length"
-        message="No project notes yet."
+        message="No notes yet. Record information the project can refer back to."
       />
       <div
         v-else
@@ -117,71 +132,74 @@ const date = (value: string) => new Date(value).toLocaleDateString(undefined, { 
         <article
           v-for="note in notes"
           :key="note.id"
-          class="min-w-0 rounded-xl border border-line bg-surface p-4"
+          class="min-w-0 border-b border-line pb-5 last:border-0"
+          :class="expanded.has(note.id) ? 'border-l-2 border-l-brand pl-4' : ''"
         >
-          <div class="flex flex-wrap items-start justify-between gap-3">
-            <div class="min-w-0 flex-1">
-              <h3 class="font-semibold text-14 [overflow-wrap:anywhere]">
-                {{ note.title }}
-              </h3>
-              <p class="mt-1 text-13 text-muted [overflow-wrap:anywhere]">
-                {{ note.creator_name ?? 'Unknown author' }} · <time :datetime="note.created_at">{{ date(note.created_at) }}</time>
-                <span v-if="note.updated_at !== note.created_at"> · Edited <time :datetime="note.updated_at">{{ date(note.updated_at) }}</time></span>
-              </p>
-            </div>
-            <div
-              v-if="canManage(note)"
-              class="flex gap-2"
+          <h3>
+            <button
+              class="w-full min-h-11 text-left rounded-lg focus-ring text-card-heading font-semibold [overflow-wrap:anywhere]"
+              :class="expanded.has(note.id) ? 'text-brand' : 'text-ink'"
+              :aria-expanded="expanded.has(note.id)"
+              :aria-controls="`note-body-${note.id}`"
+              @click="toggle(note.id)"
             >
+              {{ note.title }}
+            </button>
+          </h3>
+          <p
+            :id="`note-body-${note.id}`"
+            class="whitespace-pre-wrap text-sm leading-7 text-ink-soft [overflow-wrap:anywhere]"
+            :class="expanded.has(note.id) ? '' : 'line-clamp-3'"
+          >
+            {{ note.body }}
+          </p>
+          <p class="mt-3 text-meta text-muted">
+            Updated <time :datetime="note.updated_at">{{ date(note.updated_at) }}</time><span v-if="expanded.has(note.id)"> · {{ note.creator_name ?? 'Unknown author' }}</span>
+          </p>
+          <div class="mt-2 flex flex-wrap items-center gap-2">
+            <button
+              v-if="note.body.length > 240 || note.body.split('\n').length > 6"
+              class="min-h-11 rounded-lg px-2 text-sm text-brand focus-ring"
+              :aria-expanded="expanded.has(note.id)"
+              :aria-controls="`note-body-${note.id}`"
+              @click="toggle(note.id)"
+            >
+              {{ expanded.has(note.id) ? 'Show less' : 'Show more' }}
+            </button>
+            <template v-if="expanded.has(note.id) && canManage(note)">
               <AppButton
                 variant="secondary"
-                size="sm"
                 :disabled="busy"
+                :aria-label="`Edit note: ${note.title}`"
                 @click="beginEdit(note)"
               >
                 Edit
               </AppButton>
               <AppButton
-                variant="secondary"
-                size="sm"
+                variant="ghost"
                 :disabled="busy"
+                :aria-label="`Delete note: ${note.title}`"
                 @click="deleting = note"
               >
                 Delete
               </AppButton>
-            </div>
+            </template>
           </div>
-          <p
-            :id="`note-body-${note.id}`"
-            class="mt-3 whitespace-pre-wrap text-14 leading-6 text-ink-soft [overflow-wrap:anywhere]"
-            :class="expanded.has(note.id) ? 'max-h-96 overflow-y-auto' : (note.body.length > 240 || note.body.split('\n').length > 6 ? 'line-clamp-6' : '')"
-          >
-            {{ note.body }}
-          </p>
-          <button
-            v-if="note.body.length > 240 || note.body.split('\n').length > 6"
-            class="mt-2 text-13 text-brand-dark focus-ring"
-            :aria-expanded="expanded.has(note.id)"
-            :aria-controls="`note-body-${note.id}`"
-            @click="toggle(note.id)"
-          >
-            {{ expanded.has(note.id) ? 'Show less' : 'Show more' }}
-          </button>
         </article>
       </div>
-      <p class="mt-3 text-13 text-muted">
+      <p class="mt-3 text-meta text-muted">
         {{ notes.length }} / 20 notes
       </p>
     </template>
     <p
       v-if="archived"
-      class="mt-3 text-13 text-amber"
+      class="mt-3 text-meta text-warning"
     >
       Archived projects are read-only until unarchived.
     </p>
     <p
       v-else-if="!canCreate"
-      class="mt-3 text-13 text-muted"
+      class="mt-3 text-meta text-muted"
     >
       You have read-only access to project notes.
     </p>
@@ -191,6 +209,7 @@ const date = (value: string) => new Date(value).toLocaleDateString(undefined, { 
       :busy="busy"
       :title="editingId ? 'Edit note' : 'Add note'"
       size="lg"
+      @after-close="restoreDialogFocus"
       @close="dialogOpen = false"
     >
       <form
@@ -198,7 +217,7 @@ const date = (value: string) => new Date(value).toLocaleDateString(undefined, { 
         class="space-y-4"
         @submit.prevent="submit"
       >
-        <label class="block text-14">
+        <label class="block text-sm">
           <span class="block mb-1.5 font-medium">Title</span>
           <input
             v-model="draft.title"
@@ -210,12 +229,12 @@ const date = (value: string) => new Date(value).toLocaleDateString(undefined, { 
         </label>
         <p
           id="note-title-count"
-          class="text-13"
+          class="text-meta"
           :class="titleCount > 120 ? 'text-danger' : 'text-muted'"
         >
           {{ titleCount }} / 120 characters
         </p>
-        <label class="block text-14">
+        <label class="block text-sm">
           <span class="block mb-1.5 font-medium">Note</span>
           <textarea
             v-model="draft.body"
@@ -228,7 +247,7 @@ const date = (value: string) => new Date(value).toLocaleDateString(undefined, { 
         </label>
         <p
           id="note-body-count"
-          class="text-13"
+          class="text-meta"
           :class="bodyCount > 10000 ? 'text-danger' : 'text-muted'"
         >
           {{ bodyCount }} / 10,000 characters
@@ -236,7 +255,7 @@ const date = (value: string) => new Date(value).toLocaleDateString(undefined, { 
         <p
           v-if="fieldError"
           role="alert"
-          class="text-13 text-danger"
+          class="text-meta text-danger"
         >
           {{ fieldError }}
         </p>
@@ -267,6 +286,7 @@ const date = (value: string) => new Date(value).toLocaleDateString(undefined, { 
       confirm-label="Delete note"
       danger
       :loading="remove.isPending.value"
+      @after-close="restoreDialogFocus"
       @close="deleting = null"
       @confirm="confirmDelete"
     />
