@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useExecutionDialogFocus } from "@/composables/useExecutionDialogFocus";
 import ReimbursementStatusLabel from "@/components/commitments/ReimbursementStatusLabel.vue";
 import {computed,ref} from 'vue';
 import {useQuery,useQueryClient} from '@tanstack/vue-query';
@@ -10,6 +11,9 @@ import {useMoney} from '@/composables/useMoney';
 import {invalidatePlanning} from '@/composables/invalidation';
 import {supabase} from '@/lib/supabase';
 import {toAppError} from '@/lib/errors';
+import AppAvatar from '@/components/ui/AppAvatar.vue';
+import SkeletonBlock from '@/components/ui/SkeletonBlock.vue';
+import ErrorState from '@/components/ui/ErrorState.vue';
 import AppButton from '@/components/ui/AppButton.vue';
 import AppModal from '@/components/ui/AppModal.vue';
 const props=defineProps<{projectId:string;currency:string;itemId?:string}>();
@@ -31,61 +35,88 @@ async function refresh(){await Promise.all([client.invalidateQueries({queryKey:[
 async function save(){if(!selected.value||busy.value)return;busy.value=true;error.value='';try{const minor=toMinor(amount.value,props.currency);if(!minor||!payee.value||!date.value)throw new Error('Choose a person, amount and date.');const {error:e}=await supabase.rpc('record_item_settlement',{p_item:selected.value.commitment_id,p_from:selected.value.member_id,p_to:payee.value,p_amount:minor,p_date:date.value});if(e)throw e;await refresh();selected.value=null;}catch(e){error.value=toAppError(e).message;}finally{busy.value=false;}}
 const cancelling=ref<string|null>(null);
 async function cancel(){if(!cancelling.value)return;busy.value=true;error.value='';try{const {error:e}=await supabase.rpc('cancel_item_settlement',{p_group:cancelling.value});if(e)throw e;await refresh();cancelling.value=null;}catch(e){error.value=toAppError(e).message;}finally{busy.value=false;}}
+const focusFallback = ref<HTMLElement | null>(null);
+const restoreDialogFocus = useExecutionDialogFocus(computed(() => !!selected.value || !!cancelling.value), focusFallback);
 </script>
 <template>
   <section
     class="mt-6 space-y-3"
     aria-label="Balances"
   >
-    <h2 class="font-display text-lg font-semibold">
+    <h2
+      ref="focusFallback"
+      tabindex="-1"
+      class="text-section-heading focus-ring"
+    >
       Balances
     </h2>
-    <p v-if="query.isPending.value||lines.isPending.value">
-      Loading balances…
-    </p>
-    <p
-      v-else-if="query.isError.value||lines.isError.value"
-      role="alert"
+    <div
+      v-if="query.isPending.value||lines.isPending.value"
+      role="status"
+      aria-label="Loading balances"
+      class="space-y-2"
     >
-      Could not load balances. <button
-        class="underline"
-        @click="()=>{query.refetch();lines.refetch();}"
-      >
-        Retry
-      </button>
-    </p>
+      <SkeletonBlock
+        v-for="i in 3"
+        :key="i"
+        height="80px"
+      />
+    </div>
+    <ErrorState
+      v-else-if="query.isError.value||lines.isError.value"
+      :error="query.error.value||lines.error.value"
+      :retry="()=>{query.refetch();lines.refetch();}"
+    />
     <p
       v-else-if="!query.data.value?.members.length"
-      class="text-13 text-muted"
+      class="text-meta text-muted"
     >
       Split an Activity cost to see what each person owes.
     </p>
     <template v-else>
+      <p
+        v-if="!itemId && query.data.value?.members.every(member => member.remaining_minor === 0)"
+        class="text-sm text-success"
+      >
+        Everyone is settled.
+      </p>
       <details
         v-for="member in query.data.value?.members.filter(m=>!itemId||memberLines(m.member_id).length)"
         :key="member.member_id"
         class="group rounded-xl border border-line bg-surface p-4"
       >
-        <summary class="cursor-pointer focus-ring flex flex-wrap justify-between gap-2">
-          <span class="min-w-0">
-            <span class="block font-medium break-words">{{ member.display_name }}{{ member.member_status==='removed'?' (removed)':'' }}</span>
-            <span class="block mt-1 text-14">{{ balanceLabel(memberBalance(member.member_id, member.remaining_minor)) }}</span>
+        <summary class="cursor-pointer focus-ring rounded-lg min-h-11 flex flex-wrap items-center gap-3">
+          <AppAvatar
+            :name="member.display_name"
+            :size="32"
+          />
+          <span class="min-w-0 flex-1 [overflow-wrap:anywhere]">
+            <span class="block text-card-heading font-semibold break-words">{{ member.display_name }}{{ member.member_status==='removed'?' (removed)':'' }}</span>
+            <span
+              class="block mt-1 text-sm tnum"
+              :class="memberBalance(member.member_id, member.remaining_minor) === 0 ? 'text-success' : 'text-ink-soft'"
+            >{{ balanceLabel(memberBalance(member.member_id, member.remaining_minor)) }}</span>
           </span>
-          <span class="text-13 underline self-center"><span class="group-open:hidden">View details</span><span class="hidden group-open:inline">Hide details</span><span class="sr-only"> for {{ member.display_name }}</span></span>
+          <span class="text-meta underline self-center"><span class="group-open:hidden">View details</span><span class="hidden group-open:inline">Hide details</span><span class="sr-only"> for {{ member.display_name }}</span></span>
         </summary>
         <div
           v-for="[area,rows] in areaGroups(member.member_id)"
           :key="area"
           class="mt-4 space-y-2"
         >
-          <h3 class="text-14 font-medium break-words">
+          <h3 class="text-sm font-medium break-words">
             {{ area }}
           </h3><div
             v-for="line in rows"
             :key="line.commitment_id"
-            class="flex flex-wrap items-center justify-between gap-2 text-13 border-t border-line pt-2"
+            class="flex flex-wrap items-center justify-between gap-2 text-meta border-t border-line pt-2"
           >
-            <span class="min-w-0 break-words">{{ line.item_title }}</span><span>{{ balanceLabel(line.remaining_minor) }}</span><AppButton
+            <RouterLink
+              :to="{name:'project.commitments',params:{projectId},query:{commitment:line.commitment_id}}"
+              class="min-w-0 min-h-11 inline-flex items-center text-brand focus-ring [overflow-wrap:anywhere]"
+            >
+              {{ line.item_title }}
+            </RouterLink><span>{{ balanceLabel(line.remaining_minor) }}</span><AppButton
               v-if="canSettle&&line.member_status==='active'&&line.remaining_minor>0&&lines.data.value?.some(c=>c.commitment_id===line.commitment_id&&c.remaining_minor<0&&c.member_status==='active')"
               size="sm"
               variant="secondary"
@@ -97,7 +128,7 @@ async function cancel(){if(!cancelling.value)return;busy.value=true;error.value=
         </div>
         <section
           v-if="memberRequests(member.member_id).length"
-          class="mt-4 space-y-2 text-13"
+          class="mt-4 space-y-2 text-meta"
           aria-label="Reimbursement requests"
         >
           <h3 class="font-medium">
@@ -119,10 +150,10 @@ async function cancel(){if(!cancelling.value)return;busy.value=true;error.value=
     <p
       v-if="reimbursements.isError.value"
       role="alert"
-      class="text-13"
+      class="text-meta"
     >
       Could not load reimbursement details. <button
-        class="underline focus-ring"
+        class="underline focus-ring min-h-11 px-2"
         @click="reimbursements.refetch()"
       >
         Retry
@@ -130,9 +161,9 @@ async function cancel(){if(!cancelling.value)return;busy.value=true;error.value=
     </p>
     <details
       v-if="history.data.value?.some(r=>!itemId||r.commitment_id===itemId)"
-      class="text-13"
+      class="text-meta"
     >
-      <summary class="cursor-pointer focus-ring">
+      <summary class="cursor-pointer focus-ring rounded-lg min-h-11 py-3">
         Settlement history
       </summary><div
         v-for="row in history.data.value.filter(r=>!itemId||r.commitment_id===itemId)"
@@ -149,34 +180,40 @@ async function cancel(){if(!cancelling.value)return;busy.value=true;error.value=
         </AppButton>
       </div>
     </details>
+    <ErrorState
+      v-if="history.isError.value"
+      :error="history.error.value"
+      :retry="() => history.refetch()"
+    />
     <AppModal
       :open="!!selected"
       title="Record settlement"
       :busy="busy"
+      @after-close="restoreDialogFocus"
       @close="selected=null"
     >
       <form
         class="space-y-4"
         @submit.prevent="save"
       >
-        <p>{{ selected?.display_name }} settles {{ selected?.item_title }}. The original expense stays unchanged.</p><label class="block text-14">Paid to<select
+        <p>{{ selected?.display_name }} settles {{ selected?.item_title }}. The original expense stays unchanged.</p><label class="block text-sm">Paid to<select
           v-model="payee"
           required
-          class="block w-full p-2 border border-line rounded-lg"
+          class="block w-full min-h-11 p-2 border border-line rounded-lg focus-ring"
         ><option
           v-for="person in creditors"
           :key="person.member_id"
           :value="person.member_id"
-        >{{ person.display_name }}</option></select></label><label class="block text-14">Amount<input
+        >{{ person.display_name }}</option></select></label><label class="block text-sm">Amount<input
           v-model="amount"
           inputmode="decimal"
           required
-          class="block w-full p-2 border border-line rounded-lg"
-        ></label><label class="block text-14">Date<input
+          class="block w-full min-h-11 p-2 border border-line rounded-lg focus-ring"
+        ></label><label class="block text-sm">Date<input
           v-model="date"
           type="date"
           required
-          class="block w-full p-2 border border-line rounded-lg"
+          class="block w-full min-h-11 p-2 border border-line rounded-lg focus-ring"
         ></label><p
           v-if="error"
           role="alert"
@@ -195,6 +232,7 @@ async function cancel(){if(!cancelling.value)return;busy.value=true;error.value=
       :open="!!cancelling"
       title="Cancel settlement"
       :busy="busy"
+      @after-close="restoreDialogFocus"
       @close="cancelling=null"
     >
       <p>Cancel both sides of this settlement? Its history will remain.</p><p

@@ -58,24 +58,24 @@ async function page(delta: number) { offset.value = Math.max(0, offset.value + d
   >
     <h2
       id="join-access-heading"
-      class="text-16 font-semibold"
+      class="text-section-heading font-semibold"
     >
-      Invite link
+      Join requests
     </h2>
-    <p class="text-13 text-muted">
+    <p class="text-meta text-muted">
       Approval required: On · Default role: Member
     </p>
     <p
       v-if="loading"
       role="status"
-      class="text-14"
+      class="text-sm"
     >
       Loading access requests…
     </p>
     <p
       v-if="error"
       role="alert"
-      class="text-14 text-danger"
+      class="text-sm text-danger"
     >
       {{ error }}
     </p>
@@ -89,58 +89,22 @@ async function page(delta: number) { offset.value = Math.max(0, offset.value + d
     </AppButton>
     <template v-if="access">
       <p
-        v-if="!access.active"
-        class="text-14"
+        v-if="!access.pending_count"
+        class="text-meta text-muted"
       >
-        Copy an invite link so people can request access.
+        No pending join requests.
       </p>
-      <div class="flex flex-wrap gap-2">
-        <AppButton
-          :disabled="busy || readOnly"
-          :aria-busy="busy"
-          @click="copy"
-        >
-          Copy invite link
-        </AppButton>
-        <AppButton
-          v-if="access.active"
-          variant="secondary"
-          :loading="busy"
-          :aria-busy="busy"
-          :disabled="readOnly"
-          @click="disable"
-        >
-          Disable link
-        </AppButton>
-      </div>
-      <label
-        v-if="link"
-        class="block text-13"
-      >Join link
-        <input
-          :value="link"
-          readonly
-          class="mt-1 block w-full min-w-0 rounded-lg border border-line p-2 text-13 focus-ring"
-          @focus="($event.target as HTMLInputElement).select()"
-        >
-      </label>
-      <h3
-        v-if="access.pending_count"
-        class="font-semibold text-14"
-      >
-        Join requests
-      </h3>
       <article
         v-for="item in access.requests"
         :key="item.id"
-        class="rounded-lg border border-line p-3 space-y-2 [overflow-wrap:anywhere]"
+        class="rounded-xl border border-line bg-surface p-4 space-y-3 [overflow-wrap:anywhere]"
       >
-        <p class="font-medium text-14">
+        <p class="font-medium text-sm">
           {{ item.display_name }}
         </p>
         <time
           :datetime="item.requested_at"
-          class="text-13 text-muted"
+          class="text-meta text-muted"
         >Requested {{ new Date(item.requested_at).toLocaleString() }}</time>
         <div class="flex flex-wrap gap-2">
           <AppButton
@@ -182,11 +146,57 @@ async function page(delta: number) { offset.value = Math.max(0, offset.value + d
           Next
         </AppButton>
       </div>
+      <h3 class="text-section-heading">
+        Invite link
+      </h3>
+      <p
+        v-if="!access.active"
+        class="text-sm"
+      >
+        Copy an invite link so people can request access.
+      </p>
+      <div class="flex flex-wrap gap-2">
+        <AppButton
+          :disabled="busy || readOnly"
+          :aria-busy="busy"
+          @click="copy"
+        >
+          Copy invite link
+        </AppButton>
+      </div>
+      <details
+        v-if="access.active"
+        class="text-sm"
+      >
+        <summary class="min-h-11 py-3 cursor-pointer rounded-lg focus-ring text-muted">
+          Link settings
+        </summary>
+        <AppButton
+          variant="secondary"
+          :loading="busy"
+          :aria-busy="busy"
+          :disabled="readOnly"
+          @click="disable"
+        >
+          Disable link
+        </AppButton>
+      </details>
+      <label
+        v-if="link"
+        class="block text-meta"
+      >Join link
+        <input
+          :value="link"
+          readonly
+          class="mt-1 block w-full min-w-0 rounded-lg border border-line p-2 text-meta focus-ring"
+          @focus="($event.target as HTMLInputElement).select()"
+        >
+      </label>
     </template>
     <p
       v-if="feedback"
       role="status"
-      class="text-14"
+      class="text-sm"
     >
       {{ feedback }}
     </p>

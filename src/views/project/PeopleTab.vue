@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useExecutionDialogFocus } from "@/composables/useExecutionDialogFocus";
 import ProjectJoinAccess from "@/components/members/ProjectJoinAccess.vue";
 import { useProjectSettlement } from "@/composables/useSettlement";
 import { useMoney } from "@/composables/useMoney";
@@ -16,11 +17,11 @@ import SkeletonBlock from "@/components/ui/SkeletonBlock.vue";
 import ErrorState from "@/components/ui/ErrorState.vue";
 import EmptyState from "@/components/ui/EmptyState.vue";
 import AppAvatar from "@/components/ui/AppAvatar.vue";
-import StatusBadge from "@/components/ui/StatusBadge.vue";
+
 import AppButton from "@/components/ui/AppButton.vue";
 import AppConfirmDialog from "@/components/ui/AppConfirmDialog.vue";
 import InviteMemberDialog from "@/components/members/InviteMemberDialog.vue";
-import { getSettlementPresentation, presentLabel } from "@/lib/presentation";
+import { presentLabel } from "@/lib/presentation";
 
 const route = useRoute();
 const projectId = computed(() => String(route.params.projectId));
@@ -33,13 +34,7 @@ const settlement = useProjectSettlement(projectId,budgetVisible);
 function balanceLabel(id: string) {
  const row=settlement.data.value?.members.find(m=>m.member_id===id);
  if(!row) return "";
- const presentation = getSettlementPresentation(row.paid_minor, row.remaining_minor);
- return row.remaining_minor === 0 ? presentation.label : `${presentation.label} · ${format(Math.abs(row.remaining_minor),row.currency)} ${row.remaining_minor<0 ? 'credit' : 'remaining'}`;
-}
-
-function balanceTone(id: string) {
- const row=settlement.data.value?.members.find(m=>m.member_id===id);
- return row ? getSettlementPresentation(row.paid_minor, row.remaining_minor).tone : "accent";
+ return row.remaining_minor === 0 ? "Settled" : (row.remaining_minor > 0 ? "Owes " : "Is owed ") + format(Math.abs(row.remaining_minor),row.currency);
 }
 
 const roster = computed(() => members.value.filter((m) => m.status !== "removed"));
@@ -84,15 +79,24 @@ async function confirmRemoveNow() {
   }
 }
 
-const roleTone = (r: string) => (r === "organizer" ? "accent" : "neutral");
-const statusTone = (s: string) => (s === "invited" ? "amber" : s === "removed" ? "neutral" : "accent");
+const focusFallback = ref<HTMLElement | null>(null);
+const restoreDialogFocus = useExecutionDialogFocus(computed(() => inviteOpen.value || !!confirmRemove.value), focusFallback);
 </script>
 
 <template>
-  <div class="fade-in">
+  <div class="space-y-6 max-w-4xl fade-in">
+    <h2
+      ref="focusFallback"
+      tabindex="-1"
+      class="text-section-heading focus-ring"
+    >
+      People
+    </h2>
     <div
       v-if="isPending"
       class="space-y-2"
+      role="status"
+      aria-label="Loading members"
     >
       <SkeletonBlock
         v-for="i in 4"
@@ -107,16 +111,17 @@ const statusTone = (s: string) => (s === "invited" ? "amber" : s === "removed" ?
       :retry="() => refetch()"
     />
     <template v-else>
-      <div class="flex items-center justify-between mb-4">
-        <p class="text-14 text-ink-soft">
+      <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+        <p class="text-sm text-ink-soft">
           {{ roster.length }} {{ roster.length === 1 ? "person" : "people" }}
         </p>
         <AppButton
           v-if="canInvite"
           size="sm"
+          variant="secondary"
           @click="inviteOpen = true"
         >
-          Invite
+          Create invitation
         </AppButton>
       </div>
 
@@ -139,7 +144,7 @@ const statusTone = (s: string) => (s === "invited" ? "amber" : s === "removed" ?
 
       <div
         v-else
-        class="border rounded-xl divide-y border-line bg-surface"
+        class="border rounded-xl divide-y divide-line border-line bg-surface"
       >
         <div
           v-for="m in roster"
@@ -152,69 +157,78 @@ const statusTone = (s: string) => (s === "invited" ? "amber" : s === "removed" ?
               :url="m.avatar_url"
               :size="36"
             />
-            <div class="min-w-[8rem] flex-1 [overflow-wrap:anywhere]">
-              <div class="text-14 font-medium">
+            <div class="min-w-0 flex-1 [overflow-wrap:anywhere]">
+              <div class="text-card-heading font-semibold">
                 {{ m.display_name }}
-                <span
-                  v-if="budgetVisible && balanceLabel(m.member_id)"
-                  class="block text-13 font-normal"
-                  :class="{
-                    'text-danger': balanceTone(m.member_id) === 'danger',
-                    'text-amber': balanceTone(m.member_id) === 'amber',
-                    'text-success': balanceTone(m.member_id) === 'accent',
-                  }"
-                >{{ balanceLabel(m.member_id) }}</span>
               </div>
-              <div class="text-13 text-muted capitalize">
-                {{ presentLabel(m.role) }}
+              <div class="text-meta text-muted capitalize">
+                {{ presentLabel(m.role) }}{{ m.status === 'invited' ? ' · Invited' : '' }}
               </div>
+              <p
+                v-if="budgetVisible && balanceLabel(m.member_id)"
+                class="mt-1 text-meta text-muted"
+              >
+                {{ balanceLabel(m.member_id) }}
+              </p>
             </div>
-            <StatusBadge
-              v-if="m.status === 'invited'"
-              label="Invited"
-              :tone="statusTone(m.status)"
-            />
-
-            <select
+            <details
               v-if="canManage"
-              class="border rounded-lg px-2 py-1.5 text-13 focus-ring border-line bg-surface"
-              :disabled="updateRole.isPending.value || removeMember.isPending.value"
-              :value="m.role"
-              @change="onRoleChange(m.member_id, $event)"
+              class="w-full sm:w-auto"
             >
-              <option value="organizer">
-                Organizer
-              </option>
-              <option value="member">
-                Member
-              </option>
-              <option value="viewer">
-                Viewer
-              </option>
-            </select>
-            <StatusBadge
-              v-else-if="m.role === 'organizer'"
-              label="Organizer"
-              :tone="roleTone(m.role)"
-            />
+              <summary
+                class="cursor-pointer min-h-11 rounded-lg px-3 py-3 text-sm text-ink-soft focus-ring"
+                :aria-label="`Manage ${m.display_name}`"
+              >
+                Manage<span class="sr-only"> {{ m.display_name }}</span>
+              </summary>
+              <div class="mt-2 flex flex-wrap items-center gap-2">
+                <select
+                  v-if="canManage"
+                  class="min-h-11 border rounded-lg px-3 py-2 text-sm focus-ring border-line bg-surface"
+                  :disabled="updateRole.isPending.value || removeMember.isPending.value"
+                  :value="m.role"
+                  :aria-label="`Role for ${m.display_name}`"
+                  @change="onRoleChange(m.member_id, $event)"
+                >
+                  <option value="organizer">
+                    Organizer
+                  </option>
+                  <option value="member">
+                    Member
+                  </option>
+                  <option value="viewer">
+                    Viewer
+                  </option>
+                </select>
 
-            <AppButton
-              v-if="canManage"
-              variant="secondary"
-              size="sm"
-              @click="confirmRemove = { id: m.member_id, name: m.display_name }"
-            >
-              Remove
-            </AppButton>
+                <AppButton
+                  v-if="canManage"
+                  variant="secondary"
+                  size="sm"
+                  :aria-label="`Remove ${m.display_name}`"
+                  @click="confirmRemove = { id: m.member_id, name: m.display_name }"
+                >
+                  Remove
+                </AppButton>
+              </div>
+            </details>
           </div>
           <p
             v-if="rowError[m.member_id]"
-            class="mt-2 text-13 text-danger"
+            role="alert"
+            class="mt-2 text-meta text-danger"
           >
             {{ rowError[m.member_id] }}
           </p>
         </div>
       </div>
+      <p
+        v-if="budgetVisible && settlement.isError.value"
+        role="status"
+        class="mt-3 text-meta text-muted"
+      >
+        Balance information is unavailable. Membership controls are still available.
+      </p>
       <ProjectJoinAccess
         v-if="allowed('project.invite')"
         :key="projectId"
@@ -226,12 +240,12 @@ const statusTone = (s: string) => (s === "invited" ? "amber" : s === "removed" ?
         v-if="allowed('project.invite')"
         class="mt-6 space-y-3"
       >
-        <h2 class="font-medium text-14">
+        <h2 class="text-section-heading">
           Invitations
         </h2>
         <p
           v-if="invitations.isPending.value"
-          class="text-13 text-muted"
+          class="text-meta text-muted"
         >
           Loading invitations…
         </p>
@@ -242,30 +256,30 @@ const statusTone = (s: string) => (s === "invited" ? "amber" : s === "removed" ?
         />
         <p
           v-else-if="!invitations.data.value?.length"
-          class="text-13 text-muted"
+          class="text-meta text-muted"
         >
           No outstanding invitations.
         </p>
         <div
           v-for="inv in invitations.data.value"
           :key="inv.id"
-          class="border border-line rounded-lg p-3 text-14"
+          class="border border-line rounded-xl bg-surface p-4 text-sm [overflow-wrap:anywhere]"
         >
           <span>{{ inv.email }}</span>
-          <p class="text-13 text-muted capitalize">
+          <p class="text-meta text-muted capitalize">
             {{ inv.status === 'pending' ? 'Pending invitation' : presentLabel(inv.status) }} · {{ presentLabel(inv.role) }}
           </p>
         </div>
       </section>
       <p
         v-if="removedCount > 0"
-        class="mt-3 text-13 text-muted"
+        class="mt-3 text-meta text-muted"
       >
         {{ removedCount }} former {{ removedCount === 1 ? "member has" : "members have" }} been removed.
       </p>
       <p
         v-if="archived"
-        class="mt-3 text-13 text-amber"
+        class="mt-3 text-meta text-warning"
       >
         This project is archived — membership is read-only.
       </p>
@@ -274,6 +288,7 @@ const statusTone = (s: string) => (s === "invited" ? "amber" : s === "removed" ?
     <InviteMemberDialog
       :open="inviteOpen"
       :project-id="projectId"
+      @after-close="restoreDialogFocus"
       @close="inviteOpen = false"
     />
     <AppConfirmDialog
@@ -283,6 +298,7 @@ const statusTone = (s: string) => (s === "invited" ? "amber" : s === "removed" ?
       confirm-label="Remove"
       danger
       :loading="removeMember.isPending.value"
+      @after-close="restoreDialogFocus"
       @close="confirmRemove = null"
       @confirm="confirmRemoveNow"
     />

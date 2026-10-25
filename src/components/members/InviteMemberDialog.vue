@@ -42,36 +42,39 @@ async function submit() {
     title="Invite someone"
     @close="emit('close')"
   >
+    <p class="mb-4 text-meta text-muted">
+      Create a pending invitation for this email address. Email delivery is currently deferred.
+    </p>
     <form
       class="space-y-4"
       @submit.prevent="submit"
     >
       <label class="block">
-        <span class="text-13 font-medium block mb-1.5 text-ink-soft">Email address</span>
+        <span class="text-meta font-medium block mb-1.5 text-ink-soft">Email address</span>
         <input
           v-model="form.email"
           type="email"
           required
           placeholder="name@example.com"
-          class="w-full border rounded-lg px-3.5 py-2.5 text-14 focus-ring border-line"
+          class="w-full border rounded-lg px-3.5 py-2.5 text-sm focus-ring border-line"
         >
       </label>
       <label class="block">
-        <span class="text-13 font-medium block mb-1.5 text-ink-soft">Role</span>
+        <span class="text-meta font-medium block mb-1.5 text-ink-soft">Role</span>
         <select
           v-model="form.role"
-          class="w-full border rounded-lg px-3 py-2.5 text-14 focus-ring border-line bg-surface"
+          class="w-full border rounded-lg px-3 py-2.5 text-sm focus-ring border-line bg-surface"
         >
           <option value="member">Member</option>
           <option value="viewer">Viewer — can complete assigned Activities</option>
         </select>
       </label>
-      <p class="text-13 text-muted">
+      <p class="text-meta text-muted">
         {{ form.role === 'member' ? 'Can edit Categories, Activities and supported payments, subject to project permissions.' : 'Can view the project but cannot make changes.' }}
       </p>
       <p
         v-if="fieldError"
-        class="text-13 text-danger"
+        class="text-meta text-danger"
       >
         {{ fieldError }}
       </p>
@@ -90,7 +93,7 @@ async function submit() {
         :loading="invite.isPending.value"
         @click="submit"
       >
-        Send invitation
+        Create invitation
       </AppButton>
     </template>
   </AppModal>

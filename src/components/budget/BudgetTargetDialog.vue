@@ -34,7 +34,7 @@ async function save(clear = false) {
     @close="emit('close')"
   >
     <form @submit.prevent="save()">
-      <label class="block text-14">
+      <label class="block text-sm">
         <span class="block mb-2">Approximate total budget ({{ currency }})</span>
         <input
           v-model="draft"
@@ -48,7 +48,7 @@ async function save(clear = false) {
       <p
         v-if="error"
         role="alert"
-        class="mt-3 text-13 text-danger"
+        class="mt-3 text-meta text-danger"
       >
         {{ error }}
       </p>
