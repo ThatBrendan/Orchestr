@@ -6,8 +6,8 @@ import { useProjectContext } from "@/composables/useProjectContext";
 import SkeletonBlock from "@/components/ui/SkeletonBlock.vue";
 import ErrorState from "@/components/ui/ErrorState.vue";
 import EmptyState from "@/components/ui/EmptyState.vue";
-import SectionHeading from "@/components/ui/SectionHeading.vue";
-import UpcomingList from "@/components/timeline/UpcomingList.vue";
+
+import TimelineStream from "@/components/timeline/TimelineStream.vue";
 
 const route = useRoute();
 const projectId = computed(() => String(route.params.projectId));
@@ -18,12 +18,19 @@ const timeline = useFullTimeline(projectId);
 </script>
 
 <template>
-  <div class="fade-in space-y-8">
+  <div class="fade-in space-y-6 max-w-3xl">
     <div>
-      <SectionHeading label="Full timeline" />
+      <h2 class="text-section-heading">
+        Timeline
+      </h2>
+      <p class="mt-1 mb-5 text-meta text-muted">
+        Project dates in chronological order · {{ timezone }}
+      </p>
       <div
         v-if="timeline.isPending.value"
         class="mt-3 space-y-2"
+        role="status"
+        aria-label="Loading timeline"
       >
         <SkeletonBlock
           v-for="i in 3"
@@ -43,7 +50,7 @@ const timeline = useFullTimeline(projectId);
         class="mt-3"
         message="Nothing on the timeline yet."
       />
-      <UpcomingList
+      <TimelineStream
         v-else
         :events="timeline.events.value"
         :timezone="timezone"

@@ -7,6 +7,7 @@ import { useProjectContext } from '@/composables/useProjectContext';
 import { useProjectCalendar } from '@/composables/useProjectCalendar';
 import { entryDay, entryOnDay } from '@/lib/executionCalendar';
 import CalendarEntryLink from '@/components/calendar/CalendarEntryLink.vue';
+import ErrorState from '@/components/ui/ErrorState.vue';
 import SkeletonBlock from '@/components/ui/SkeletonBlock.vue';
 const route = useRoute();
 const { project } = useProjectContext();
@@ -20,6 +21,7 @@ const start = computed(() => anchor.value.startOf('week'));
 const end = computed(() => anchor.value.endOf('month').endOf('week').plus({ days: 1 }).startOf('day'));
 const calendar = useProjectCalendar(computed(() => String(route.params.projectId)), computed(() => start.value.toISODate()!), computed(() => end.value.toISODate()!));
 const narrow = useMediaQuery('(max-width: 639px)');
+const compactMonth = useMediaQuery('(max-width: 1023px)');
 const selectedView = ref<'month' | 'agenda' | null>(null);
 const view = computed(() => selectedView.value ?? (narrow.value ? 'agenda' : 'month'));
 const filter = ref('all');
@@ -40,29 +42,35 @@ function selectDay(day: string) { selectedDay.value = day; }
 
 <template>
   <section
-    class="space-y-5 min-w-0"
+    class="space-y-5 min-w-0 fade-in"
     aria-label="Project execution calendar"
   >
     <header class="flex flex-wrap items-center justify-between gap-3">
       <div class="min-w-0">
         <h2
-          class="text-lg font-semibold"
+          class="text-section-heading"
           aria-live="polite"
         >
-          {{ anchor.toFormat('LLLL yyyy') }}
+          Calendar
         </h2>
-        <p class="text-xs text-muted break-all">
+        <p class="mt-1 text-meta text-muted break-words">
           Times shown in {{ timezone }}
         </p>
       </div>
       <RouterLink
-        class="text-sm underline focus-ring"
+        class="min-h-11 inline-flex items-center text-sm text-brand focus-ring"
         :to="{ name: 'project.commitments', params: route.params }"
       >
         Go to Activities
       </RouterLink>
     </header>
     <div class="flex flex-wrap items-center gap-2">
+      <h3
+        class="w-full text-card-heading font-semibold"
+        aria-live="polite"
+      >
+        {{ anchor.toFormat('LLLL yyyy') }}
+      </h3>
       <button
         class="focus-ring calendar-button"
         aria-label="Previous month"
@@ -84,19 +92,19 @@ function selectDay(day: string) { selectedDay.value = day; }
         Next
       </button>
       <div
-        class="flex gap-1"
+        class="flex gap-1 rounded-xl bg-surface-subtle p-1 sm:ml-auto"
         role="group"
         aria-label="Calendar view"
       >
         <button
-          class="focus-ring calendar-button"
+          class="focus-ring calendar-button calendar-view"
           :aria-pressed="view === 'month'"
           @click="selectedView = 'month'"
         >
           Month
         </button>
         <button
-          class="focus-ring calendar-button"
+          class="focus-ring calendar-button calendar-view"
           :aria-pressed="view === 'agenda'"
           @click="selectedView = 'agenda'"
         >
@@ -112,35 +120,31 @@ function selectDay(day: string) { selectedDay.value = day; }
       <button
         v-for="f in filters"
         :key="f.id"
-        class="focus-ring calendar-button"
+        class="focus-ring calendar-button calendar-filter"
         :aria-pressed="filter === f.id"
         @click="filter = f.id"
       >
         {{ f.label }}
       </button>
     </div>
-    <SkeletonBlock
-      v-if="calendar.isPending.value"
-      height="320px"
-    />
     <div
-      v-else-if="calendar.isError.value"
-      role="alert"
+      v-if="calendar.isPending.value"
+      role="status"
+      aria-label="Loading calendar"
     >
-      <p>Calendar couldn't be loaded.</p>
-      <button
-        class="focus-ring calendar-button mt-2"
-        @click="calendar.refetch()"
-      >
-        Retry
-      </button>
+      <SkeletonBlock height="320px" />
     </div>
+    <ErrorState
+      v-else-if="calendar.isError.value"
+      :error="calendar.error.value"
+      :retry="() => calendar.refetch()"
+    />
     <template v-else>
       <p
         v-if="!entries.length"
         class="text-sm text-muted"
       >
-        {{ filter === 'all' ? 'Nothing scheduled in this range. Add dates to Activities, Decisions or payment schedules to see them here.' : 'No matching items in this range.' }}
+        {{ filter === 'all' ? 'Nothing scheduled in this range. Dated Activities, Decision deadlines and payment schedules appear here.' : 'No matching items in this range.' }}
       </p>
       <table
         v-if="view === 'month'"
@@ -153,7 +157,7 @@ function selectDay(day: string) { selectedDay.value = day; }
               v-for="day in ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']"
               :key="day"
               scope="col"
-              class="p-1 text-xs text-muted"
+              class="py-2 text-meta font-medium text-muted"
             >
               {{ day }}
             </th>
@@ -167,12 +171,12 @@ function selectDay(day: string) { selectedDay.value = day; }
             <td
               v-for="day in week"
               :key="day.key"
-              class="border border-line align-top p-1 h-16 sm:h-36"
-              :class="day.date.month !== anchor.month ? 'bg-surface-soft text-muted' : ''"
+              class="border border-line align-top p-0.5 sm:p-1 h-16 lg:h-36"
+              :class="day.date.month !== anchor.month ? 'bg-surface-subtle text-muted' : ''"
             >
               <button
-                class="focus-ring w-full rounded text-xs text-left p-1"
-                :class="day.key === today ? 'font-bold bg-surface-soft' : ''"
+                class="focus-ring w-full min-h-11 rounded-lg text-sm text-center sm:text-left p-1"
+                :class="day.key === today ? 'font-bold underline decoration-2 underline-offset-4 bg-brand-soft text-brand' : ''"
                 :aria-label="`${day.date.toFormat('cccc, d LLLL yyyy')}, ${day.entries.length} entries`"
                 :aria-current="day.key === today ? 'date' : undefined"
                 :aria-pressed="selectedDay === day.key"
@@ -183,12 +187,12 @@ function selectDay(day: string) { selectedDay.value = day; }
                   class="sr-only"
                 > Today</span>
                 <span
-                  v-if="narrow && day.entries.length"
+                  v-if="compactMonth && day.entries.length"
                   class="block"
                 >· {{ day.entries.length }}<span class="sr-only"> entries</span></span>
               </button>
               <div
-                v-if="!narrow"
+                v-if="!compactMonth"
                 class="space-y-1"
               >
                 <CalendarEntryLink
@@ -201,7 +205,7 @@ function selectDay(day: string) { selectedDay.value = day; }
                 />
                 <button
                   v-if="day.entries.length > 2"
-                  class="focus-ring text-xs underline"
+                  class="focus-ring min-h-11 rounded-lg text-meta text-brand underline"
                   :aria-label="`${day.entries.length - 2} more entries for ${day.date.toFormat('d LLLL')}`"
                   @click="selectDay(day.key)"
                 >
@@ -214,7 +218,7 @@ function selectDay(day: string) { selectedDay.value = day; }
       </table>
       <div
         v-if="view === 'agenda' || selectedDay"
-        class="space-y-4"
+        class="space-y-6 max-w-3xl"
         aria-live="polite"
       >
         <button
@@ -234,7 +238,7 @@ function selectDay(day: string) { selectedDay.value = day; }
           </h3>
           <ul
             v-if="day.entries.length"
-            class="space-y-2"
+            class="rounded-xl border border-line bg-surface divide-y divide-line"
           >
             <li
               v-for="entry in day.entries"
@@ -260,6 +264,8 @@ function selectDay(day: string) { selectedDay.value = day; }
 </template>
 
 <style scoped>
-.calendar-button { @apply rounded border border-line px-3 py-2 text-xs; }
-.calendar-button[aria-pressed="true"] { @apply bg-ink text-white; }
+.calendar-button { @apply min-h-11 rounded-lg border border-line bg-surface px-3 py-2 text-sm; }
+.calendar-view { @apply border-transparent bg-transparent; }
+.calendar-filter { @apply border-transparent bg-transparent text-ink-soft; }
+.calendar-button[aria-pressed="true"] { @apply bg-brand-soft text-brand border-brand/20; }
 </style>
