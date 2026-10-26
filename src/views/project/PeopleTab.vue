@@ -285,6 +285,14 @@ const restoreDialogFocus = useExecutionDialogFocus(computed(() => inviteOpen.val
       </p>
     </template>
 
+    <p class="mt-6 text-meta text-muted">
+      Choose how others can reimburse you in <RouterLink
+        :to="{ name: 'settings', hash: '#payment-links-settings' }"
+        class="min-h-11 inline-flex items-center rounded-lg text-brand underline focus-ring"
+      >
+        My payment preferences
+      </RouterLink>.
+    </p>
     <InviteMemberDialog
       :open="inviteOpen"
       :project-id="projectId"

@@ -36,6 +36,7 @@ async function remove() {
 </script>
 <template>
   <section
+    id="calendar-sync-settings"
     class="mt-8 space-y-4 border-t border-line pt-6"
     aria-labelledby="calendar-sync-title"
     data-testid="calendar-sync-settings"

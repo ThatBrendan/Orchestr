@@ -64,6 +64,12 @@ function selectDay(day: string) { selectedDay.value = day; }
         Go to Activities
       </RouterLink>
     </header>
+    <RouterLink
+      :to="{ name: 'settings', hash: '#calendar-sync-settings' }"
+      class="min-h-11 inline-flex items-center rounded-lg text-sm text-brand underline focus-ring"
+    >
+      Calendar sync settings
+    </RouterLink>
     <div class="flex flex-wrap items-center gap-2">
       <h3
         class="w-full text-card-heading font-semibold"

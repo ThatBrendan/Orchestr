@@ -96,6 +96,10 @@ const restoreDialogFocus = useExecutionDialogFocus(computed(() => !!selected.val
               class="block mt-1 text-sm tnum"
               :class="memberBalance(member.member_id, member.remaining_minor) === 0 ? 'text-success' : 'text-ink-soft'"
             >{{ balanceLabel(memberBalance(member.member_id, member.remaining_minor)) }}</span>
+            <span
+              v-if="memberRequests(member.member_id).length"
+              class="block mt-1 text-meta text-muted"
+            >{{ memberRequests(member.member_id).length }} reimbursement {{ memberRequests(member.member_id).length === 1 ? 'request' : 'requests' }}</span>
           </span>
           <span class="text-meta underline self-center"><span class="group-open:hidden">View details</span><span class="hidden group-open:inline">Hide details</span><span class="sr-only"> for {{ member.display_name }}</span></span>
         </summary>

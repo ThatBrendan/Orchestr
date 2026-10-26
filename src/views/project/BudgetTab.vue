@@ -99,6 +99,37 @@ const restoreDialogFocus = useExecutionDialogFocus(budgetOpen, focusFallback);
           </dd>
         </div>
       </dl>
+      <details class="mt-4 border-t border-line pt-2">
+        <summary class="min-h-11 py-3 cursor-pointer rounded-lg focus-ring text-sm font-medium">
+          Planning and payments
+        </summary>
+        <dl class="grid gap-4 sm:grid-cols-2">
+          <div>
+            <dt class="text-meta text-muted">
+              Committed spend
+            </dt><dd class="mt-1 text-sm tnum [overflow-wrap:anywhere]">
+              {{ format(financials.committed_spend_minor, currency) }}
+            </dd>
+          </div>
+          <div>
+            <dt class="text-meta text-muted">
+              Scheduled payments outstanding
+            </dt><dd class="mt-1 text-sm tnum [overflow-wrap:anywhere]">
+              {{ format(financials.scheduled_outstanding_minor, currency) }}
+            </dd>
+          </div>
+        </dl>
+        <p class="mt-3 text-meta text-muted">
+          Open an Activity for payment schedules, cost splits and reimbursement requests.
+        </p>
+        <AppButton
+          class="mt-2"
+          variant="ghost"
+          :to="{ name: 'project.commitments', params: { projectId } }"
+        >
+          View Activities and payments
+        </AppButton>
+      </details>
       <p
         v-if="!hasTarget"
         class="mt-4 text-meta text-muted"
