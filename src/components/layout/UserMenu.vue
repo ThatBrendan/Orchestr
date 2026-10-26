@@ -41,7 +41,7 @@ async function handleSignOut(close: () => void) {
       />
       <span
         v-if="!compact"
-        class="text-[13.5px] font-medium truncate"
+        class="text-sm font-medium truncate"
       >{{ profile?.display_name ?? email }}</span>
     </MenuButton>
     <MenuItems

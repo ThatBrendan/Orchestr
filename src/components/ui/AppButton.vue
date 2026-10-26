@@ -23,8 +23,8 @@ const classes = computed(() => {
     "inline-flex min-h-11 max-w-full [overflow-wrap:anywhere] items-center justify-center gap-1.5 font-medium rounded-lg transition-colors focus-ring disabled:opacity-50 disabled:cursor-not-allowed";
   const size = {
     sm: "px-3 py-1.5 text-13",
-    md: "px-3.5 py-2 text-13.5",
-    lg: "px-5 py-2.5 text-14.5",
+    md: "px-3.5 py-2 text-sm",
+    lg: "px-5 py-2.5 text-body",
   }[props.size];
   const variant = {
     primary: "bg-brand text-white hover:bg-brand-dark",

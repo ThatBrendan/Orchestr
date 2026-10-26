@@ -29,16 +29,16 @@ async function toggle(category: NotificationCategory) {
 </script>
 <template>
   <section
-    class="mt-8 rounded-xl border border-line bg-surface p-5 space-y-4"
+    class="mt-8 border-t border-line pt-6 space-y-4"
     aria-labelledby="notification-preferences-title"
   >
     <h2
       id="notification-preferences-title"
-      class="font-display text-lg font-semibold"
+      class="text-section-heading font-semibold"
     >
       Notifications
     </h2>
-    <p class="text-13 text-muted">
+    <p class="text-meta text-muted">
       Choose optional in-app updates across your projects. Essential workflow updates always arrive.
     </p>
     <p
@@ -52,7 +52,7 @@ async function toggle(category: NotificationCategory) {
       role="alert"
     >
       Could not load preferences. <button
-        class="underline focus-ring"
+        class="inline-flex min-h-11 items-center rounded-lg underline focus-ring"
         @click="query.refetch()"
       >
         Retry
@@ -62,9 +62,9 @@ async function toggle(category: NotificationCategory) {
       <label
         v-for="category in notificationCategories"
         :key="category.id"
-        class="flex items-center gap-4 justify-between"
+        class="min-h-11 flex items-center gap-4 justify-between"
       >
-        <span><span class="block font-medium">{{ category.label }}</span><span class="block text-13 text-muted">{{ category.description }}</span></span>
+        <span><span class="block font-medium">{{ category.label }}</span><span class="block text-meta text-muted">{{ category.description }}</span></span>
         <input
           type="checkbox"
           class="h-5 w-5 shrink-0 focus-ring"

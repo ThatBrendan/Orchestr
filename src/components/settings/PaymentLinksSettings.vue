@@ -31,19 +31,22 @@ function save() {
 <template>
   <section
     id="payment-links-settings"
-    class="mt-8 min-w-0 rounded-xl border border-line bg-surface p-5 space-y-4 [overflow-wrap:anywhere]"
+    class="mt-8 min-w-0 border-t border-line pt-6 space-y-4 [overflow-wrap:anywhere]"
     aria-labelledby="payment-links-title"
   >
     <h2
       id="payment-links-title"
-      class="font-display text-lg font-semibold"
+      class="text-section-heading font-semibold"
     >
       My payment preferences
     </h2>
-    <p class="text-13 text-muted">
+    <p class="text-meta text-muted">
       Add multiple payment preferences so people can choose how to reimburse you. Only people with an eligible reimbursement to pay you can see them. For Starling Settle Up, choose Other / Custom.
     </p>
-    <p v-if="query.isPending.value">
+    <p
+      v-if="query.isPending.value"
+      role="status"
+    >
       Loading payment links…
     </p>
     <p
@@ -51,7 +54,7 @@ function save() {
       role="alert"
     >
       Could not load payment links. <button
-        class="underline focus-ring"
+        class="inline-flex min-h-11 items-center rounded-lg underline focus-ring"
         @click="query.refetch()"
       >
         Retry
@@ -59,7 +62,7 @@ function save() {
     </p>
     <p
       v-else-if="!query.data.value?.length"
-      class="text-14"
+      class="text-sm"
     >
       No payment links added.
     </p>
@@ -67,17 +70,17 @@ function save() {
       v-for="link in query.data.value"
       :key="link.id"
       :data-payment-link-id="link.id"
-      class="rounded-lg border border-line p-3 space-y-2 min-w-0"
+      class="border-b border-line pb-4 space-y-2 min-w-0"
     >
       <p class="font-medium">
         {{ link.display_label }} <span
           v-if="link.is_default"
-          class="text-13 text-muted"
+          class="text-meta text-muted"
         >· Default</span><span
-          class="text-13 text-muted"
+          class="text-meta text-muted"
         >· {{ link.is_enabled ? 'Enabled' : 'Disabled' }}</span>
       </p>
-      <p class="text-13 break-all">
+      <p class="text-meta break-all">
         {{ link.payment_url }}
       </p>
       <div class="flex flex-wrap gap-2">
@@ -110,6 +113,7 @@ function save() {
     </article>
     <AppButton
       v-if="!show"
+      variant="secondary"
       size="sm"
       :disabled="busy"
       @click="edit()"
@@ -126,12 +130,12 @@ function save() {
       </h3>
       <label
         for="payment-provider"
-        class="block text-14"
+        class="block text-sm"
       >Provider</label>
       <select
         id="payment-provider"
         v-model="form.provider"
-        class="block w-full min-w-0 rounded-lg border border-line p-2"
+        class="block w-full min-w-0 rounded-lg border border-line p-2 focus-ring"
         :disabled="busy"
         @change="error=''"
       >
@@ -145,19 +149,19 @@ function save() {
       </select>
       <p
         id="payment-link-help"
-        class="text-13 text-muted"
+        class="text-meta text-muted"
       >
         {{ paymentProviders[form.provider].help }}
       </p>
       <template v-if="form.provider==='custom'">
         <label
           for="payment-link-label"
-          class="block text-14"
+          class="block text-sm"
         >Label</label>
         <input
           id="payment-link-label"
           v-model="form.label"
-          class="block w-full min-w-0 rounded-lg border border-line p-2"
+          class="block w-full min-w-0 rounded-lg border border-line p-2 focus-ring"
           maxlength="60"
           :disabled="busy"
           :aria-invalid="!!error"
@@ -166,7 +170,7 @@ function save() {
       </template>
       <label
         for="payment-link-url"
-        class="block text-14"
+        class="block text-sm"
       >Payment link</label>
       <input
         id="payment-link-url"
@@ -177,12 +181,12 @@ function save() {
         autocapitalize="none"
         spellcheck="false"
         maxlength="2048"
-        class="block w-full min-w-0 rounded-lg border border-line p-2"
+        class="block w-full min-w-0 rounded-lg border border-line p-2 focus-ring"
         :disabled="busy"
         :aria-invalid="!!error"
         aria-describedby="payment-link-help payment-link-error"
       >
-      <label class="flex gap-2 items-center text-14"><input
+      <label class="flex gap-2 items-center text-sm"><input
         v-model="form.enabled"
         type="checkbox"
         :disabled="busy"
@@ -233,7 +237,7 @@ function save() {
     <p
       id="payment-link-error"
       role="alert"
-      class="text-13 text-danger"
+      class="text-meta text-danger"
     >
       {{ error }}
     </p>

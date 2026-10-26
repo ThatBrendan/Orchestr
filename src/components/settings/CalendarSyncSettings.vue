@@ -36,22 +36,25 @@ async function remove() {
 </script>
 <template>
   <section
-    class="mt-8 space-y-4 rounded-xl border border-line bg-surface p-5"
+    class="mt-8 space-y-4 border-t border-line pt-6"
     aria-labelledby="calendar-sync-title"
     data-testid="calendar-sync-settings"
   >
     <h2
       id="calendar-sync-title"
-      class="font-display text-lg font-semibold"
+      class="text-section-heading font-semibold"
     >
       Calendar sync
     </h2>
-    <p class="text-13 text-muted">
-      Send your Orchestrio dates to a dedicated Google calendar. Orchestrio stays authoritative; external edits are overwritten. Sync runs about every 15 minutes across a rolling 30 days past and 90 days ahead.
+    <p class="text-meta text-muted">
+      When connected, send project dates to a dedicated Google calendar. Orchestrio remains the source of truth.
     </p>
-    <p class="text-13 text-muted">
-      Only dates you can currently read are exported. Titles are included, so keep sensitive information out of titles. Decision deadlines use a 30-minute marker. Timed Activities without an end stay internal-only; add an end to export them.
-    </p>
+    <details class="text-meta text-muted">
+      <summary class="min-h-11 py-3 cursor-pointer rounded-lg focus-ring">
+        What calendar sync includes
+      </summary>
+      <p>Sync runs about every 15 minutes across a rolling 30 days past and 90 days ahead. External edits are overwritten. Only dates you can currently read are exported. Titles are included, so keep sensitive information out of titles. Decision deadlines use a 30-minute marker. Timed Activities without an end stay internal-only; add an end to export them.</p>
+    </details>
     <p
       v-if="connection.isPending.value"
       role="status"
@@ -63,7 +66,7 @@ async function remove() {
       role="alert"
     >
       Calendar settings are unavailable. <button
-        class="underline focus-ring"
+        class="inline-flex min-h-11 items-center rounded-lg underline focus-ring"
         @click="connection.refetch()"
       >
         Retry
@@ -76,13 +79,13 @@ async function remove() {
         </p>
         <p
           v-if="row?.account_label"
-          class="break-all text-13 text-muted"
+          class="break-all text-meta text-muted"
         >
           {{ row.account_label }}
         </p>
         <p
           v-if="row?.last_synced_at && active"
-          class="text-13 text-muted"
+          class="text-meta text-muted"
         >
           Last synced {{ new Date(row.last_synced_at).toLocaleString() }}
         </p>
@@ -90,21 +93,21 @@ async function remove() {
       <p
         v-if="active && !connected"
         role="alert"
-        class="text-13"
+        class="text-meta"
       >
         {{ uncertain ? 'Setup could not be confirmed. Check Google for an Orchestrio calendar, then disconnect and remove it before connecting again.' : 'Calendar sync needs attention. Reconnect to resume; your Orchestrio workflows are unaffected.' }}
       </p>
       <p
         v-else-if="row?.last_error_code === 'cleanup_required'"
         role="alert"
-        class="text-13"
+        class="text-meta"
       >
         Disconnected locally. Remove the Orchestrio calendar and revoke access in your Google account manually.
       </p>
       <p
         v-else-if="row?.last_error_code"
         role="status"
-        class="text-13"
+        class="text-meta"
       >
         The last sync did not finish. Temporary errors retry automatically, up to five attempts. You can request another sync.
       </p>
@@ -112,9 +115,9 @@ async function remove() {
         <label
           v-for="preference in preferences"
           :key="preference.key"
-          class="flex items-center justify-between gap-4"
+          class="min-h-11 flex items-center justify-between gap-4"
         >
-          <span><span class="block font-medium">{{ preference.label }}</span><span class="block text-13 text-muted">{{ preference.description }}</span></span>
+          <span><span class="block font-medium">{{ preference.label }}</span><span class="block text-meta text-muted">{{ preference.description }}</span></span>
           <input
             type="checkbox"
             class="h-5 w-5 shrink-0 focus-ring"
@@ -127,13 +130,14 @@ async function remove() {
       </template>
       <p
         v-if="!config.isPending.value && !config.data.value?.configured"
-        class="text-13 text-muted"
+        class="text-meta text-muted"
       >
         Google Calendar connection is not configured for this environment yet.
       </p>
       <div class="flex flex-wrap gap-2">
         <AppButton
           v-if="!connected && !uncertain"
+          variant="secondary"
           :disabled="busy || !config.data.value?.configured"
           @click="act(connectCalendar)"
         >
@@ -141,6 +145,7 @@ async function remove() {
         </AppButton>
         <AppButton
           v-if="connected"
+          variant="secondary"
           :disabled="busy"
           @click="act(() => requestCalendarSync(), 'Sync requested.')"
         >
@@ -161,7 +166,7 @@ async function remove() {
         role="group"
         aria-label="Confirm calendar disconnect"
       >
-        <p class="text-13">
+        <p class="text-meta">
           Disconnect and remove the dedicated Orchestrio calendar from Google? This removes its external events. Your Orchestrio dates stay unchanged. If Google is unavailable, you may need to remove the calendar and revoke access manually.
         </p>
         <div class="flex flex-wrap gap-2">
@@ -184,14 +189,14 @@ async function remove() {
     <p
       v-if="message"
       role="status"
-      class="text-13"
+      class="text-meta"
     >
       {{ message }}
     </p>
     <p
       v-if="error"
       role="alert"
-      class="text-13 text-danger"
+      class="text-meta text-danger"
     >
       {{ error }}
     </p>

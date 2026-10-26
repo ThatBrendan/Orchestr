@@ -19,6 +19,7 @@ import ProjectSettingsView from "./ProjectSettingsView.vue";
 import { useCommitments } from "@/composables/useCommitments";
 import { useMemberDirectory } from "@/composables/useProject";
 import { downloadProjectCsv } from "@/lib/projectExport";
+import { useExecutionDialogFocus } from "@/composables/useExecutionDialogFocus";
 import { useToast } from "@/composables/useToast";
 
 const route = useRoute();
@@ -60,6 +61,8 @@ const { commitments } = useCommitments(projectId);
 const { members } = useMemberDirectory(projectId);
 const toast = useToast();
 const settingsOpen = ref(false);
+const settingsFallback = ref<HTMLElement | null>(null);
+const restoreSettingsFocus = useExecutionDialogFocus(settingsOpen, settingsFallback);
 const exporting = ref(false);
 watch(()=>route.query.settings,value=>{if(value==='1'&&allowed('project.settings'))settingsOpen.value=true;},{immediate:true});
 watch(settingsOpen,value=>{if(!value&&route.query.settings){const query={...route.query};delete query.settings;void router.replace({query});}});
@@ -85,11 +88,15 @@ onBeforeUnmount(() => ctxStore.clear());
 <template>
   <PageContainer>
     <div class="flex items-start justify-between gap-4 flex-wrap">
-      <div>
-        <h1 class="font-display text-[24px] font-semibold tracking-tight">
+      <div class="min-w-0 max-w-full [overflow-wrap:anywhere]">
+        <h1
+          ref="settingsFallback"
+          tabindex="-1"
+          class="font-display text-page-title font-semibold tracking-tight"
+        >
           {{ project?.name }}
         </h1>
-        <p class="mt-1 text-[13.5px] text-muted">
+        <p class="mt-1 text-sm text-muted">
           {{ dates }}
         </p>
         <p class="mt-1 text-13 text-muted">
@@ -138,6 +145,7 @@ onBeforeUnmount(() => ctxStore.clear());
       title="Project settings"
       size="lg"
       @close="settingsOpen = false"
+      @after-close="restoreSettingsFocus"
     >
       <ProjectSettingsView />
     </AppModal>

@@ -110,7 +110,7 @@ async function submit() {
         :key="profileOption.value"
         type="button"
         class="rounded-xl border p-4 text-left transition-colors focus-ring"
-        :class="form.profile === profileOption.value ? 'border-ink bg-[#F6F6F4]' : 'border-line hover:bg-[#FBFBFA]'"
+        :class="form.profile === profileOption.value ? 'border-ink bg-surface-subtle' : 'border-line hover:bg-surface-subtle'"
         :aria-pressed="form.profile === profileOption.value"
         @click="chooseProfile(profileOption.value)"
       >
@@ -124,7 +124,7 @@ async function submit() {
       class="space-y-4"
       @submit.prevent="submit"
     >
-      <div class="rounded-xl border border-line bg-[#FBFBFA] px-4 py-3">
+      <div class="rounded-xl border border-line bg-surface-subtle px-4 py-3">
         <div class="text-13 font-medium text-muted">
           Profile
         </div>

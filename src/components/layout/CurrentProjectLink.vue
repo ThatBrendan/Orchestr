@@ -17,7 +17,7 @@ const { projectId, project } = useProjectContext();
       class="flex items-center gap-2.5 px-3 py-2.5 rounded-lg bg-brand-soft"
     >
       <span class="w-2 h-2 rounded-full shrink-0 bg-brand" />
-      <span class="text-[13.5px] font-medium truncate text-ink">{{ project.name }}</span>
+      <span class="text-sm font-medium truncate text-ink">{{ project.name }}</span>
     </RouterLink>
   </div>
 </template>

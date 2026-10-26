@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useExecutionDialogFocus } from "@/composables/useExecutionDialogFocus";
 import { computed, reactive, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useProjectContext } from "@/composables/useProjectContext";
@@ -131,6 +132,8 @@ async function changeStatus(status: ProjectStatus, from?: ProjectStatus) {
 }
 
 const confirmDelete = ref(false);
+const lifecycleFallback = ref<HTMLElement | null>(null);
+const restoreLifecycleFocus = useExecutionDialogFocus(computed(() => confirmDelete.value || confirmLifecycle.value !== null), lifecycleFallback);
 async function doDelete() {
   try {
     await del.mutateAsync();
@@ -147,73 +150,80 @@ const status = computed(() => project.value?.status);
 </script>
 
 <template>
-  <div class="fade-in max-w-xl space-y-8">
+  <div
+    ref="lifecycleFallback"
+    tabindex="-1"
+    class="fade-in max-w-xl space-y-8 focus-ring"
+  >
     <div
       v-if="!canEdit"
-      class="border rounded-xl p-4 border-line bg-surface text-14 text-ink-soft"
+      class="border rounded-xl p-4 border-line bg-surface text-sm text-ink-soft"
     >
       Only an organizer can change project settings.
     </div>
 
     <template v-else>
       <div>
-        <SectionHeading label="Details" />
+        <SectionHeading label="General" />
         <form
           class="mt-3 space-y-4"
+          :aria-describedby="fieldError ? 'project-details-error' : undefined"
           @submit.prevent="saveDetails"
         >
           <label class="block">
-            <span class="text-13 font-medium block mb-1.5 text-ink-soft">Name</span>
+            <span class="text-meta font-medium block mb-1.5 text-ink-soft">Name</span>
             <input
               v-model="form.name"
               required
-              class="w-full border rounded-lg px-3.5 py-2.5 text-14 focus-ring border-line"
+              class="w-full border rounded-lg px-3.5 py-2.5 text-sm focus-ring border-line"
             >
           </label>
           <label class="block">
-            <span class="text-13 font-medium block mb-1.5 text-ink-soft">Description</span>
+            <span class="text-meta font-medium block mb-1.5 text-ink-soft">Description</span>
             <textarea
               v-model="form.description"
               rows="3"
-              class="w-full border rounded-lg px-3.5 py-2.5 text-14 focus-ring border-line"
+              class="w-full border rounded-lg px-3.5 py-2.5 text-sm focus-ring border-line"
             />
           </label>
-          <div class="grid grid-cols-2 gap-3">
+          <div class="grid gap-3 sm:grid-cols-2">
             <label class="block">
-              <span class="text-13 font-medium block mb-1.5 text-ink-soft">Start date</span>
+              <span class="text-meta font-medium block mb-1.5 text-ink-soft">Start date</span>
               <input
                 v-model="form.starts_on"
                 type="date"
-                class="w-full border rounded-lg px-3 py-2.5 text-14 focus-ring border-line"
+                class="w-full border rounded-lg px-3 py-2.5 text-sm focus-ring border-line"
               >
             </label>
             <label class="block">
-              <span class="text-13 font-medium block mb-1.5 text-ink-soft">End date</span>
+              <span class="text-meta font-medium block mb-1.5 text-ink-soft">End date</span>
               <input
                 v-model="form.ends_on"
                 type="date"
-                class="w-full border rounded-lg px-3 py-2.5 text-14 focus-ring border-line"
+                class="w-full border rounded-lg px-3 py-2.5 text-sm focus-ring border-line"
               >
             </label>
           </div>
           <div class="grid gap-3 sm:grid-cols-2">
-            <label class="block text-13">Timezone<input
+            <label class="block text-meta">Timezone<input
               v-model="form.timezone"
               required
               class="block w-full border border-line rounded-lg p-2"
-            ></label><label class="block text-13">Currency<input
+            ></label><label class="block text-meta">Currency<input
               v-model="form.currency"
               required
               maxlength="3"
               class="block w-full border border-line rounded-lg p-2"
             ></label>
           </div>
-          <p class="text-13 text-muted">
+          <p class="text-meta text-muted">
             Currency is {{ project?.currency }} — locked once Activities or payments exist.
           </p>
           <p
             v-if="fieldError"
-            class="text-13 text-danger"
+            id="project-details-error"
+            role="alert"
+            class="text-meta text-danger"
           >
             {{ fieldError }}
           </p>
@@ -229,24 +239,25 @@ const status = computed(() => project.value?.status);
       </div>
 
       <div>
-        <SectionHeading label="Modules" />
-        <div class="mt-3 space-y-4 rounded-xl border border-line bg-surface p-4">
-          <label class="flex items-center gap-2 text-13.5 text-ink-soft">
+        <SectionHeading label="Preferences" />
+        <div class="mt-3 space-y-2">
+          <label class="min-h-11 flex items-center gap-2 text-sm text-ink-soft">
             <input
               v-model="form.budget_visible"
               :disabled="update.isPending.value || status === 'archived'"
               type="checkbox"
-              class="rounded border-line"
+              class="h-5 w-5 rounded border-line focus-ring"
               @change="saveWorkspace"
             >
             Show Budget
           </label>
-          <p class="text-13 text-muted">
-            Changing this only affects navigation and workspace emphasis. Existing data is preserved.
+          <p class="text-meta text-muted">
+            Show Budget in project navigation. Existing data is preserved.
           </p>
           <p
             v-if="workspaceError"
-            class="text-13 text-danger"
+            role="alert"
+            class="text-meta text-danger"
           >
             {{ workspaceError }}
           </p>
@@ -255,7 +266,7 @@ const status = computed(() => project.value?.status);
 
       <div>
         <SectionHeading label="Status" />
-        <p class="mt-2 text-14 text-ink-soft">
+        <p class="mt-2 text-sm text-ink-soft">
           Current status: <span class="font-medium capitalize">{{ status }}</span>
         </p>
         <div class="mt-3 flex flex-wrap gap-2">
@@ -278,15 +289,6 @@ const status = computed(() => project.value?.status);
             Complete project
           </AppButton>
           <AppButton
-            v-if="status !== 'archived' && canArchive"
-            variant="secondary"
-            size="sm"
-            :loading="setStatus.isPending.value"
-            @click="changeStatus('archived')"
-          >
-            Archive project
-          </AppButton>
-          <AppButton
             v-if="status === 'archived' && canArchive"
             variant="secondary"
             size="sm"
@@ -307,18 +309,41 @@ const status = computed(() => project.value?.status);
         </div>
         <p
           v-if="status === 'archived'"
-          class="mt-2 text-13 text-amber"
+          class="mt-2 text-meta text-warning"
         >
           Archived projects are read-only until unarchived.
         </p>
       </div>
 
-      <div v-if="canDelete">
+      <div
+        v-if="canDelete || (status !== 'archived' && canArchive)"
+        class="border-t border-line pt-6"
+      >
         <SectionHeading label="Danger zone" />
-        <p class="mt-2 text-13 text-muted">
+        <p
+          v-if="status !== 'archived' && canArchive"
+          class="mt-2 text-meta text-muted"
+        >
+          Archive to make the project read-only. You can unarchive it later.
+        </p>
+        <AppButton
+          v-if="status !== 'archived' && canArchive"
+          variant="secondary"
+          size="sm"
+          :loading="setStatus.isPending.value"
+          @click="changeStatus('archived')"
+        >
+          Archive project
+        </AppButton>
+
+        <p
+          v-if="canDelete"
+          class="mt-4 text-meta text-muted"
+        >
           Deleting removes this project from everyone's list. It cannot be undone from the app.
         </p>
         <AppButton
+          v-if="canDelete"
           class="mt-3 !text-danger"
           variant="secondary"
           size="sm"
@@ -335,6 +360,7 @@ const status = computed(() => project.value?.status);
       :message="confirmLifecycle === 'complete' ? 'This will move the project to Past Projects. You can reopen it later if needed.' : 'This will return the project to Active Projects.'"
       :confirm-label="confirmLifecycle === 'complete' ? 'Complete project' : 'Reopen project'"
       :loading="setStatus.isPending.value"
+      @after-close="restoreLifecycleFocus"
       @close="confirmLifecycle = null"
       @confirm="confirmLifecycle === 'complete' ? changeStatus('completed', 'active') : changeStatus('active', 'completed')"
     />
@@ -345,6 +371,7 @@ const status = computed(() => project.value?.status);
       confirm-label="Delete project"
       danger
       :loading="del.isPending.value"
+      @after-close="restoreLifecycleFocus"
       @close="confirmDelete = false"
       @confirm="doDelete"
     />

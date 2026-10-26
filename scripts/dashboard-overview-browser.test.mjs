@@ -130,7 +130,7 @@ const fs = await import('node:fs/promises');
 const evidence = '/tmp/orchestrio-dashboard-overview';
 await fs.mkdir(evidence, {recursive:true});
 const results=[];
-const sizes=[[1280,900],[768,1024],[390,844],[375,812]];
+const sizes=[[1280,900],[1024,768],[768,1024],[430,932],[390,844],[375,812]];
 function populate(state) {
  state.categories=[{id:'00000000-0000-4000-8000-000000000080',project_id:state.project.id,title:'Plans'}];
  state.attention=Array.from({length:6},(_,i)=>({project_id:state.project.id,project_name:state.project.name,code:'fixture-'+i,severity:'warning',subject_type:i===0?'decision':i===1?'payment_schedule':i===2?'commitment':'project',subject_id:'00000000-0000-4000-8000-00000000004'+i,subject_label:['Choose a venue','Venue deposit','Book transport','Project readiness','Confirm dates','Final check'][i],params:{activity_id:'00000000-0000-4000-8000-000000000041'},message:['Voting closes tomorrow','Payment is due tomorrow','Transport needs an owner','Review project details','Check the project dates','Review remaining plans'][i],resolution:['Choose your preferred option.','Review the payment schedule.','Assign someone to coordinate this.','Check what needs completing.','Confirm the dates with your team.','Review the final details.'][i],dismissed:false}));

@@ -142,7 +142,7 @@ async function fits(page,label) {
 function makeDecision(state,extra={}) {return {id:crypto.randomUUID(),project_id:state.project.id,title:'Where shall we meet?',description:null,status:'open',voting_deadline:null,voting_started:false,resolved_option_id:null,converted_activity_id:null,can_manage:true,writable:true,can_vote:true,deadline_reached:false,my_option_id:null,vote_count:0,options:[{id:crypto.randomUUID(),title:'Riverside',estimated_cost_minor:1200,vote_count:0},{id:crypto.randomUUID(),title:'Town centre',estimated_cost_minor:null,vote_count:0}],...extra};}
 async function capture(page,name){await page.evaluate(()=>document.fonts.ready);await page.waitForTimeout(220);await fits(page,name);await page.screenshot({path:'/tmp/orchestrio-phase3-'+name+'.png',fullPage:true});}
 try {
- for(const [width,height] of [[1280,900],[768,1024],[390,844],[375,812]]) await test('Activity and Decision states '+width,async({page,state})=>{
+ for(const [width,height] of [[1280,900],[1024,768],[768,1024],[430,932],[390,844],[375,812]]) await test('Activity and Decision states '+width,async({page,state})=>{
   await page.setViewportSize({width,height});const errors=[];page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
   await login(page);await go(page,'/app/projects/'+state.project.id+'/activities');await page.getByRole('button',{name:'Add activity',exact:true}).waitFor();await capture(page,'activities-empty-'+width);
   state.categories=[{id:crypto.randomUUID(),project_id:state.project.id,title:'Weekend plans'}];

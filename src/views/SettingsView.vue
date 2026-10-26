@@ -3,18 +3,26 @@ import CalendarSyncSettings from "@/components/settings/CalendarSyncSettings.vue
 import NotificationSettings from '@/components/settings/NotificationSettings.vue';
 import PaymentLinksSettings from "@/components/settings/PaymentLinksSettings.vue";
 import PasswordForm from "@/components/ui/PasswordForm.vue";
-import { computed, ref, watch } from "vue";
+import { computed, nextTick, ref, watch } from "vue";
 import { useMyProfile, useUpdateMyDisplayName } from "@/composables/useDashboard";
 import { useToast } from "@/composables/useToast";
 import { toAppError } from "@/lib/errors";
 import PageContainer from "@/components/ui/PageContainer.vue";
+import ErrorState from "@/components/ui/ErrorState.vue";
 import SkeletonBlock from "@/components/ui/SkeletonBlock.vue";
 import AppButton from "@/components/ui/AppButton.vue";
 
-const { profile, isPending } = useMyProfile();
+const { profile, isPending, isError, error, refetch } = useMyProfile();
 const updateName = useUpdateMyDisplayName();
 const toast = useToast();
 const editing = ref(false);
+const nameInput = ref<HTMLInputElement | null>(null);
+const editButton = ref<InstanceType<typeof AppButton> | null>(null);
+watch(editing, async value => {
+  await nextTick();
+  if (value) nameInput.value?.focus();
+  else (editButton.value?.$el as HTMLElement | undefined)?.focus();
+});
 const name = ref("");
 const fieldError = ref<string | null>(null);
 
@@ -61,42 +69,65 @@ async function saveName() {
 
 <template>
   <PageContainer width="md">
-    <h1 class="font-display text-[26px] font-semibold tracking-tight">
+    <h1 class="font-display text-page-title font-semibold tracking-tight">
       Settings
     </h1>
-    <p class="mt-1.5 text-14.5 text-ink-soft">
+    <p class="mt-1.5 text-body text-ink-soft">
       Manage your account and preferences.
     </p>
 
-    <div class="mt-8 space-y-2">
+    <div class="mt-8 space-y-3">
+      <h2 class="text-section-heading">
+        Account
+      </h2>
       <SkeletonBlock
         v-if="isPending"
+        role="status"
+        aria-label="Loading account details"
         height="180px"
         rounded="0.75rem"
+      />
+      <ErrorState
+        v-else-if="isError"
+        :error="error"
+        :retry="() => refetch()"
       />
       <div
         v-else
         class="border rounded-xl divide-y border-line bg-surface"
       >
         <div class="px-5 py-4">
-          <div class="flex items-center justify-between gap-4">
-            <span class="text-14 font-medium text-ink-soft">Name</span>
+          <div class="flex flex-wrap items-center justify-between gap-4">
+            <label
+              v-if="editing"
+              for="account-name"
+            >Name</label>
+            <span
+              v-else
+              class="text-sm font-medium text-ink-soft"
+            >Name</span>
             <template v-if="editing">
               <input
+                id="account-name"
+                ref="nameInput"
                 v-model="name"
-                class="min-w-0 flex-1 rounded-lg border border-line bg-surface px-3 py-2 text-14 focus-ring sm:max-w-xs"
+                :aria-invalid="!!fieldError"
+                :aria-describedby="fieldError ? 'account-name-error' : undefined"
+                class="min-w-0 flex-1 rounded-lg border border-line bg-surface px-3 py-2 text-sm focus-ring sm:max-w-xs"
                 maxlength="80"
                 autocomplete="name"
               >
             </template>
             <span
               v-else
-              class="text-14"
+              class="min-w-0 text-sm [overflow-wrap:anywhere]"
             >{{ profile?.display_name ?? "—" }}</span>
           </div>
           <p
             v-if="fieldError"
-            class="mt-2 text-13 text-danger"
+            id="account-name-error"
+            role="alert"
+            class="mt-2 text-meta text-danger"
           >
             {{ fieldError }}
           </p>
@@ -121,6 +152,7 @@ async function saveName() {
             </template>
             <AppButton
               v-else
+              ref="editButton"
               variant="secondary"
               size="sm"
               @click="startEdit"
@@ -129,34 +161,34 @@ async function saveName() {
             </AppButton>
           </div>
         </div>
-        <div class="flex items-center justify-between px-5 py-4">
-          <span class="text-14 font-medium text-ink-soft">Email</span>
-          <span class="text-14">{{ profile?.email ?? "—" }}</span>
+        <div class="flex flex-wrap items-start justify-between gap-3 px-5 py-4">
+          <span class="text-sm font-medium text-ink-soft">Email</span>
+          <span class="min-w-0 text-sm [overflow-wrap:anywhere]">{{ profile?.email ?? "—" }}</span>
         </div>
-        <div class="flex items-center justify-between px-5 py-4">
-          <span class="text-14 font-medium text-ink-soft">Timezone</span>
-          <span class="text-14">{{ profile?.timezone ?? "—" }}</span>
+        <div class="flex flex-wrap items-start justify-between gap-3 px-5 py-4">
+          <span class="text-sm font-medium text-ink-soft">Timezone</span>
+          <span class="min-w-0 text-sm [overflow-wrap:anywhere]">{{ profile?.timezone ?? "—" }}</span>
         </div>
-        <div class="flex items-center justify-between px-5 py-4">
-          <span class="text-14 font-medium text-ink-soft">Currency</span>
-          <span class="text-14">{{ profile?.default_currency ?? "—" }}</span>
+        <div class="flex flex-wrap items-start justify-between gap-3 px-5 py-4">
+          <span class="text-sm font-medium text-ink-soft">Currency</span>
+          <span class="min-w-0 text-sm [overflow-wrap:anywhere]">{{ profile?.default_currency ?? "—" }}</span>
         </div>
       </div>
     </div>
-    <CalendarSyncSettings />
-    <NotificationSettings />
-    <PaymentLinksSettings />
     <section
-      class="mt-8 max-w-sm border rounded-xl p-5 border-line bg-surface"
+      class="mt-8 border-t border-line pt-6"
       aria-labelledby="change-password-title"
     >
       <h2
         id="change-password-title"
-        class="mb-4 font-display text-lg font-semibold"
+        class="mb-4 text-section-heading font-semibold"
       >
         Change password
       </h2>
       <PasswordForm label="Change password" />
     </section>
+    <NotificationSettings />
+    <PaymentLinksSettings />
+    <CalendarSyncSettings />
   </PageContainer>
 </template>

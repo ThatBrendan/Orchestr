@@ -33,7 +33,8 @@ const current = computed(() => String(route.name ?? ""));
       v-for="t in visibleTabs"
       :key="t.name"
       :to="{ name: t.name, params: { projectId: props.projectId } }"
-      class="px-3.5 py-2.5 text-[13.5px] font-medium whitespace-nowrap border-b-2 -mb-px focus-ring transition-colors"
+      :aria-current="(current === t.name || (t.name === 'project.decisions' && current === 'project.decision')) ? 'page' : undefined"
+      class="min-h-11 px-3.5 py-2.5 text-sm font-medium whitespace-nowrap border-b-2 -mb-px focus-ring transition-colors"
       :class="(current === t.name || (t.name === 'project.decisions' && current === 'project.decision')) ? 'border-ink text-ink' : 'border-transparent text-muted hover:text-ink-soft'"
     >
       {{ t.label }}

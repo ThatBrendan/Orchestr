@@ -47,7 +47,7 @@ const widthClass = computed(() => (props.size === "lg" ? "max-w-2xl" : "max-w-md
             :class="widthClass"
           >
             <div class="px-4 sm:px-6 pt-5 pb-4 border-b border-line flex items-start justify-between gap-4 shrink-0">
-              <DialogTitle class="min-w-0 font-display text-[17px] font-semibold [overflow-wrap:anywhere]">
+              <DialogTitle class="min-w-0 font-display text-section-heading font-semibold [overflow-wrap:anywhere]">
                 {{ props.title }}
               </DialogTitle>
               <button

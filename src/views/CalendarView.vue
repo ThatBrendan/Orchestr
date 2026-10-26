@@ -153,10 +153,10 @@ function isPast(event: GlobalTimelineEvent): boolean {
   <PageContainer width="lg">
     <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
       <div>
-        <h1 class="font-display text-[26px] font-semibold tracking-tight">
+        <h1 class="font-display text-page-title font-semibold tracking-tight">
           Calendar
         </h1>
-        <p class="mt-1.5 text-14.5 text-ink-soft">
+        <p class="mt-1.5 text-body text-ink-soft">
           All deadlines, bookings and payments across your projects.
         </p>
       </div>
@@ -189,10 +189,11 @@ function isPast(event: GlobalTimelineEvent): boolean {
       <h2 class="font-display text-[22px] font-semibold tracking-tight">
         {{ monthLabel }}
       </h2>
-      <div class="grid gap-2 sm:grid-cols-2 md:w-[28rem]">
+      <div class="grid min-w-0 gap-2 sm:grid-cols-2 md:w-[28rem]">
         <select
           v-model="selectedProject"
-          class="border rounded-lg px-3 py-2 text-14 focus-ring border-line bg-surface"
+          aria-label="Filter calendar by project"
+          class="min-w-0 w-full border rounded-lg px-3 py-2 text-14 focus-ring border-line bg-surface"
         >
           <option value="">
             All projects
@@ -207,7 +208,8 @@ function isPast(event: GlobalTimelineEvent): boolean {
         </select>
         <select
           v-model="selectedType"
-          class="border rounded-lg px-3 py-2 text-14 capitalize focus-ring border-line bg-surface"
+          aria-label="Filter calendar by event type"
+          class="min-w-0 w-full border rounded-lg px-3 py-2 text-14 capitalize focus-ring border-line bg-surface"
         >
           <option value="">
             All event types
@@ -286,7 +288,7 @@ function isPast(event: GlobalTimelineEvent): boolean {
           v-for="cell in monthDays"
           :key="cell.key"
           class="min-h-[8.5rem] border-b border-r border-line p-2 last:border-r-0"
-          :class="cell.inMonth ? 'bg-surface' : 'bg-[#FBFBFA] text-muted'"
+          :class="cell.inMonth ? 'bg-surface' : 'bg-surface-subtle text-muted'"
         >
           <div class="text-12 font-medium">
             {{ cell.day.day }}
