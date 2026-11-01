@@ -13,7 +13,7 @@ async function fixture(options = {}) {
   const page = await context.newPage();
   page.setDefaultTimeout(10000);
   const project = {id:'00000000-0000-4000-8000-000000000010',name:'Beta Trip',status:'active',profile:'group_trip',module_visibility:{},currency:'GBP',timezone:'UTC',starts_on:null,ends_on:null,description:null,deleted_at:null};
-  const state = { project, attention: [], events: [], emptyUser: false, failSummary: false, categories: [], activities: [], tasks: [], payments: [], deleteFail: false, role:'organizer', unread:true, notificationUnread:false, invitations:[], user: structuredClone(user), calls: [], signupSession: false, error: null, nonceRequired: false };
+  const state = { project, attention: [], events: [], emptyUser: false, failSummary: false, categories: [], activities: [], tasks: [], payments: [], deleteFail: false, role:'organizer', unread:true, notificationUnread:false, invitations:[], members:[], user: structuredClone(user), calls: [], signupSession: false, error: null, nonceRequired: false };
   const token = () => {
     const payload = { sub: state.user.id, exp: Math.floor(Date.now()/1000)+3600, role: 'authenticated', aud: 'authenticated' };
     return { access_token: `e30.${Buffer.from(JSON.stringify(payload)).toString('base64url')}.signature`, refresh_token: 'mock-refresh-token', expires_in: 3600, token_type: 'bearer', user: state.user };
@@ -58,7 +58,7 @@ async function fixture(options = {}) {
     if(url.pathname.endsWith('/v_area_totals'))return reply([{area_id:null,item_count:state.activities.filter(a=>!a.deleted_at).length,spent_minor:0}]);
     if(url.pathname.endsWith('/complete_assigned_item')){const a=state.activities.find(a=>a.id===body.p_item);assert.equal(a.owner_member_id,'00000000-0000-4000-8000-000000000020');a.status='completed';return reply(null);}
     const mid='00000000-0000-4000-8000-000000000020';
-    if(url.pathname.endsWith('/v_member_directory')) return reply([{member_id:mid,project_id:project.id,user_id:user.id,role:state.role,status:'active',display_name:'Beta'}]);
+    if(url.pathname.endsWith('/v_member_directory')) return reply(state.members.length?state.members:[{member_id:mid,project_id:project.id,user_id:user.id,role:state.role,status:'active',display_name:'Beta',avatar_url:null}]);
     if(url.pathname.endsWith('/create_project')) { Object.assign(state.project,{name:body.p_name, starts_on:body.p_starts_on,ends_on:body.p_ends_on});return reply(project.id); }
     if(url.pathname.endsWith('/create_activity_in_category')) {
       const a={id:'00000000-0000-4000-8000-'+String(state.activities.length+40).padStart(12,'0'),project_id:project.id,status:'idea',created_by:mid,cost_split_mode:'none',recurrence_frequency:null,actual_cost_minor:null,confirmed_cost_minor:null,deleted_at:null,area_id:body.p_category,...body.p_fields};
@@ -151,7 +151,26 @@ try {
    const errors=[];page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error') errors.push(m.text());});
    if(scenario!=='empty')populate(state);
    if(scenario==='clear')state.attention=[];
-   if(scenario==='empty')state.emptyUser=true;
+   if(scenario==='populated'||scenario==='clear') {
+    Object.assign(state.project,{
+     description:'Coordinate the team event, deadlines, decisions and shared budget in one project.',
+     starts_on:'2027-06-18',
+     ends_on:'2027-06-24',
+     timezone:'America/New_York',
+     profile:'team_project',
+    });
+    state.members=[
+     {member_id:'00000000-0000-4000-8000-000000000020',project_id:state.project.id,user_id:user.id,role:'organizer',status:'active',display_name:'Beta',avatar_url:null},
+     {member_id:'00000000-0000-4000-8000-000000000021',project_id:state.project.id,user_id:'00000000-0000-4000-8000-000000000002',role:'member',status:'active',display_name:'Alex Morgan',avatar_url:null},
+     {member_id:'00000000-0000-4000-8000-000000000022',project_id:state.project.id,user_id:'00000000-0000-4000-8000-000000000003',role:'member',status:'active',display_name:'Sam Rivera',avatar_url:null},
+     {member_id:'00000000-0000-4000-8000-000000000023',project_id:state.project.id,user_id:'00000000-0000-4000-8000-000000000004',role:'member',status:'active',display_name:'Taylor Kim',avatar_url:null},
+     {member_id:'00000000-0000-4000-8000-000000000024',project_id:state.project.id,user_id:'00000000-0000-4000-8000-000000000005',role:'member',status:'invited',display_name:'Jordan Lee',avatar_url:null},
+    ];
+   }
+   if(scenario==='empty') {
+    state.emptyUser=true;
+    Object.assign(state.project,{description:null,starts_on:null,ends_on:null,timezone:'UTC',profile:'blank'});
+   }
    await login(page);
    await page.getByRole('heading',{name:'Your projects',exact:true}).waitFor();
    if(scenario!=='empty')await page.getByRole('link',{name:'Open project: Beta Trip',exact:true}).waitFor();
@@ -184,6 +203,14 @@ try {
     await page.getByText('Final check ·',{exact:true}).waitFor();
     await page.getByRole('button',{name:'Previous needs attention page',exact:true}).click();
     await page.getByText('Choose a venue ·',{exact:true}).waitFor();
+    await page.getByRole('button',{name:'Open project settings',exact:true}).click();
+    await page.getByRole('heading',{name:'Project settings',exact:true}).waitFor();
+    await page.keyboard.press('Escape');
+    await page.getByRole('heading',{name:'Project settings',exact:true}).waitFor({state:'hidden'});
+    await page.getByRole('link',{name:'Activities',exact:true}).click();
+    await page.waitForURL(origin+base+'/areas');
+    await go(page,base+'/overview');
+    await page.getByRole('heading',{name:'People',exact:true}).waitFor();
     await page.getByRole('link',{name:/View Budget/}).click();await page.waitForURL(origin+base+'/budget');
     await go(page,base+'/overview');await page.getByRole('link',{name:/View People/}).click();await page.waitForURL(origin+base+'/people');
     await go(page,base+'/overview');await page.getByRole('link',{name:/View calendar/}).click();await page.waitForURL(origin+base+'/calendar');

@@ -64,6 +64,7 @@ function syncContext(nextProject: Project) {
     project: {
       id: nextProject.id,
       name: nextProject.name,
+      description: nextProject.description,
       status: nextProject.status,
       profile: nextProject.profile,
       module_visibility: nextProject.module_visibility as Record<string, boolean>,

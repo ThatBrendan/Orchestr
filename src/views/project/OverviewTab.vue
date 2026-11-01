@@ -17,6 +17,7 @@ import AppAvatar from '@/components/ui/AppAvatar.vue';
 import { attentionDestination } from '@/lib/attentionDestination';
 import AttentionRow from '@/components/health/AttentionRow.vue';
 import UpcomingList from '@/components/timeline/UpcomingList.vue';
+import { profileDefinition } from '@/lib/projectProfiles';
 
 const overviewTitle = ref<HTMLElement | null>(null);
 onMounted(() => overviewTitle.value?.focus({ preventScroll: true }));
@@ -36,6 +37,9 @@ const directory = useMemberDirectory(projectId);
 const roster = computed(() => directory.members.value.filter(member => member.status !== 'removed'));
 const invited = computed(() => roster.value.filter(member => member.status === 'invited').length);
 const currency=computed(()=>project.value?.currency??'GBP');
+const profileLabel = computed(() => profileDefinition(project.value?.profile).label);
+const timezoneLabel = computed(() => project.value?.timezone?.replaceAll('_', ' ') ?? 'UTC');
+const hasDates = computed(() => !!(project.value?.starts_on || project.value?.ends_on));
 const page = ref(1);
 const perPage = 5;
 const attentionPage = computed(() => {
@@ -50,6 +54,90 @@ watch(() => health.needsAttention.value.length, () => {
 </script>
 <template>
   <div class="space-y-8 fade-in">
+    <section
+      v-if="hasDates || directory.members.value.length || upcoming.events.value.length || project?.timezone"
+      aria-label="Project context"
+      class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4"
+    >
+      <div
+        v-if="project?.starts_on"
+        class="rounded-xl border border-line bg-surface px-4 py-3"
+      >
+        <div class="flex items-center gap-2">
+          <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-soft text-brand">
+            <AppIcon
+              name="calendar"
+              :size="16"
+            />
+          </span>
+          <div class="min-w-0">
+            <p class="text-meta text-muted">
+              Project dates
+            </p>
+            <p class="mt-0.5 text-sm font-semibold text-ink">
+              {{ project.starts_on }}<span v-if="project.ends_on"> – {{ project.ends_on }}</span>
+            </p>
+          </div>
+        </div>
+      </div>
+      <div class="rounded-xl border border-line bg-surface px-4 py-3">
+        <div class="flex items-center gap-2">
+          <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-accent-soft text-accent">
+            <AppIcon
+              name="circleDot"
+              :size="16"
+            />
+          </span>
+          <div class="min-w-0">
+            <p class="text-meta text-muted">
+              Type
+            </p>
+            <p class="mt-0.5 text-sm font-semibold text-ink">
+              {{ profileLabel }}
+            </p>
+          </div>
+        </div>
+      </div>
+      <div
+        v-if="directory.members.value.length"
+        class="rounded-xl border border-line bg-surface px-4 py-3"
+      >
+        <div class="flex items-center gap-2">
+          <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-soft text-brand">
+            <AppIcon
+              name="people"
+              :size="16"
+            />
+          </span>
+          <div>
+            <p class="text-meta text-muted">
+              People
+            </p>
+            <p class="mt-0.5 text-sm font-semibold text-ink">
+              {{ roster.length }} involved
+            </p>
+          </div>
+        </div>
+      </div>
+      <div class="rounded-xl border border-line bg-surface px-4 py-3">
+        <div class="flex items-center gap-2">
+          <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-warning-soft text-warning">
+            <AppIcon
+              name="clock"
+              :size="16"
+            />
+          </span>
+          <div class="min-w-0">
+            <p class="text-meta text-muted">
+              Timezone
+            </p>
+            <p class="mt-0.5 truncate text-sm font-semibold text-ink">
+              {{ timezoneLabel }}
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
     <section aria-label="Needs attention">
       <h2
         ref="overviewTitle"
@@ -93,6 +181,7 @@ watch(() => health.needsAttention.value.length, () => {
             :finding="f"
             :to="attentionDestination(projectId, f).to"
             :destination-label="attentionDestination(projectId, f).label"
+            dashboard
           />
         </div>
         <div
@@ -212,123 +301,127 @@ watch(() => health.needsAttention.value.length, () => {
       </p>
     </section>
 
-    <section
+    <div
       v-if="!needsFirstCategory"
-      aria-label="Project spending"
-      class="border-t border-line pt-6"
+      class="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(260px,0.6fr)]"
     >
-      <div class="flex flex-wrap items-center justify-between gap-2">
-        <SectionHeading label="Budget" />
-        <AppButton
-          variant="ghost"
-          size="sm"
-          :to="{name:'project.budget',params:{projectId}}"
-        >
-          View Budget <span aria-hidden="true">→</span>
-        </AppButton>
-      </div>
-      <SkeletonBlock
-        v-if="financials.isPending.value"
-        class="mt-3"
-        height="104px"
-        rounded="0.75rem"
-      />
-      <ErrorState
-        v-else-if="financials.isError.value"
-        class="mt-3"
-        :error="financials.error.value"
-        :retry="() => financials.refetch()"
-      />
-      <div
-        v-else-if="financials.financials.value"
-        class="mt-3 rounded-xl border border-line bg-surface p-5"
+      <section
+        aria-label="Project spending"
+        class="border-t border-line pt-6"
       >
-        <dl class="grid gap-5 sm:grid-cols-3">
-          <div>
-            <dt class="text-meta text-muted">
-              Budget
-            </dt><dd class="mt-1 text-lg font-semibold tnum">
-              {{ financials.financials.value.total_target_minor == null ? 'Not set' : format(financials.financials.value.total_target_minor, currency) }}
-            </dd>
-          </div>
-          <div>
-            <dt class="text-meta text-muted">
-              Spent so far
-            </dt><dd class="mt-1 text-lg font-semibold tnum">
-              {{ format(financials.financials.value.net_actual_spend_minor, currency) }}
-            </dd>
-          </div>
-          <div v-if="financials.financials.value.settled_variance_minor != null">
-            <dt class="text-meta text-muted">
-              {{ financials.financials.value.settled_variance_minor < 0 ? 'Over budget' : 'Remaining budget' }}
-            </dt><dd
-              class="mt-1 text-lg font-semibold tnum"
-              :class="financials.financials.value.settled_variance_minor < 0 ? 'text-warning' : 'text-ink'"
-            >
-              {{ format(Math.abs(financials.financials.value.settled_variance_minor), currency) }}
-            </dd>
-          </div>
-        </dl>
-        <p class="mt-4 text-sm text-ink-soft">
-          View Budget for member balances, settlement details and history.
-        </p>
-      </div>
-      <p
-        v-else
-        class="mt-3 text-sm text-muted"
-      >
-        No budget summary available yet.
-      </p>
-    </section>
-
-    <section
-      aria-label="People"
-      class="border-t border-line pt-6"
-    >
-      <div class="flex flex-wrap items-center justify-between gap-2">
-        <SectionHeading label="People" />
-        <AppButton
-          variant="ghost"
-          size="sm"
-          :to="{name:'project.people',params:{projectId}}"
-        >
-          View People <span aria-hidden="true">→</span>
-        </AppButton>
-      </div>
-      <SkeletonBlock
-        v-if="directory.isPending.value"
-        class="mt-3"
-        height="44px"
-      />
-      <ErrorState
-        v-else-if="directory.isError.value"
-        class="mt-3"
-        :error="directory.error.value"
-        :retry="() => directory.refetch()"
-      />
-      <div
-        v-else-if="roster.length"
-        class="mt-3 flex flex-wrap items-center gap-3"
-      >
-        <div class="flex gap-1">
-          <AppAvatar
-            v-for="member in roster.slice(0, 4)"
-            :key="member.member_id"
-            :name="member.display_name"
-            :url="member.avatar_url"
-            :size="32"
-          />
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <SectionHeading label="Budget" />
+          <AppButton
+            variant="ghost"
+            size="sm"
+            :to="{name:'project.budget',params:{projectId}}"
+          >
+            View Budget <span aria-hidden="true">→</span>
+          </AppButton>
         </div>
-        <p class="text-sm text-ink-soft">
-          {{ roster.length }} {{ roster.length === 1 ? 'person' : 'people' }} involved<span v-if="invited"> · {{ invited }} invited</span>
+        <SkeletonBlock
+          v-if="financials.isPending.value"
+          class="mt-3"
+          height="104px"
+          rounded="0.75rem"
+        />
+        <ErrorState
+          v-else-if="financials.isError.value"
+          class="mt-3"
+          :error="financials.error.value"
+          :retry="() => financials.refetch()"
+        />
+        <div
+          v-else-if="financials.financials.value"
+          class="mt-3 rounded-xl border border-line bg-surface p-5"
+        >
+          <dl class="grid gap-5 sm:grid-cols-3">
+            <div>
+              <dt class="text-meta text-muted">
+                Budget
+              </dt><dd class="mt-1 text-lg font-semibold tnum">
+                {{ financials.financials.value.total_target_minor == null ? 'Not set' : format(financials.financials.value.total_target_minor, currency) }}
+              </dd>
+            </div>
+            <div>
+              <dt class="text-meta text-muted">
+                Spent so far
+              </dt><dd class="mt-1 text-lg font-semibold tnum">
+                {{ format(financials.financials.value.net_actual_spend_minor, currency) }}
+              </dd>
+            </div>
+            <div v-if="financials.financials.value.settled_variance_minor != null">
+              <dt class="text-meta text-muted">
+                {{ financials.financials.value.settled_variance_minor < 0 ? 'Over budget' : 'Remaining budget' }}
+              </dt><dd
+                class="mt-1 text-lg font-semibold tnum"
+                :class="financials.financials.value.settled_variance_minor < 0 ? 'text-warning' : 'text-ink'"
+              >
+                {{ format(Math.abs(financials.financials.value.settled_variance_minor), currency) }}
+              </dd>
+            </div>
+          </dl>
+          <p class="mt-4 text-sm text-ink-soft">
+            View Budget for member balances, settlement details and history.
+          </p>
+        </div>
+        <p
+          v-else
+          class="mt-3 text-sm text-muted"
+        >
+          No budget summary available yet.
         </p>
-      </div>
-      <p
-        v-else
-        class="mt-3 text-sm text-muted"
+      </section>
+
+      <section
+        aria-label="People"
+        class="border-t border-line pt-6"
       >
-        See who's involved and manage invitations in People.
-      </p>
-    </section>
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <SectionHeading label="People" />
+          <AppButton
+            variant="ghost"
+            size="sm"
+            :to="{name:'project.people',params:{projectId}}"
+          >
+            View People <span aria-hidden="true">→</span>
+          </AppButton>
+        </div>
+        <SkeletonBlock
+          v-if="directory.isPending.value"
+          class="mt-3"
+          height="44px"
+        />
+        <ErrorState
+          v-else-if="directory.isError.value"
+          class="mt-3"
+          :error="directory.error.value"
+          :retry="() => directory.refetch()"
+        />
+        <div
+          v-else-if="roster.length"
+          class="mt-3 flex flex-wrap items-center gap-3"
+        >
+          <div class="flex gap-1">
+            <AppAvatar
+              v-for="member in roster.slice(0, 4)"
+              :key="member.member_id"
+              :name="member.display_name"
+              :url="member.avatar_url"
+              :size="32"
+            />
+          </div>
+          <p class="text-sm text-ink-soft">
+            {{ roster.length }} {{ roster.length === 1 ? 'person' : 'people' }} involved<span v-if="invited"> · {{ invited }} invited</span>
+          </p>
+        </div>
+        <p
+          v-else
+          class="mt-3 text-sm text-muted"
+        >
+          See who's involved and manage invitations in People.
+        </p>
+      </section>
+    </div>
   </div>
 </template>

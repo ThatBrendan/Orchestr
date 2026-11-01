@@ -21,6 +21,7 @@ import { useMemberDirectory } from "@/composables/useProject";
 import { downloadProjectCsv } from "@/lib/projectExport";
 import { useExecutionDialogFocus } from "@/composables/useExecutionDialogFocus";
 import { useToast } from "@/composables/useToast";
+import AppAvatar from "@/components/ui/AppAvatar.vue";
 
 const route = useRoute();
 const router = useRouter();
@@ -59,6 +60,7 @@ const archived = computed(() => project.value?.status === "archived");
 const profileLabel = computed(() => profileDefinition(project.value?.profile).label);
 const { commitments } = useCommitments(projectId);
 const { members } = useMemberDirectory(projectId);
+const roster = computed(() => members.value.filter((member) => member.status !== "removed"));
 const toast = useToast();
 const settingsOpen = ref(false);
 const settingsFallback = ref<HTMLElement | null>(null);
@@ -96,18 +98,49 @@ onBeforeUnmount(() => ctxStore.clear());
         >
           {{ project?.name }}
         </h1>
-        <p class="mt-1 text-sm text-muted">
-          {{ dates }}
+        <p
+          v-if="project?.description"
+          class="mt-2 max-w-2xl text-sm text-ink-soft"
+        >
+          {{ project.description }}
         </p>
-        <p class="mt-1 text-13 text-muted">
-          {{ profileLabel }}
-        </p>
+        <div class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-13 text-muted">
+          <span v-if="dates">{{ dates }}</span>
+          <span>{{ profileLabel }}</span>
+        </div>
         <p
           v-if="archived"
           class="mt-1 text-13 text-amber font-medium"
         >
           Archived — read only
         </p>
+        <div
+          v-if="route.name === 'project.overview' && roster.length"
+          class="mt-3 flex items-center gap-2"
+          aria-label="Project members"
+        >
+          <div
+            class="flex -space-x-2"
+            aria-hidden="true"
+          >
+            <AppAvatar
+              v-for="member in roster.slice(0, 3)"
+              :key="member.member_id"
+              :name="member.display_name"
+              :url="member.avatar_url"
+              :size="32"
+              class="ring-2 ring-paper"
+            />
+          </div>
+          <span
+            v-if="roster.length > 3"
+            class="flex h-8 min-w-8 items-center justify-center rounded-full border border-line bg-surface text-xs font-semibold text-muted"
+            aria-hidden="true"
+          >
+            +{{ roster.length - 3 }}
+          </span>
+          <span class="sr-only">{{ roster.length }} project members</span>
+        </div>
       </div>
       <div class="flex items-center gap-2">
         <AppButton

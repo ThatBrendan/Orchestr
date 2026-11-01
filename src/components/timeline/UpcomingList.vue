@@ -18,6 +18,7 @@ const DEADLINE_TYPES = new Set(["payment_due", "task_due", "recurring_commitment
 
 interface Item {
   label: string;
+  source: string;
   status: string | null;
   link: { name: string; params: { projectId: string; decisionId?: string }; query: Record<string,string> } | null;
   time: string;
@@ -42,6 +43,7 @@ const groups = computed<Group[]>(() => {
     const time = e.all_day ? "" : t.value.time(e.occurs_at);
     byDay.get(day)!.items.push({
       label: e.title,
+      source: e.subject_type === "payment_schedule" ? "Payment" : e.subject_type === "decision" ? "Decision" : e.subject_type === "task" ? "Task" : "Activity",
       schedule: e.subject_type === "payment_schedule",
       status: e.subject_type === "payment_schedule" ? (paymentScheduleLabels[e.status ?? ""] ?? null) : e.subject_type === "decision" ? ({ voting_open: "Voting open", voting_closed: "Voting closed", resolved: "Resolved" }[e.status ?? ""] ?? null) : e.is_recurring_occurrence ? e.status : null,
       link: e.subject_type === 'payment_schedule' ? {name:'project.commitments',params:{projectId:e.project_id},query:{commitment:e.subject_id,section:'payments'}} : e.subject_type === 'decision' ? { name: 'project.decision', params: { projectId: e.project_id, decisionId: e.subject_id }, query: {} } : ['commitment','task'].includes(e.subject_type) ? {name:'project.commitments',params:{projectId:e.project_id},query:{[e.subject_type==='task'?'item':'commitment']:e.subject_id,...(e.occurrence_date?{occurrence:e.occurrence_date}:{})}}:null,
@@ -106,6 +108,12 @@ const groups = computed<Group[]>(() => {
               v-if="i.done"
               aria-hidden="true"
             >✓ </span>{{ i.label }}</span>
+            <div
+              v-if="compact"
+              class="mt-1 text-meta text-muted"
+            >
+              {{ i.source }}
+            </div>
             <div
               v-if="i.status && !i.overdue"
               class="mt-1"
