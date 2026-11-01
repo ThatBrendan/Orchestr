@@ -20,6 +20,7 @@ import ErrorState from '@/components/ui/ErrorState.vue';
 import AppConfirmDialog from '@/components/ui/AppConfirmDialog.vue';
 import ActivityListRow from '@/components/commitments/ActivityListRow.vue';
 import SkeletonBlock from '@/components/ui/SkeletonBlock.vue';
+import AppIcon from '@/components/ui/AppIcon.vue';
 import CommitmentFormDialog from '@/components/commitments/CommitmentFormDialog.vue';
 import CommitmentDetailDialog from '@/components/commitments/CommitmentDetailDialog.vue';
 import LegacyItemDialog from '@/components/tasks/LegacyItemDialog.vue';
@@ -34,6 +35,14 @@ const canEdit=computed(()=>allowed('commitment.edit')&&project.value?.status!=='
 const selected=computed(()=>typeof route.query.area==='string'?route.query.area:null);
 const selectedArea=computed(()=>areas.data.value?.find(a=>a.id===selected.value));
 const visibleItems=computed(()=>(items.data.value??[]).filter(i=>selected.value==='unassigned'?i.area_id==null:i.area_id===selected.value));
+const activitySummary=computed(()=>{
+ const rows=items.data.value??[];
+ return {
+  total:rows.length,
+  completed:rows.filter(row=>['completed','done'].includes(row.status)).length,
+  open:rows.filter(row=>!['completed','done','cancelled'].includes(row.status)).length,
+ };
+});
 const groupedItems=computed(()=>{
  const groups=new Map<string,Item[]>();
  for(const area of areas.data.value??[]) groups.set(area.title,[]);
@@ -107,11 +116,18 @@ const restoreDialogFocus = useExecutionDialogFocus(computed(() => formOpen.value
         >
           Delete category
         </AppButton><AppButton
-          v-if="!selected"
+          v-if="canEdit && !selected && groupedItems.length"
+          variant="secondary"
           size="sm"
           @click="openArea()"
         >
-          {{ groupedItems.length ? 'New category' : 'Add activity' }}
+          New category
+        </AppButton><AppButton
+          v-if="canEdit"
+          size="sm"
+          @click="groupedItems.length ? createItem() : openArea()"
+        >
+          Add activity
         </AppButton>
       </div>
     </div>
@@ -141,19 +157,73 @@ const restoreDialogFocus = useExecutionDialogFocus(computed(() => formOpen.value
     />
     <template v-else>
       <div
+        v-if="activitySummary.total"
+        class="flex flex-wrap items-center gap-2"
+        aria-label="Activity summary"
+      >
+        <span class="inline-flex min-h-9 items-center gap-2 rounded-full border border-line bg-surface px-3 text-sm">
+          <span class="font-semibold text-ink">{{ activitySummary.total }}</span>
+          <span class="text-muted">{{ activitySummary.total === 1 ? 'Activity' : 'Activities' }}</span>
+        </span>
+        <span class="inline-flex min-h-9 items-center gap-2 rounded-full border border-line bg-surface px-3 text-sm">
+          <span class="font-semibold text-success">{{ activitySummary.completed }}</span>
+          <span class="text-muted">Complete</span>
+        </span>
+        <span class="inline-flex min-h-9 items-center gap-2 rounded-full border border-line bg-surface px-3 text-sm">
+          <span class="font-semibold text-brand">{{ activitySummary.open }}</span>
+          <span class="text-muted">Open</span>
+        </span>
+      </div>
+      <nav
+        v-if="!selected && groupedItems.length"
+        class="flex gap-2 overflow-x-auto pb-1"
+        aria-label="Activity Categories"
+      >
+        <button
+          type="button"
+          class="min-h-11 shrink-0 inline-flex items-center gap-2 rounded-full bg-brand px-3.5 py-2 text-sm font-semibold text-white focus-ring"
+          aria-current="page"
+          @click="selectArea(null)"
+        >
+          All
+          <span class="text-white/80">{{ activitySummary.total }}</span>
+        </button>
+        <button
+          v-for="[category,rows] in groupedItems"
+          :key="category"
+          type="button"
+          class="min-h-11 shrink-0 inline-flex items-center gap-2 rounded-full border border-line bg-surface px-3.5 py-2 text-sm font-medium text-ink-soft hover:bg-surface-subtle focus-ring"
+          @click="category === 'Activities without a Category' ? selectArea('unassigned') : selectArea(areas.data.value?.find(area => area.title === category)?.id ?? null)"
+        >
+          <span class="max-w-48 truncate">{{ category }}</span>
+          <span class="text-muted">{{ rows.length }}</span>
+        </button>
+      </nav>
+      <div
         v-if="!selected"
         class="space-y-5"
       >
         <section
           v-for="[category,rows] in groupedItems"
           :key="category"
-          class="rounded-xl border border-line bg-surface divide-y divide-line"
+          class="overflow-hidden rounded-xl border border-line bg-surface"
         >
           <button
-            class="flex w-full items-center justify-between gap-3 border-b border-line px-4 py-3 text-left focus-ring"
+            class="flex min-h-14 w-full items-center justify-between gap-3 border-b border-line px-4 py-3 text-left hover:bg-surface-subtle focus-ring"
             @click="category === 'Activities without a Category' ? selectArea('unassigned') : selectArea(areas.data.value?.find(area => area.title === category)?.id ?? null)"
           >
-            <span class="font-semibold break-words">{{ category }}</span>
+            <span class="flex min-w-0 items-center gap-3">
+              <span
+                class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-soft text-brand"
+                aria-hidden="true"
+              >
+                <AppIcon
+                  name="projects"
+                  :size="18"
+                />
+              </span>
+              <span class="font-semibold break-words">{{ category }}</span>
+            </span>
             <span class="text-meta text-muted">{{ rows.length }} {{ rows.length === 1 ? 'activity' : 'activities' }}</span>
           </button>
           <ActivityListRow
