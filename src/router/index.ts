@@ -138,7 +138,15 @@ export const router = createRouter({
   routes,
   scrollBehavior(to, _from, savedPosition) {
     if (savedPosition) return savedPosition;
-    if (to.hash) return { el: to.hash, behavior: "smooth" };
+    if (to.hash) {
+      // Public landing sections must clear the sticky header. Keep other routes unchanged.
+      if (to.path === "/") return {
+        el: to.hash,
+        top: 80,
+        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth",
+      };
+      return { el: to.hash, behavior: "smooth" };
+    }
     return { top: 0 };
   },
 });

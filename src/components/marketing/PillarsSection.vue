@@ -1,76 +1,42 @@
 <script setup lang="ts">
 import AppIcon from "@/components/ui/AppIcon.vue";
 import type { IconName } from "@/components/ui/icons";
-
-const PILLARS: { title: string; body: string; icon: IconName }[] = [
-  {
-    title: "Categories and activities",
-    body: "Keep the work, bookings and details of your project together.",
-    icon: "projects",
-  },
-  {
-    title: "Work together",
-    body: "Assign activities when you need to share the work.",
-    icon: "flag",
-  },
-  {
-    title: "Money",
-    body: "See what things cost, what’s paid and what’s left to pay.",
-    icon: "coins",
-  },
-  {
-    title: "Timeline",
-    body: "Bring bookings, payment deadlines and activities together chronologically, in the plan's own timezone.",
-    icon: "calendar",
-  },
-  {
-    title: "People",
-    body: "See people, their responsibilities and their involvement across the whole plan.",
-    icon: "people",
-  },
-  {
-    title: "Stay on track",
-    body: "Catch overdue activities, upcoming payments and unfinished bookings.",
-    icon: "alert",
-  },
+const capabilities: { label: string; icon: IconName; tone: string }[] = [
+  { label: "Activities", icon: "checkCircle", tone: "text-brand" },
+  { label: "People", icon: "people", tone: "text-accent" },
+  { label: "Decisions", icon: "flag", tone: "text-brand" },
+  { label: "Dates", icon: "calendar", tone: "text-amber" },
+  { label: "Money", icon: "coins", tone: "text-accent" },
+  { label: "Progress", icon: "circleDot", tone: "text-brand" },
 ];
 </script>
 
 <template>
   <section
     id="product"
-    class="max-w-6xl mx-auto px-5 md:px-8 py-16 md:py-24"
+    class="border-y border-line bg-surface"
     aria-labelledby="pillars-heading"
   >
-    <h2
-      id="pillars-heading"
-      class="font-display text-[26px] md:text-[32px] font-semibold tracking-tight"
-    >
-      One workspace for the whole plan
-    </h2>
-    <p class="mt-3 text-[16px] text-ink-soft max-w-2xl">
-      Orchestrio keeps the moving parts of a plan connected — not scattered across tools that don't talk to each other.
-    </p>
-
-    <div class="mt-10 grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-      <div
-        v-for="p in PILLARS"
-        :key="p.title"
-        class="rounded-xl border border-line bg-surface p-5"
+    <div class="max-w-6xl mx-auto px-5 md:px-8 py-7 flex flex-col xl:flex-row items-center justify-between gap-5">
+      <h2
+        id="pillars-heading"
+        class="text-13 uppercase tracking-wider text-ink-soft text-center"
       >
-        <div class="w-9 h-9 rounded-lg bg-brand-soft text-brand-dark flex items-center justify-center">
+        What Orchestrio brings together
+      </h2>
+      <ul class="flex flex-wrap justify-center gap-2 sm:gap-3">
+        <li
+          v-for="item in capabilities"
+          :key="item.label"
+          class="inline-flex items-center gap-2 rounded-full border border-line bg-paper px-3 py-2 text-13 font-semibold"
+        >
           <AppIcon
-            :name="p.icon"
-            :size="18"
-          />
-        </div>
-        <h3 class="mt-3.5 text-[15px] font-semibold">
-          {{ p.title }}
-        </h3>
-        <p class="mt-1.5 text-13.5 leading-relaxed text-ink-soft">
-          {{ p.body }}
-        </p>
-      </div>
+            :name="item.icon"
+            :class="item.tone"
+            :size="16"
+          />{{ item.label }}
+        </li>
+      </ul>
     </div>
   </section>
 </template>

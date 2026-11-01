@@ -1,50 +1,43 @@
 <script setup lang="ts">
 import { computed } from "vue";
-import { RouterLink } from "vue-router";
 import { useAuth } from "@/composables/useAuth";
 import AppButton from "@/components/ui/AppButton.vue";
-
+import AppIcon from "@/components/ui/AppIcon.vue";
 const { isAuthenticated } = useAuth();
-const primary = computed(() =>
-  isAuthenticated.value
-    ? { to: { name: "dashboard" }, label: "Open Orchestrio" }
-    : { to: { name: "signup" }, label: "Create your first plan" },
-);
+const primary = computed(() => isAuthenticated.value
+  ? { to: { name: "dashboard" }, label: "Open Orchestrio" }
+  : { to: { name: "signup" }, label: "Get started" });
 </script>
 
 <template>
   <section
-    class="max-w-6xl mx-auto px-5 md:px-8 py-20 md:py-28 text-center"
+    class="max-w-6xl mx-auto px-5 md:px-8 pb-16 md:pb-24"
     aria-labelledby="cta-heading"
   >
-    <h2
-      id="cta-heading"
-      class="font-display text-[28px] md:text-[38px] font-semibold tracking-tight"
-    >
-      Keep the whole plan moving.
-    </h2>
-    <p class="mt-4 text-[16px] text-ink-soft max-w-xl mx-auto">
-      Bring the activities, costs, deadlines and progress into one place — and stop chasing the details.
-    </p>
-    <div class="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
+    <div class="rounded-2xl bg-brand-dark px-6 py-14 sm:p-16 text-center text-white">
+      <h2
+        id="cta-heading"
+        class="text-[28px] sm:text-4xl leading-tight font-bold"
+      >
+        Make the plan easier to run.
+      </h2>
+      <p class="mt-4 text-base leading-relaxed max-w-xl mx-auto">
+        Bring the Activities, people, decisions, dates and money together. Keep the whole plan moving.
+      </p>
       <AppButton
         :to="primary.to"
+        variant="secondary"
         size="lg"
+        class="mt-8"
       >
-        {{ primary.label }}
+        {{ primary.label }} <AppIcon
+          name="arrowRight"
+          :size="16"
+        />
       </AppButton>
+      <p class="mt-5 text-sm">
+        Start with a project. Invite the people involved.
+      </p>
     </div>
-    <p
-      v-if="!isAuthenticated"
-      class="mt-4 text-13 text-muted"
-    >
-      Already have an account?
-      <RouterLink
-        :to="{ name: 'login' }"
-        class="text-brand-dark font-medium focus-ring"
-      >
-        Log in
-      </RouterLink>
-    </p>
   </section>
 </template>

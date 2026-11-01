@@ -11,7 +11,7 @@ import FinalCtaSection from "@/components/marketing/FinalCtaSection.vue";
 </script>
 
 <template>
-  <div class="min-h-screen bg-paper overflow-x-hidden">
+  <div class="min-h-screen bg-paper">
     <a
       href="#main"
       class="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:px-3 focus:py-2 focus:rounded-lg focus:bg-ink focus:text-white text-13 font-medium"
