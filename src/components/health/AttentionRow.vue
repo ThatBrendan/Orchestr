@@ -4,6 +4,7 @@ import { RouterLink, type RouteLocationRaw } from "vue-router";
 import type { FindingSeverity } from "@/types";
 
 import AppIcon from "@/components/ui/AppIcon.vue";
+import type { IconName } from "@/components/ui/icons";
 import { normalizeHealthCopy } from "@/lib/presentation";
 
 /** Structural prop — accepts a project HealthFinding or a DashboardFinding. */
@@ -21,7 +22,17 @@ const props = defineProps<{
   projectLabel?: string;
   to?: RouteLocationRaw;
   destinationLabel?: string;
+  /** Dashboard-only icon treatment; the project Overview keeps its existing layout. */
+  dashboard?: boolean;
 }>();
+
+const contextIcon = computed<IconName>(() => {
+  if (!props.dashboard) return "alert";
+  if (["payment_schedule", "reimbursement"].includes(props.finding.subject_type ?? "")) return "coins";
+  if (props.finding.subject_type === "decision") return "flag";
+  if (["commitment", "task"].includes(props.finding.subject_type ?? "")) return "checkCircle";
+  return "alert";
+});
 
 const message = computed(() => props.finding.subject_type === "reimbursement" ? props.finding.message : normalizeHealthCopy(props.finding.message));
 const resolution = computed(() => props.finding.subject_type === "reimbursement" ? props.finding.resolution : normalizeHealthCopy(props.finding.resolution));
@@ -34,10 +45,10 @@ const resolution = computed(() => props.finding.subject_type === "reimbursement"
     class="flex items-center gap-3 px-4 py-3.5 first:rounded-t-xl last:rounded-b-xl hover:bg-surface-subtle focus-ring transition-colors"
   >
     <AppIcon
-      name="alert"
+      :name="contextIcon"
       :size="18"
       class="shrink-0"
-      :class="finding.severity === 'blocker' ? 'text-danger' : 'text-warning'"
+      :class="[finding.severity === 'blocker' ? 'text-danger' : 'text-warning', dashboard ? ['box-content rounded-lg p-2.5', finding.severity === 'blocker' ? 'bg-danger-soft' : 'bg-warning-soft'] : '']"
     />
     <div class="min-w-0 flex-1 [overflow-wrap:anywhere]">
       <div class="text-14 font-medium">

@@ -103,7 +103,7 @@ async function fixture(options = {}) {
       return reply(state.project);
     }
     if(url.pathname.endsWith('/project_members')) return reply([{id:'00000000-0000-4000-8000-000000000020',project_id:project.id,user_id:user.id,role:state.role,status:'active',deleted_at:null}]);
-    if(url.pathname.endsWith('/v_my_projects')) return reply(state.emptyUser?[]:[{...state.project,project_id:project.id,progress_pct:40,attention_count:state.attention.length,committed_spend_minor:40000,total_target_minor:100000}]);
+    if(url.pathname.endsWith('/v_my_projects')) return state.failProjects ? reply({code:'57014',message:'PRIVATE PROJECT ERROR'},500) : reply(state.projectCards ?? (state.emptyUser?[]:[{...state.project,project_id:project.id,progress_pct:40,attention_count:state.attention.length,committed_spend_minor:40000,total_target_minor:100000}]));
     if(url.pathname.endsWith('/v_my_activity_notifications')) return route.fulfill({status:200,contentType:'application/json',headers:{'content-range':state.unread?'0-0/1':'*/0','access-control-expose-headers':'content-range'},body:JSON.stringify(state.unread?[{id:'00000000-0000-4000-8000-000000000030',project_id:project.id,commitment_id:'00000000-0000-4000-8000-000000000040',activity_title:'Book restaurant',project_name:project.name,created_at:new Date().toISOString(),read_at:null}]:[])});
     if(url.pathname.endsWith('/mark_notification_read')) {state.unread=false;return reply(body.p_notification);}
     if (url.pathname.endsWith('/get_invitation')) return reply([{ project_name: 'Shared test project', inviter_name: 'Inviter', role:'member', status:'pending' }]);
@@ -130,7 +130,7 @@ const fs = await import('node:fs/promises');
 const evidence = '/tmp/orchestrio-dashboard-overview';
 await fs.mkdir(evidence, {recursive:true});
 const results=[];
-const sizes=[[1280,900],[1024,768],[768,1024],[430,932],[390,844],[375,812]];
+const sizes=[[1440,900],[1280,900],[1024,768],[768,1024],[430,932],[390,844],[375,812]];
 function populate(state) {
  state.categories=[{id:'00000000-0000-4000-8000-000000000080',project_id:state.project.id,title:'Plans'}];
  state.attention=Array.from({length:6},(_,i)=>({project_id:state.project.id,project_name:state.project.name,code:'fixture-'+i,severity:'warning',subject_type:i===0?'decision':i===1?'payment_schedule':i===2?'commitment':'project',subject_id:'00000000-0000-4000-8000-00000000004'+i,subject_label:['Choose a venue','Venue deposit','Book transport','Project readiness','Confirm dates','Final check'][i],params:{activity_id:'00000000-0000-4000-8000-000000000041'},message:['Voting closes tomorrow','Payment is due tomorrow','Transport needs an owner','Review project details','Check the project dates','Review remaining plans'][i],resolution:['Choose your preferred option.','Review the payment schedule.','Assign someone to coordinate this.','Check what needs completing.','Confirm the dates with your team.','Review the final details.'][i],dismissed:false}));
@@ -138,11 +138,13 @@ function populate(state) {
 }
 async function capture(page,name,width) {
  await page.evaluate(()=>document.fonts.ready);await page.waitForTimeout(220);
+ await page.evaluate(()=>window.scrollTo({top:0,behavior:'instant'}));
  await fits(page,name+' '+width);
  await page.screenshot({path:`${evidence}/${name}-${width}.png`,fullPage:true});
  results.push({name,width,path:new URL(page.url()).pathname});
 }
 try {
+ if (!process.env.DASHBOARD_CARDS_ONLY) {
  for(const [width,height] of sizes) {
   for(const scenario of ['populated','clear','empty']) {
    const f=await fixture({viewport:{width,height}}),{page,state}=f;
@@ -151,7 +153,7 @@ try {
    if(scenario==='clear')state.attention=[];
    if(scenario==='empty')state.emptyUser=true;
    await login(page);
-   await page.getByRole('heading',{name:'Projects',exact:true}).waitFor();
+   await page.getByRole('heading',{name:'Your projects',exact:true}).waitFor();
    if(scenario!=='empty')await page.getByRole('link',{name:'Open project: Beta Trip',exact:true}).waitFor();
    await capture(page,'dashboard-'+scenario,width);
    if(scenario==='populated') {
@@ -219,6 +221,54 @@ try {
   await page.getByRole('button',{name:'Create project',exact:true}).click();await page.waitForURL('**/overview');
   assert.equal(state.calls.filter(c=>c.path.endsWith('/create_project')).length,1);
   await f.context.close();console.log('PASS loading, isolated errors, retry and Dashboard creation at '+width);
+ }
+
+ }
+ for(const [width,height] of sizes) {
+  const {page,state,context}=await fixture({viewport:{width,height}});
+  populate(state);state.notificationUnread=true;
+  const base={...state.project,project_id:state.project.id,my_role:'organizer',progress_pct:40,attention_count:2,committed_spend_minor:40000,total_target_minor:100000};
+  state.projectCards=[
+   {...base,name:'Summer gathering',starts_on:'2027-06-18',ends_on:'2027-06-24'},
+   {...base,project_id:'00000000-0000-4000-8000-000000000011',name:'A product launch with a longer project name that wraps across lines',profile:'launch',starts_on:'2027-12-28',ends_on:'2028-01-04',progress_pct:75,attention_count:0},
+   {...base,project_id:'00000000-0000-4000-8000-000000000012',name:'House move',profile:'house_move',progress_pct:0,attention_count:1},
+   {...base,project_id:'00000000-0000-4000-8000-000000000013',name:'A fresh idea',profile:'blank',status:'draft',progress_pct:null,attention_count:null,committed_spend_minor:null,total_target_minor:null},
+  ];
+  const errors=[];page.on('pageerror',e=>errors.push(e.message));
+  await login(page);
+  const cards=page.getByRole('link',{name:/^Open project:/});await cards.first().waitFor();
+  assert.equal(await cards.count(),4);
+  assert(await cards.first().innerText().then(t=>t.includes('18–24 June 2027')&&t.includes('40% complete')&&t.includes('£400.00 committed')));
+  const minimal=page.getByRole('link',{name:'Open project: A fresh idea',exact:true});
+  assert(!/complete|committed|Dates not set|Blank Project|attention/.test(await minimal.innerText()));
+  assert(!(await page.getByRole('link',{name:'Open project: House move',exact:true}).innerText()).includes('committed'));
+  assert.equal(await cards.locator('button,a,input').count(),0);
+  await page.keyboard.press('Tab');await cards.first().focus();assert.notEqual(await cards.first().evaluate(e=>getComputedStyle(e).outlineStyle),'none');
+  const layout=await cards.evaluateAll(els=>els.map(e=>({x:e.getBoundingClientRect().x,y:e.getBoundingClientRect().y})));
+  assert.equal(new Set(layout.map(r=>r.x)).size,width>=1280?3:width>=1024?2:1);
+  await page.getByRole('status',{name:'Unread notifications',exact:true}).waitFor();
+  await page.getByRole('button',{name:'Notifications',exact:true}).click();
+  await page.getByRole('heading',{name:'Notifications',exact:true}).waitFor();await page.keyboard.press('Escape');
+  await page.getByRole('heading',{name:'Notifications',exact:true}).waitFor({state:'hidden'});
+  await capture(page,'dashboard-rich-cards',width);
+  assert(!state.calls.some(c=>c.path.endsWith('/v_member_directory')),'No per-card member requests');
+  assert.deepEqual(errors,[]);
+  await cards.first().press('Enter');await page.waitForURL('**/'+state.project.id+'/overview');
+  await context.close();
+  console.log('PASS rich/minimal project cards, unread state, keyboard and grid at '+width);
+ }
+ for(const [width,height] of sizes) {
+  const {page,state,context}=await fixture({viewport:{width,height}});populate(state);state.failProjects=true;state.delayReads=1500;
+  await login(page);await page.getByRole('status',{name:'Loading projects',exact:true}).waitFor();
+  await capture(page,'dashboard-card-loading',width);state.delayReads=0;
+  await page.getByRole('button',{name:'Try again',exact:true}).waitFor({timeout:20000});
+  assert(await page.getByRole('link').filter({hasText:'Open decision'}).isVisible());
+  assert(await page.getByRole('button',{name:'New project',exact:true}).isVisible());
+  assert(!(await page.locator('body').innerText()).includes('PRIVATE'));
+  await capture(page,'dashboard-project-error',width);
+  state.failProjects=false;await page.getByRole('button',{name:'Try again',exact:true}).click();
+  await page.getByRole('link',{name:'Open project: Beta Trip',exact:true}).waitFor();
+  await context.close();console.log('PASS isolated project error/retry at '+width);
  }
  await fs.writeFile(evidence+'/results.json',JSON.stringify(results,null,2));
 } finally {await browser.close();}

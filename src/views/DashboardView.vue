@@ -9,10 +9,9 @@ import { useMyProfile, useDashboardAttention } from "@/composables/useDashboard"
 import PageContainer from "@/components/ui/PageContainer.vue";
 import SectionHeading from "@/components/ui/SectionHeading.vue";
 import SkeletonBlock from "@/components/ui/SkeletonBlock.vue";
-import EmptyState from "@/components/ui/EmptyState.vue";
 import ErrorState from "@/components/ui/ErrorState.vue";
 import AppButton from "@/components/ui/AppButton.vue";
-import ProjectSummaryRow from "@/components/projects/ProjectSummaryRow.vue";
+import DashboardProjectCard from "@/components/projects/DashboardProjectCard.vue";
 import AttentionRow from "@/components/health/AttentionRow.vue";
 
 const pageTitle = ref<HTMLElement | null>(null);
@@ -45,13 +44,13 @@ const attentionLine = computed(() => {
 </script>
 
 <template>
-  <PageContainer>
+  <PageContainer class="dashboard-container">
     <header class="flex flex-wrap items-start justify-between gap-4">
       <div class="min-w-0">
         <h1
           ref="pageTitle"
           tabindex="-1"
-          class="text-page-title focus:outline-none"
+          class="text-[26px] sm:text-[30px] leading-tight font-semibold [overflow-wrap:anywhere] focus:outline-none"
         >
           {{ greeting }}
         </h1>
@@ -60,6 +59,7 @@ const attentionLine = computed(() => {
         </p>
       </div>
       <AppButton
+        v-if="isPending || isError || projects.length > 0"
         ref="newProjectButton"
         @click="openNewProject"
       >
@@ -111,6 +111,7 @@ const attentionLine = computed(() => {
           v-for="(f, i) in attention.findings.value"
           :key="f.project_id + f.code + (f.subject_id ?? '') + i"
           :finding="f"
+          dashboard
           :project-label="f.project_name"
           :to="attentionDestination(f.project_id, f).to"
           :destination-label="attentionDestination(f.project_id, f).label"
@@ -125,42 +126,98 @@ const attentionLine = computed(() => {
         label="Needs attention pages"
       />
     </div>
-    <!-- projects -->
+    <!-- Dashboard cards use the existing project summary, without additional reads. -->
     <section
-      aria-label="Projects"
-      class="mt-8 space-y-3"
+      aria-labelledby="your-projects-heading"
+      class="mt-10"
     >
-      <SectionHeading label="Projects" />
-      <template v-if="isPending">
-        <SkeletonBlock
-          v-for="i in 2"
+      <h2
+        id="your-projects-heading"
+        class="text-xl font-semibold"
+      >
+        Your projects
+      </h2>
+      <p class="mt-1 text-sm text-ink-soft">
+        The plans you’re bringing together.
+      </p>
+      <div
+        v-if="isPending"
+        class="dashboard-project-grid mt-5"
+        role="status"
+        aria-label="Loading projects"
+      >
+        <div
+          v-for="i in 3"
           :key="i"
-          height="120px"
-          rounded="0.75rem"
-        />
-      </template>
+          class="rounded-2xl border border-line bg-surface p-5 space-y-5"
+          aria-hidden="true"
+        >
+          <SkeletonBlock
+            width="44px"
+            height="44px"
+            rounded="0.75rem"
+          />
+          <SkeletonBlock
+            width="75%"
+            height="24px"
+          />
+          <SkeletonBlock
+            width="55%"
+            height="16px"
+          />
+          <SkeletonBlock height="8px" />
+          <SkeletonBlock
+            width="65%"
+            height="16px"
+          />
+          <div class="border-t border-line pt-4">
+            <SkeletonBlock height="20px" />
+          </div>
+        </div>
+      </div>
       <ErrorState
         v-else-if="isError"
+        class="mt-5"
         :error="error"
         :retry="() => refetch()"
       />
-      <EmptyState
+      <div
         v-else-if="projects.length === 0"
-        title="No projects yet"
-        message="Create your first project to start planning."
+        class="mt-5 rounded-2xl border border-line bg-surface p-6 sm:p-10"
       >
-        <template #action>
-          <p class="text-sm text-ink-soft">
-            Use New project above to get started.
-          </p>
-        </template>
-      </EmptyState>
-      <ProjectSummaryRow
-        v-for="p in projects"
+        <div class="w-12 h-12 flex items-center justify-center rounded-xl bg-brand-soft text-brand">
+          <AppIcon
+            name="projects"
+            :size="24"
+          />
+        </div>
+        <h3 class="mt-4 text-lg">
+          Your next plan starts here.
+        </h3>
+        <p class="mt-2 text-sm text-ink-soft">
+          No projects yet. Create your first project to bring the people and details together.
+        </p>
+        <AppButton
+          ref="newProjectButton"
+          class="mt-5"
+          @click="openNewProject"
+        >
+          <AppIcon
+            name="plus"
+            :size="16"
+          />New project
+        </AppButton>
+      </div>
+      <div
         v-else
-        :key="p.project_id"
-        :project="p"
-      />
+        class="dashboard-project-grid mt-5"
+      >
+        <DashboardProjectCard
+          v-for="p in projects"
+          :key="p.project_id"
+          :project="p"
+        />
+      </div>
     </section>
     <NewProjectDialog
       :open="showNew"
@@ -169,3 +226,12 @@ const attentionLine = computed(() => {
     />
   </PageContainer>
 </template>
+
+<style scoped>
+.dashboard-container { max-width: 1200px; }
+.dashboard-project-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
+  gap: 1.25rem;
+}
+</style>
