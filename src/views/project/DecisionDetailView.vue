@@ -22,6 +22,11 @@ const projectId = computed(() => String(route.params.projectId)), id = computed(
 const { list, refresh } = useDecisions(projectId, id), decision = computed(() => list.data.value?.[0]);
 const selected = computed(() => decision.value?.options.find(o => o.id === decision.value?.resolved_option_id));
 const leading = computed(() => Math.max(0, ...(decision.value?.options.map(o => o.vote_count) ?? [])));
+const votePercent = (optionId: string) => {
+ const total = decision.value?.vote_count ?? 0;
+ const count = decision.value?.options.find(option => option.id === optionId)?.vote_count ?? 0;
+ return total > 0 ? Math.round((count / total) * 100) : 0;
+};
 const dialog = ref<"edit" | "resolve" | "convert" | "delete" | "share" | null>(null);
 const choice = ref(""), category = ref(""), activityType = ref("other"), busy = ref(false), error = ref("");
 const areas = useQuery({ queryKey: computed(() => ["project", projectId.value, "decision-conversion-categories"]), queryFn: () => listAreas(projectId.value), enabled: computed(() => dialog.value === "convert") });
@@ -128,6 +133,20 @@ useExecutionDialogFocus(computed(() => dialog.value !== null), focusFallback);
             <h3 class="text-card-heading font-semibold">
               {{ option.title }}
             </h3>
+            <div
+              class="mt-2 h-2 max-w-md overflow-hidden rounded-full bg-line/70"
+              role="progressbar"
+              :aria-label="`${option.title}: ${option.vote_count} votes`"
+              aria-valuemin="0"
+              aria-valuemax="100"
+              :aria-valuenow="votePercent(option.id)"
+            >
+              <div
+                class="h-full rounded-full"
+                :class="option.id === decision.resolved_option_id ? 'bg-success' : 'bg-brand'"
+                :style="{ width: `${votePercent(option.id)}%` }"
+              />
+            </div>
             <p
               class="mt-1 text-sm"
               :class="option.id === decision.resolved_option_id ? 'text-success' : 'text-ink-soft'"
