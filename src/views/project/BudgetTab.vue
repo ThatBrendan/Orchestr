@@ -2,6 +2,7 @@
 import { useExecutionDialogFocus } from "@/composables/useExecutionDialogFocus";
 import MemberBalances from "@/components/budget/MemberBalances.vue";
 import BudgetTargetDialog from "@/components/budget/BudgetTargetDialog.vue";
+import BudgetVisual from "@/components/budget/BudgetVisual.vue";
 import AppButton from "@/components/ui/AppButton.vue";
 import { computed, ref } from "vue";
 import { useRoute } from "vue-router";
@@ -36,7 +37,7 @@ const restoreDialogFocus = useExecutionDialogFocus(budgetOpen, focusFallback);
 </script>
 
 <template>
-  <div class="space-y-6 max-w-4xl fade-in">
+  <div class="space-y-6 max-w-5xl fade-in">
     <h2
       ref="focusFallback"
       tabindex="-1"
@@ -44,6 +45,9 @@ const restoreDialogFocus = useExecutionDialogFocus(budgetOpen, focusFallback);
     >
       Budget
     </h2>
+    <p class="text-sm text-ink-soft -mt-4 max-w-2xl">
+      Project spending, category targets and member settlements.
+    </p>
     <div
       v-if="isPending"
       role="status"
@@ -61,15 +65,18 @@ const restoreDialogFocus = useExecutionDialogFocus(budgetOpen, focusFallback);
     />
     <section
       v-else-if="financials"
-      class="rounded-xl border border-line bg-surface p-4 sm:p-5"
+      class="rounded-2xl border border-line bg-surface p-5 sm:p-6"
       aria-label="Project financial summary"
     >
       <div class="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p class="text-sm text-ink-soft">
-            Spent so far
+          <p class="text-meta font-medium uppercase tracking-wide text-muted">
+            Overall financial summary
           </p><p class="mt-1 text-page-title tnum [overflow-wrap:anywhere]">
             {{ format(financials.net_actual_spend_minor, currency) }}
+          </p>
+          <p class="mt-1 text-sm text-ink-soft">
+            Spent so far
           </p>
         </div>
         <AppButton
@@ -99,6 +106,13 @@ const restoreDialogFocus = useExecutionDialogFocus(budgetOpen, focusFallback);
           </dd>
         </div>
       </dl>
+      <BudgetVisual
+        class="mt-5"
+        :target="financials.total_target_minor"
+        :planned="financials.committed_spend_minor ?? 0"
+        :paid="financials.net_actual_spend_minor ?? 0"
+        :currency="currency"
+      />
       <details class="mt-4 border-t border-line pt-2">
         <summary class="min-h-11 py-3 cursor-pointer rounded-lg focus-ring text-sm font-medium">
           Planning and payments
