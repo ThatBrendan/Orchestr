@@ -28,6 +28,7 @@ import AppIcon from "@/components/ui/AppIcon.vue";
         </div>
         <div
           class="flex -space-x-2"
+          role="img"
           aria-label="Project members: Alex, Priya and three others"
         >
           <span
