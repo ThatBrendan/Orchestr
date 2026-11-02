@@ -29,7 +29,8 @@ const editingId = ref<string>();
 const draft = reactive({ title: "", body: "" });
 const fieldError = ref("");
 const deleting = ref<ProjectNote | null>(null);
-const expanded = ref(new Set<string>());
+const selectedId = ref<string | null>(null);
+const selectedNote = computed(() => notes.value.find((note) => note.id === selectedId.value) ?? null);
 const titleCount = computed(() => Array.from(draft.title).length);
 const bodyCount = computed(() => Array.from(draft.body).length);
 const valid = computed(() => !!draft.title.trim() && !!draft.body.trim() && titleCount.value <= 120 && bodyCount.value <= 10000);
@@ -43,36 +44,50 @@ function beginEdit(note?: ProjectNote) {
   fieldError.value = "";
   dialogOpen.value = true;
 }
-watch(projectId, () => { dialogOpen.value = false; deleting.value = null; expanded.value = new Set(); });
+watch(projectId, () => { dialogOpen.value = false; deleting.value = null; selectedId.value = null; });
+watch(notes, (value) => {
+  if (!value.length) {
+    selectedId.value = null;
+  } else if (!value.some((note) => note.id === selectedId.value)) {
+    selectedId.value = value[0]?.id ?? null;
+  }
+}, { immediate: true });
 async function submit() {
   if (busy.value || !valid.value) return;
   fieldError.value = "";
   try {
-    await save.mutateAsync({ projectId: projectId.value, id: editingId.value, title: draft.title.trim(), body: draft.body.trim() });
+    const result = await save.mutateAsync({ projectId: projectId.value, id: editingId.value, title: draft.title.trim(), body: draft.body.trim() });
+    await list.refetch();
+    if (!editingId.value && typeof result === "string") selectedId.value = result;
+    else if (editingId.value) selectedId.value = editingId.value;
     dialogOpen.value = false;
     toast.success("Note saved.");
   } catch (error) { fieldError.value = toAppError(error).message; }
 }
 async function confirmDelete() {
   if (!deleting.value || busy.value) return;
+  const deleted = deleting.value;
+  const index = notes.value.findIndex((note) => note.id === deleted.id);
   try {
-    await remove.mutateAsync({ id: deleting.value.id, projectId: deleting.value.project_id });
+    await remove.mutateAsync({ id: deleted.id, projectId: deleted.project_id });
     deleting.value = null;
+    await list.refetch();
+    const remaining = notes.value;
+    selectedId.value = remaining[Math.min(index, remaining.length - 1)]?.id ?? null;
     toast.success("Note deleted.");
   } catch (error) { toast.error(toAppError(error).message); }
 }
-function toggle(id: string) {
-  const next = new Set(expanded.value);
-  if (next.has(id)) next.delete(id); else next.add(id);
-  expanded.value = next;
-}
+const preview = (body: string) => {
+  const compact = body.replace(/\s+/g, " ").trim();
+  return compact.length > 120 ? `${compact.slice(0, 117)}...` : compact;
+};
 const date = (value: string) => new Date(value).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
 const focusFallback = ref<HTMLElement | null>(null);
 const restoreDialogFocus = useExecutionDialogFocus(computed(() => dialogOpen.value || !!deleting.value), focusFallback);
 </script>
 
 <template>
-  <div class="fade-in max-w-3xl">
+  <div class="fade-in max-w-6xl">
     <div class="mb-5 flex flex-wrap items-start justify-between gap-4">
       <div class="min-w-0 flex-1">
         <h2
@@ -82,9 +97,6 @@ const restoreDialogFocus = useExecutionDialogFocus(computed(() => dialogOpen.val
         >
           Notes
         </h2>
-        <p class="mt-1 text-sm text-ink-soft">
-          Keep important project information in one place.
-        </p>
       </div>
       <AppButton
         v-if="canCreate"
@@ -92,19 +104,25 @@ const restoreDialogFocus = useExecutionDialogFocus(computed(() => dialogOpen.val
         :disabled="atLimit || list.isPending.value || list.isError.value || busy"
         @click="beginEdit()"
       >
-        + Add note
+        Add note
       </AppButton>
     </div>
     <div
       v-if="list.isPending.value"
       role="status"
       aria-label="Loading notes"
-      class="space-y-3"
+      class="grid gap-5 lg:grid-cols-[minmax(240px,38%)_minmax(0,1fr)]"
     >
+      <div class="space-y-3">
+        <SkeletonBlock
+          v-for="i in 3"
+          :key="i"
+          height="104px"
+          rounded="0.75rem"
+        />
+      </div>
       <SkeletonBlock
-        v-for="i in 3"
-        :key="i"
-        height="112px"
+        height="360px"
         rounded="0.75rem"
       />
     </div>
@@ -123,73 +141,106 @@ const restoreDialogFocus = useExecutionDialogFocus(computed(() => dialogOpen.val
       </p>
       <EmptyState
         v-if="!notes.length"
-        message="No notes yet. Record information the project can refer back to."
-      />
+        message="No notes yet."
+      >
+        <template #action>
+          <AppButton
+            v-if="canCreate"
+            size="sm"
+            :disabled="atLimit || busy"
+            @click="beginEdit()"
+          >
+            Add note
+          </AppButton>
+        </template>
+      </EmptyState>
       <div
         v-else
-        class="space-y-4"
+        class="grid gap-5 lg:grid-cols-[minmax(240px,38%)_minmax(0,1fr)]"
       >
-        <article
-          v-for="note in notes"
-          :key="note.id"
-          class="min-w-0 border-b border-line pb-5 last:border-0"
-          :class="expanded.has(note.id) ? 'border-l-2 border-l-brand pl-4' : ''"
+        <nav
+          aria-label="Project notes"
+          class="min-w-0 rounded-xl border border-line bg-surface lg:max-h-[calc(100vh-220px)] lg:overflow-y-auto"
         >
-          <h3>
-            <button
-              class="w-full min-h-11 text-left rounded-lg focus-ring text-card-heading font-semibold [overflow-wrap:anywhere]"
-              :class="expanded.has(note.id) ? 'text-brand' : 'text-ink'"
-              :aria-expanded="expanded.has(note.id)"
-              :aria-controls="`note-body-${note.id}`"
-              @click="toggle(note.id)"
+          <ol>
+            <li
+              v-for="note in notes"
+              :key="note.id"
+              class="border-b border-line last:border-b-0"
             >
-              {{ note.title }}
-            </button>
-          </h3>
-          <p
-            :id="`note-body-${note.id}`"
-            class="whitespace-pre-wrap text-sm leading-7 text-ink-soft [overflow-wrap:anywhere]"
-            :class="expanded.has(note.id) ? '' : 'line-clamp-3'"
+              <button
+                type="button"
+                class="group block w-full min-h-24 px-4 py-3 text-left focus-ring [overflow-wrap:anywhere]"
+                :class="selectedId === note.id
+                  ? 'border-l-4 border-l-brand bg-brand-soft/60'
+                  : 'border-l-4 border-l-transparent hover:bg-surface-subtle'"
+                :aria-current="selectedId === note.id ? 'true' : undefined"
+                :aria-label="note.title"
+                @click="selectedId = note.id"
+              >
+                <span
+                  class="block text-card-heading font-semibold"
+                  :class="selectedId === note.id ? 'text-brand' : 'text-ink'"
+                >
+                  {{ note.title }}
+                </span>
+                <span class="mt-1 block text-sm leading-5 text-ink-soft line-clamp-2">
+                  {{ preview(note.body) }}
+                </span>
+                <span class="mt-2 block text-meta text-muted">
+                  Updated <time :datetime="note.updated_at">{{ date(note.updated_at) }}</time>
+                </span>
+              </button>
+            </li>
+          </ol>
+        </nav>
+        <article
+          v-if="selectedNote"
+          aria-label="Selected note detail"
+          class="min-w-0 rounded-xl border border-line bg-surface p-5 sm:p-6"
+        >
+          <header class="border-b border-line pb-4">
+            <h3 class="text-section-heading [overflow-wrap:anywhere]">
+              {{ selectedNote.title }}
+            </h3>
+            <p class="mt-2 text-meta text-muted">
+              Updated <time :datetime="selectedNote.updated_at">{{ date(selectedNote.updated_at) }}</time>
+            </p>
+            <p
+              v-if="selectedNote.creator_name"
+              class="mt-1 text-meta text-muted"
+            >
+              By {{ selectedNote.creator_name }}
+            </p>
+          </header>
+          <div class="py-5">
+            <p class="max-w-prose whitespace-pre-wrap text-body leading-7 text-ink-soft [overflow-wrap:anywhere]">
+              {{ selectedNote.body }}
+            </p>
+          </div>
+          <div
+            v-if="canManage(selectedNote)"
+            class="flex flex-wrap items-center gap-2 border-t border-line pt-4"
           >
-            {{ note.body }}
-          </p>
-          <p class="mt-3 text-meta text-muted">
-            Updated <time :datetime="note.updated_at">{{ date(note.updated_at) }}</time><span v-if="expanded.has(note.id)"> · {{ note.creator_name ?? 'Unknown author' }}</span>
-          </p>
-          <div class="mt-2 flex flex-wrap items-center gap-2">
-            <button
-              v-if="note.body.length > 240 || note.body.split('\n').length > 6"
-              class="min-h-11 rounded-lg px-2 text-sm text-brand focus-ring"
-              :aria-expanded="expanded.has(note.id)"
-              :aria-controls="`note-body-${note.id}`"
-              @click="toggle(note.id)"
+            <AppButton
+              variant="secondary"
+              :disabled="busy"
+              :aria-label="`Edit note: ${selectedNote.title}`"
+              @click="beginEdit(selectedNote)"
             >
-              {{ expanded.has(note.id) ? 'Show less' : 'Show more' }}
-            </button>
-            <template v-if="expanded.has(note.id) && canManage(note)">
-              <AppButton
-                variant="secondary"
-                :disabled="busy"
-                :aria-label="`Edit note: ${note.title}`"
-                @click="beginEdit(note)"
-              >
-                Edit
-              </AppButton>
-              <AppButton
-                variant="ghost"
-                :disabled="busy"
-                :aria-label="`Delete note: ${note.title}`"
-                @click="deleting = note"
-              >
-                Delete
-              </AppButton>
-            </template>
+              Edit
+            </AppButton>
+            <AppButton
+              variant="ghost"
+              :disabled="busy"
+              :aria-label="`Delete note: ${selectedNote.title}`"
+              @click="deleting = selectedNote"
+            >
+              Delete
+            </AppButton>
           </div>
         </article>
       </div>
-      <p class="mt-3 text-meta text-muted">
-        {{ notes.length }} / 20 notes
-      </p>
     </template>
     <p
       v-if="archived"
