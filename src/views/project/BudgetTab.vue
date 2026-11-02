@@ -1,6 +1,8 @@
 <script setup lang="ts">
+import { useExecutionDialogFocus } from "@/composables/useExecutionDialogFocus";
 import MemberBalances from "@/components/budget/MemberBalances.vue";
 import BudgetTargetDialog from "@/components/budget/BudgetTargetDialog.vue";
+import BudgetVisual from "@/components/budget/BudgetVisual.vue";
 import AppButton from "@/components/ui/AppButton.vue";
 import { computed, ref } from "vue";
 import { useRoute } from "vue-router";
@@ -11,8 +13,8 @@ import { categoryLabel } from "@/lib/commitmentCategories";
 import SkeletonBlock from "@/components/ui/SkeletonBlock.vue";
 import ErrorState from "@/components/ui/ErrorState.vue";
 import EmptyState from "@/components/ui/EmptyState.vue";
-import StatTile from "@/components/ui/StatTile.vue";
-import SectionHeading from "@/components/ui/SectionHeading.vue";
+
+
 
 const route = useRoute();
 const projectId = computed(() => String(route.params.projectId));
@@ -30,19 +32,30 @@ const hasTarget = computed(() => financials.value?.total_target_minor != null);
 
 const categoriesWithData = computed(() => categories.value.filter((c) => c.target_minor != null || c.actual_minor > 0 || c.net_paid_minor !== 0));
 
+const focusFallback = ref<HTMLElement | null>(null);
+const restoreDialogFocus = useExecutionDialogFocus(budgetOpen, focusFallback);
 </script>
 
 <template>
-  <div class="fade-in">
+  <div class="space-y-6 max-w-5xl fade-in">
+    <h2
+      ref="focusFallback"
+      tabindex="-1"
+      class="text-section-heading focus-ring"
+    >
+      Budget
+    </h2>
+    <p class="text-sm text-ink-soft -mt-4 max-w-2xl">
+      Project spending, category targets and member settlements.
+    </p>
     <div
       v-if="isPending"
-      class="grid sm:grid-cols-3 gap-4"
+      role="status"
+      aria-label="Loading budget"
     >
       <SkeletonBlock
-        v-for="i in 6"
-        :key="i"
-        height="52px"
-        rounded="0.5rem"
+        height="180px"
+        rounded="0.75rem"
       />
     </div>
     <ErrorState
@@ -50,123 +63,157 @@ const categoriesWithData = computed(() => categories.value.filter((c) => c.targe
       :error="error"
       :retry="() => refetch()"
     />
-    <template v-else-if="financials">
-      <div class="mb-4 flex justify-end">
+    <section
+      v-else-if="financials"
+      class="rounded-2xl border border-line bg-surface p-5 sm:p-6"
+      aria-label="Project financial summary"
+    >
+      <div class="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p class="text-meta font-medium uppercase tracking-wide text-muted">
+            Overall financial summary
+          </p><p class="mt-1 text-page-title tnum [overflow-wrap:anywhere]">
+            {{ format(financials.net_actual_spend_minor, currency) }}
+          </p>
+          <p class="mt-1 text-sm text-ink-soft">
+            Spent so far
+          </p>
+        </div>
         <AppButton
           v-if="canEditBudget"
-          size="sm"
+          variant="secondary"
           @click="budgetOpen = true"
         >
           {{ hasTarget ? 'Edit budget' : 'Set budget' }}
         </AppButton>
       </div>
-      <div class="grid gap-4 sm:grid-cols-3">
-        <div class="border border-line rounded-xl bg-surface p-5">
-          <StatTile
-            :value="hasTarget ? format(financials.total_target_minor, currency) : 'Not set'"
-            label="Total budget"
-          />
+      <dl class="mt-5 grid gap-4 sm:grid-cols-2 border-t border-line pt-4">
+        <div>
+          <dt class="text-meta text-muted">
+            Total budget
+          </dt><dd class="mt-1 text-card-heading tnum [overflow-wrap:anywhere]">
+            {{ hasTarget ? format(financials.total_target_minor, currency) : 'Not set' }}
+          </dd>
         </div>
-        <div class="border border-line rounded-xl bg-surface p-5">
-          <StatTile
-            :value="format(financials.net_actual_spend_minor, currency)"
-            label="Spent so far"
-          />
+        <div>
+          <dt class="text-meta text-muted">
+            {{ (financials.settled_variance_minor ?? 0) < 0 ? 'Over budget' : 'Remaining budget' }}
+          </dt><dd
+            class="mt-1 text-card-heading tnum [overflow-wrap:anywhere]"
+            :class="(financials.settled_variance_minor ?? 0) < 0 ? 'text-warning' : ''"
+          >
+            {{ hasTarget ? format(Math.abs(financials.settled_variance_minor ?? 0), currency) : '—' }}
+          </dd>
         </div>
-
-        <div class="border border-line rounded-xl bg-surface p-5">
-          <StatTile
-            :value="hasTarget ? format(Math.abs(financials.settled_variance_minor ?? 0), currency) : '—'"
-            :label="(financials.settled_variance_minor ?? 0) < 0 ? 'Over budget' : 'Remaining budget'"
-            :tone="(financials.settled_variance_minor ?? 0) < 0 ? 'amber' : 'default'"
-          />
-        </div>
-      </div>
+      </dl>
+      <BudgetVisual
+        class="mt-5"
+        :target="financials.total_target_minor"
+        :planned="financials.committed_spend_minor ?? 0"
+        :paid="financials.net_actual_spend_minor ?? 0"
+        :currency="currency"
+      />
+      <details class="mt-4 border-t border-line pt-2">
+        <summary class="min-h-11 py-3 cursor-pointer rounded-lg focus-ring text-sm font-medium">
+          Planning and payments
+        </summary>
+        <dl class="grid gap-4 sm:grid-cols-2">
+          <div>
+            <dt class="text-meta text-muted">
+              Committed spend
+            </dt><dd class="mt-1 text-sm tnum [overflow-wrap:anywhere]">
+              {{ format(financials.committed_spend_minor, currency) }}
+            </dd>
+          </div>
+          <div>
+            <dt class="text-meta text-muted">
+              Scheduled payments outstanding
+            </dt><dd class="mt-1 text-sm tnum [overflow-wrap:anywhere]">
+              {{ format(financials.scheduled_outstanding_minor, currency) }}
+            </dd>
+          </div>
+        </dl>
+        <p class="mt-3 text-meta text-muted">
+          Open an Activity for payment schedules, cost splits and reimbursement requests.
+        </p>
+        <AppButton
+          class="mt-2"
+          variant="ghost"
+          :to="{ name: 'project.commitments', params: { projectId } }"
+        >
+          View Activities and payments
+        </AppButton>
+      </details>
       <p
         v-if="!hasTarget"
-        class="my-4 text-13 text-muted"
+        class="mt-4 text-meta text-muted"
       >
-        Set an approximate project budget to track spending against a target.
+        Set an approximate budget to track spending against a target.
       </p>
-      <MemberBalances
-        :project-id="projectId"
-        :currency="currency"
+    </section>
+    <MemberBalances
+      :project-id="projectId"
+      :currency="currency"
+    />
+    <section
+      class="border-t border-line pt-6 space-y-3"
+      aria-label="Category budgets"
+    >
+      <h2 class="text-section-heading">
+        By category
+      </h2>
+      <SkeletonBlock
+        v-if="catPending"
+        height="100px"
       />
-    
-      <section
-        class="mt-10 border-t border-line pt-6"
-        aria-label="Category budgets"
+      <ErrorState
+        v-else-if="catFailed"
+        :error="catError"
+        :retry="() => refetchCategories()"
+      />
+      <EmptyState
+        v-else-if="categoriesWithData.length === 0"
+        message="No category targets or spending yet. Activity costs appear here by category."
+      />
+      <div
+        v-else
+        class="rounded-xl border border-line bg-surface divide-y divide-line"
       >
-        <SectionHeading label="By category" />
-        <SkeletonBlock
-          v-if="catPending"
-          class="mt-3"
-          height="80px"
-        />
-        <ErrorState
-          v-else-if="catFailed"
-          :error="catError"
-          :retry="() => refetchCategories()"
-        />
-        <EmptyState
-          v-else-if="categoriesWithData.length === 0"
-          class="mt-3"
-          message="No spending recorded yet. Add costs to Activities to see a category breakdown."
-        />
-        <div
-          v-else
-          class="mt-3 overflow-x-auto border border-line rounded-xl"
-          role="region"
-          aria-label="Budget by category"
-          tabindex="0"
+        <article
+          v-for="c in categoriesWithData"
+          :key="c.kind"
+          class="p-4 sm:flex sm:items-center sm:justify-between gap-4"
         >
-          <table class="w-full text-14 whitespace-nowrap">
-            <caption class="sr-only">
-              Category targets and recorded expenses
-            </caption>
-            <thead class="bg-surface text-muted">
-              <tr>
-                <th
-                  v-for="heading in ['Category', 'Target', 'Spent so far']"
-                  :key="heading"
-                  scope="col"
-                  class="px-4 py-3 text-left"
-                >
-                  {{ heading }}
-                </th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-line">
-              <tr
-                v-for="c in categoriesWithData"
-                :key="c.kind"
-              >
-                <th
-                  scope="row"
-                  class="px-4 py-3 text-left font-medium"
-                >
-                  {{ categoryLabel(c.kind) }}
-                </th>
-                <td class="px-4 py-3 text-right">
-                  {{ c.target_minor == null ? '—' : format(c.target_minor, currency) }}
-                </td>
-
-                <td class="px-4 py-3 text-right">
-                  {{ format(c.net_paid_minor, currency) }}
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </section>
-      
-      <BudgetTargetDialog
-        :open="budgetOpen"
-        :project-id="projectId"
-        :currency="currency"
-        :target="financials.total_target_minor"
-        @close="budgetOpen = false"
-      />
-    </template>
+          <h3 class="text-card-heading font-medium [overflow-wrap:anywhere]">
+            {{ categoryLabel(c.kind) }}
+          </h3>
+          <dl class="mt-3 sm:mt-0 grid grid-cols-2 gap-4 sm:min-w-64">
+            <div>
+              <dt class="text-meta text-muted">
+                Target
+              </dt><dd class="mt-1 text-sm tnum [overflow-wrap:anywhere]">
+                {{ c.target_minor == null ? 'Not set' : format(c.target_minor, currency) }}
+              </dd>
+            </div>
+            <div>
+              <dt class="text-meta text-muted">
+                Spent so far
+              </dt><dd class="mt-1 text-sm tnum [overflow-wrap:anywhere]">
+                {{ format(c.net_paid_minor, currency) }}
+              </dd>
+            </div>
+          </dl>
+        </article>
+      </div>
+    </section>
+    <BudgetTargetDialog
+      v-if="financials"
+      :open="budgetOpen"
+      :project-id="projectId"
+      :currency="currency"
+      :target="financials.total_target_minor"
+      @after-close="restoreDialogFocus"
+      @close="budgetOpen = false"
+    />
   </div>
 </template>

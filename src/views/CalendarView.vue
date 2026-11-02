@@ -1,198 +1,122 @@
 <script setup lang="ts">
-import { executionStatusLabel } from "@/lib/activityWorkflows";
-import { presentLabel } from "@/lib/presentation";
-import { computed, ref } from "vue";
-import { DateTime } from "luxon";
-import { RouterLink } from "vue-router";
-import { useGlobalCalendar } from "@/composables/useGlobalCalendar";
-import { useMyProjects } from "@/composables/useProjects";
-import { useMyProfile } from "@/composables/useDashboard";
-import { useMoney } from "@/composables/useMoney";
-import { CALENDAR_SEMANTICS, calendarPresentation, calendarTypeLabel } from "@/lib/calendarPresentation";
-import type { GlobalTimelineEvent } from "@/types/derived";
-import PageContainer from "@/components/ui/PageContainer.vue";
-import AppButton from "@/components/ui/AppButton.vue";
-import AppIcon from "@/components/ui/AppIcon.vue";
-import AppModal from "@/components/ui/AppModal.vue";
-import SkeletonBlock from "@/components/ui/SkeletonBlock.vue";
-import ErrorState from "@/components/ui/ErrorState.vue";
-import EmptyState from "@/components/ui/EmptyState.vue";
-import StatusBadge from "@/components/ui/StatusBadge.vue";
+import { computed, ref } from 'vue';
+import { DateTime } from 'luxon';
+import { useMediaQuery, useNow } from '@vueuse/core';
+import { useGlobalCalendar } from '@/composables/useGlobalCalendar';
+import { useMyProjects } from '@/composables/useProjects';
+import { useMyProfile } from '@/composables/useDashboard';
+import { globalEventDay, globalEventKey, globalEventSource, globalEventTypeLabel } from '@/lib/globalCalendarPresentation';
+import type { GlobalTimelineEvent } from '@/types/derived';
+import PageContainer from '@/components/ui/PageContainer.vue';
+import AppIcon from '@/components/ui/AppIcon.vue';
+import ErrorState from '@/components/ui/ErrorState.vue';
+import CalendarToolbar from '@/components/calendar/CalendarToolbar.vue';
+import CalendarMonthGrid from '@/components/calendar/CalendarMonthGrid.vue';
+import CalendarLoading from '@/components/calendar/CalendarLoading.vue';
+import GlobalCalendarEventLink from '@/components/calendar/GlobalCalendarEventLink.vue';
 
 const { profile } = useMyProfile();
 const { projects } = useMyProjects();
-const { format } = useMoney();
-
-const zone = computed(() => profile.value?.timezone ?? "UTC");
-const selectedMonth = ref(DateTime.now().setZone(zone.value).startOf("month"));
-const selectedProject = ref("");
-const selectedType = ref("");
+const zone = computed(() => profile.value?.timezone ?? 'UTC');
+// Preserve the global query's existing month anchor and two-day buffer.
+const selectedMonth = ref(DateTime.now().setZone(zone.value).startOf('month'));
+const selectedProject = ref('');
+const selectedType = ref('');
 const selectedDay = ref<string | null>(null);
-const VISIBLE_MARKERS = 3;
-
-const queryStart = computed(() => selectedMonth.value.minus({ days: 2 }).toUTC().toISO() ?? "");
-const queryEnd = computed(() => selectedMonth.value.endOf("month").plus({ days: 2 }).toUTC().toISO() ?? "");
+const queryStart = computed(() => selectedMonth.value.minus({days: 2}).toUTC().toISO() ?? '');
+const queryEnd = computed(() => selectedMonth.value.endOf('month').plus({days: 2}).toUTC().toISO() ?? '');
 const calendar = useGlobalCalendar(queryStart, queryEnd);
-
-const monthLabel = computed(() => selectedMonth.value.toFormat("LLLL yyyy"));
-const eventTypes = computed(() => Array.from(new Set(calendar.events.value.map((e) => e.event_type))).sort());
-
-function eventDayKey(event: GlobalTimelineEvent): string {
-  return DateTime.fromISO(event.occurs_at, { zone: event.project_timezone }).toISODate() ?? "";
-}
-
-const filteredEvents = computed(() =>
-  calendar.events.value
-    .filter((event) => eventDayKey(event).startsWith(selectedMonth.value.toFormat("yyyy-LL")))
-    .filter((event) => !selectedProject.value || event.project_id === selectedProject.value)
-    .filter((event) => !selectedType.value || event.event_type === selectedType.value),
-);
-
+const monthLabel = computed(() => selectedMonth.value.toFormat('LLLL yyyy'));
+const eventTypes = computed(() => Array.from(new Set(calendar.events.value.map(e => e.event_type))).sort().map(type => ({
+  type, label: globalEventTypeLabel(type), source: globalEventSource(calendar.events.value.find(e => e.event_type === type)!.subject_type),
+})));
+const now = useNow({interval: 60_000});
+const today = computed(() => DateTime.fromJSDate(now.value, {zone: zone.value}).toISODate()!);
+const narrow = useMediaQuery('(max-width: 639px)');
+const compactMonth = useMediaQuery('(max-width: 1023px)');
+const selectedView = ref<'month' | 'agenda' | null>(null);
+const view = computed(() => selectedView.value ?? (narrow.value ? 'agenda' : 'month'));
+const entries = computed(() => calendar.events.value
+  .filter(e => globalEventDay(e).startsWith(selectedMonth.value.toFormat('yyyy-LL')))
+  .filter(e => !selectedProject.value || e.project_id === selectedProject.value)
+  .filter(e => !selectedType.value || e.event_type === selectedType.value));
 const eventsByDay = computed(() => {
   const map = new Map<string, GlobalTimelineEvent[]>();
-  for (const event of filteredEvents.value) {
-    const key = eventDayKey(event);
+  for (const event of entries.value) {
+    const key = globalEventDay(event);
     map.set(key, [...(map.get(key) ?? []), event]);
   }
   return map;
 });
-
-const monthDays = computed(() => {
-  const start = selectedMonth.value.startOf("month");
-  const firstGridDay = start.minus({ days: start.weekday - 1 });
-  return Array.from({ length: 42 }, (_, index) => {
-    const day = firstGridDay.plus({ days: index });
-    const key = day.toISODate() ?? "";
-    return { day, key, inMonth: day.month === selectedMonth.value.month };
+const days = computed(() => {
+  const start = selectedMonth.value.startOf('month');
+  const first = start.minus({days: start.weekday - 1});
+  return Array.from({length: 42}, (_, index) => {
+    const date = first.plus({days: index});
+    const key = date.toISODate()!;
+    return {key, date, entries: eventsByDay.value.get(key) ?? []};
   });
 });
-
-function moveMonth(delta: number) {
-  selectedMonth.value = selectedMonth.value.plus({ months: delta }).startOf("month");
-}
-
-function goToday() {
-  selectedMonth.value = DateTime.now().setZone(zone.value).startOf("month");
-}
-
-function typeLabel(type: string): string {
-  return calendarTypeLabel(type);
-}
-
-function statusTone(status: string | null) {
-  if (status === "completed" || status === "paid" || status === "booked") return "accent";
-  if (status === "cancelled" || status === "waived") return "neutral";
-  return "amber";
-}
-
-function eventRoute(event: GlobalTimelineEvent) {
-  if (event.subject_type === "commitment") {
-    return {
-      name: "project.commitments",
-      params: { projectId: event.project_id },
-      query: {
-        commitment: event.subject_id,
-        ...(event.occurrence_date ? { occurrence: event.occurrence_date } : {}),
-      },
-    };
-  }
-  if (event.subject_type === "payment_schedule") return { name: "project.commitments", params: { projectId: event.project_id }, query: { commitment: event.subject_id, section: "payments" } };
-  if (event.subject_type === "payment") return { name: "project.budget", params: { projectId: event.project_id } };
-  if (event.subject_type === "task") return { name: "project.commitments", params: { projectId: event.project_id }, query: {item:event.subject_id} };
-  if (event.subject_type === "milestone") return { name: "project.timeline", params: { projectId: event.project_id } };
-  return { name: "project.overview", params: { projectId: event.project_id } };
-}
-
-function eventTime(event: GlobalTimelineEvent): string | null {
-  if (event.all_day) return null;
-  return DateTime.fromISO(event.occurs_at, { zone: event.project_timezone }).toFormat("HH:mm");
-}
-
-function eventDate(event: GlobalTimelineEvent): string {
-  return DateTime.fromISO(event.occurs_at, { zone: event.project_timezone }).toFormat("d LLL yyyy");
-}
-
-function eventKey(event: GlobalTimelineEvent): string {
-  return event.event_type + event.subject_id + event.occurs_at + (event.occurrence_date ?? "");
-}
-
-function eventAccessibleLabel(event: GlobalTimelineEvent): string {
-  const presentation = calendarPresentation(event.event_type);
-  const amount = event.amount_minor != null ? `, ${format(event.amount_minor, event.currency)}` : "";
-  return `${presentation.label}: ${event.title}, ${event.project_name}, ${eventDate(event)}${event.is_recurring_occurrence ? `, ${event.status}` : ""}${amount}`;
-}
-
-function eventStatusClass(event: GlobalTimelineEvent): string {
-  if (["completed", "paid", "booked", "cancelled", "waived", "skipped"].includes(event.status ?? "")) {
-    return "opacity-50 grayscale";
-  }
-  if (event.status === "overdue" || isPast(event)) return "ring-1 ring-amber-400";
-  return "";
-}
-
-function eventsForDay(key: string): GlobalTimelineEvent[] {
-  return eventsByDay.value.get(key) ?? [];
-}
-
-const selectedDayEvents = computed(() => (selectedDay.value ? eventsForDay(selectedDay.value) : []));
-const selectedDayLabel = computed(() =>
-  selectedDay.value ? DateTime.fromISO(selectedDay.value, { zone: zone.value }).toFormat("d LLLL yyyy") : "",
-);
-
-function openDayAgenda(day: string) {
-  selectedDay.value = day;
-}
-
-function isPast(event: GlobalTimelineEvent): boolean {
-  if (event.is_recurring_occurrence) return event.status === "overdue";
-  return DateTime.fromISO(event.occurs_at) < DateTime.now() && !["completed", "paid", "booked"].includes(event.status ?? "");
-}
+const weeks = computed(() => Array.from({length: 6}, (_, i) => days.value.slice(i * 7, i * 7 + 7)));
+const selected = computed(() => days.value.find(d => d.key === selectedDay.value));
+const agenda = computed(() => days.value.filter(d => selectedDay.value ? d.key === selectedDay.value : d.entries.length));
+const comingUp = computed(() => entries.value.filter(e => globalEventDay(e) >= DateTime.fromJSDate(now.value, {zone: e.project_timezone}).toISODate()!).slice(0, 3));
+function move(delta: number) {selectedMonth.value = selectedMonth.value.plus({months: delta}).startOf('month'); selectedDay.value = null;}
+function goToday() {selectedMonth.value = DateTime.now().setZone(zone.value).startOf('month'); selectedDay.value = null;}
+function selectDay(day: string) {selectedDay.value = day;}
 </script>
 
 <template>
   <PageContainer width="lg">
-    <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-      <div>
-        <h1 class="font-display text-[26px] font-semibold tracking-tight">
+    <section
+      class="space-y-5 min-w-0"
+      aria-label="Cross-project calendar"
+    >
+      <header>
+        <h1 class="font-display text-page-title font-semibold tracking-tight">
           Calendar
         </h1>
-        <p class="mt-1.5 text-14.5 text-ink-soft">
-          All deadlines, bookings and payments across your projects.
+        <p class="mt-1 text-sm text-ink-soft">
+          Activities and deadlines across your projects.
         </p>
-      </div>
-      <div class="flex flex-wrap items-center gap-2">
-        <AppButton
-          variant="secondary"
-          size="sm"
-          @click="moveMonth(-1)"
+        <p class="mt-1 text-meta text-muted">
+          Dates and times follow each event’s project timezone.
+        </p>
+      </header>
+      <div class="space-y-3">
+        <div
+          class="flex gap-2 overflow-x-auto pb-1 lg:flex-wrap"
+          role="group"
+          aria-label="Calendar event types"
         >
-          Previous month
-        </AppButton>
-        <AppButton
-          variant="secondary"
-          size="sm"
-          @click="goToday"
-        >
-          Today
-        </AppButton>
-        <AppButton
-          variant="secondary"
-          size="sm"
-          @click="moveMonth(1)"
-        >
-          Next month
-        </AppButton>
-      </div>
-    </div>
-
-    <div class="mt-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-      <h2 class="font-display text-[22px] font-semibold tracking-tight">
-        {{ monthLabel }}
-      </h2>
-      <div class="grid gap-2 sm:grid-cols-2 md:w-[28rem]">
+          <button
+            class="focus-ring calendar-button calendar-filter inline-flex shrink-0 whitespace-nowrap items-center gap-2"
+            :aria-pressed="selectedType === ''"
+            @click="selectedType = ''"
+          >
+            <AppIcon
+              name="calendar"
+              :size="16"
+            />All
+          </button>
+          <button
+            v-for="item in eventTypes"
+            :key="item.type"
+            class="focus-ring calendar-button calendar-filter inline-flex shrink-0 whitespace-nowrap items-center gap-2"
+            :aria-pressed="selectedType === item.type"
+            @click="selectedType = item.type"
+          >
+            <AppIcon
+              :name="item.source.icon"
+              :size="16"
+              :class="item.source.text"
+            />{{ item.label }}
+          </button>
+        </div>
         <select
           v-model="selectedProject"
-          class="border rounded-lg px-3 py-2 text-14 focus-ring border-line bg-surface"
+          aria-label="Filter calendar by project"
+          class="min-h-11 min-w-0 w-full sm:max-w-xs border rounded-lg px-3 py-2 text-sm focus-ring border-line bg-surface"
         >
           <option value="">
             All projects
@@ -205,219 +129,192 @@ function isPast(event: GlobalTimelineEvent): boolean {
             {{ project.name }}
           </option>
         </select>
-        <select
-          v-model="selectedType"
-          class="border rounded-lg px-3 py-2 text-14 capitalize focus-ring border-line bg-surface"
-        >
-          <option value="">
-            All event types
-          </option>
-          <option
-            v-for="type in eventTypes"
-            :key="type"
-            :value="type"
-          >
-            {{ typeLabel(type) }}
-          </option>
-        </select>
       </div>
-    </div>
-
-    <div
-      class="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-12 text-muted"
-      aria-label="Calendar legend"
-    >
-      <span
-        v-for="semantic in CALENDAR_SEMANTICS"
-        :key="semantic.semantic"
-        class="inline-flex items-center gap-1.5"
-      >
-        <span
-          class="inline-flex h-5 w-5 items-center justify-center rounded border"
-          :class="semantic.markerClass"
-        >
-          <AppIcon
-            :name="semantic.icon"
-            :size="12"
-          />
-        </span>
-        {{ semantic.label }}
-      </span>
-    </div>
-
-    <div
-      v-if="calendar.isPending.value"
-      class="mt-5 grid gap-2 md:grid-cols-7"
-    >
-      <SkeletonBlock
-        v-for="i in 14"
-        :key="i"
-        height="96px"
-        rounded="0.5rem"
+      <CalendarToolbar
+        :heading-level="2"
+        :label="monthLabel"
+        :view="view"
+        @previous="move(-1)"
+        @next="move(1)"
+        @today="goToday"
+        @update:view="selectedView = $event"
       />
-    </div>
-    <ErrorState
-      v-else-if="calendar.isError.value"
-      class="mt-5"
-      :error="calendar.error.value"
-      :retry="() => calendar.refetch()"
-    />
-    <EmptyState
-      v-else-if="calendar.events.value.length === 0"
-      class="mt-5"
-      message="Nothing scheduled yet. Dates, deadlines, bookings and payments from your projects will appear here."
-    />
-    <template v-else>
-      <EmptyState
-        v-if="filteredEvents.length === 0"
-        class="mt-5"
-        message="Nothing scheduled this month."
+      <CalendarLoading
+        v-if="calendar.isPending.value"
+        :view="view"
       />
-
-      <div class="mt-5 hidden rounded-xl border border-line bg-surface md:grid md:grid-cols-7">
-        <div
-          v-for="label in ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']"
-          :key="label"
-          class="border-b border-line px-3 py-2 text-12 font-semibold uppercase text-muted"
+      <ErrorState
+        v-else-if="calendar.isError.value"
+        :error="calendar.error.value"
+        :retry="() => calendar.refetch()"
+      />
+      <template v-else>
+        <p
+          v-if="!entries.length"
+          class="text-sm text-muted"
         >
-          {{ label }}
-        </div>
+          {{ !selectedType && !selectedProject ? 'Nothing scheduled this month.' : 'No matching items this month.' }}
+        </p>
         <div
-          v-for="cell in monthDays"
-          :key="cell.key"
-          class="min-h-[8.5rem] border-b border-r border-line p-2 last:border-r-0"
-          :class="cell.inMonth ? 'bg-surface' : 'bg-[#FBFBFA] text-muted'"
+          v-if="view === 'month'"
+          class="calendar-layout"
         >
-          <div class="text-12 font-medium">
-            {{ cell.day.day }}
-          </div>
-          <div class="mt-2 flex min-h-12 flex-wrap content-start gap-1">
-            <RouterLink
-              v-for="event in eventsForDay(cell.key).slice(0, VISIBLE_MARKERS)"
-              :key="eventKey(event)"
-              :to="eventRoute(event)"
-              class="group relative inline-flex h-8 w-8 items-center justify-center rounded-md border focus-ring hover:brightness-95"
-              :class="[calendarPresentation(event.event_type).markerClass, eventStatusClass(event)]"
-              :aria-label="eventAccessibleLabel(event)"
-              :title="eventAccessibleLabel(event)"
+          <div class="min-w-0">
+            <CalendarMonthGrid
+              :weeks="weeks"
+              :anchor-month="selectedMonth.month"
+              :today="today"
+              :selected-day="selectedDay"
+              :compact-month="compactMonth"
+              :entry-key="globalEventKey"
+              roomy
+              @select="selectDay"
             >
-              <AppIcon
-                :name="calendarPresentation(event.event_type).icon"
-                :size="16"
-              />
-              <span class="pointer-events-none absolute left-0 top-9 z-30 hidden w-56 rounded-lg border border-line bg-surface p-2.5 text-left text-12 shadow-lg group-hover:block group-focus:block">
-                <span class="block font-medium text-ink">{{ event.title }}</span>
-                <span class="mt-0.5 block text-muted">{{ event.project_name }}</span>
-                <span
-                  class="mt-1 block"
-                  :class="calendarPresentation(event.event_type).softClass"
+              <template #entry="{entry}">
+                <GlobalCalendarEventLink
+                  :event="entry"
+                  compact
+                />
+              </template>
+            </CalendarMonthGrid>
+          </div>
+          <div class="min-w-0 space-y-5">
+            <section
+              class="rounded-xl border border-line bg-surface"
+              aria-label="Selected day"
+              aria-live="polite"
+            >
+              <div class="p-4 sm:p-5 border-b border-line">
+                <p class="text-xs uppercase tracking-wider font-semibold text-brand">
+                  Selected day
+                </p>
+                <h3 class="mt-2 text-base font-semibold">
+                  {{ selected ? selected.date.toFormat('cccc, d LLLL yyyy') + (selected.key === today ? ' · Today' : '') : 'A closer look at your day' }}
+                </h3>
+                <p
+                  v-if="!selected"
+                  class="mt-2 text-sm text-muted"
                 >
-                  {{ typeLabel(event.event_type) }} · {{ eventDate(event) }}
-                </span>
-              </span>
-            </RouterLink>
-            <button
-              v-if="eventsForDay(cell.key).length > VISIBLE_MARKERS"
-              type="button"
-              class="h-8 rounded-md px-1.5 text-12 font-semibold text-ink-soft hover:bg-paper focus-ring"
-              :aria-label="`Show all ${eventsForDay(cell.key).length} events for ${cell.day.toFormat('d LLLL yyyy')}`"
-              @click="openDayAgenda(cell.key)"
+                  Choose a date in the month to see what’s scheduled.
+                </p>
+                <button
+                  v-if="selectedDay"
+                  class="focus-ring mt-2 min-h-11 text-sm text-brand"
+                  @click="selectedDay = null"
+                >
+                  Show all dates
+                </button>
+              </div>
+              <ul
+                v-if="selected?.entries.length"
+                class="divide-y divide-line"
+              >
+                <li
+                  v-for="entry in selected.entries"
+                  :key="globalEventKey(entry)"
+                >
+                  <GlobalCalendarEventLink
+                    :event="entry"
+                  />
+                </li>
+              </ul>
+              <p
+                v-else-if="selected"
+                class="p-5 text-sm text-muted"
+              >
+                Nothing scheduled for this day.
+              </p>
+            </section>
+            <section
+              v-if="comingUp.length"
+              class="rounded-xl border border-line bg-surface"
+              aria-label="Coming up"
             >
-              +{{ eventsForDay(cell.key).length - VISIBLE_MARKERS }} more
-            </button>
+              <div class="p-4 border-b border-line">
+                <h3 class="text-sm font-semibold">
+                  Coming up
+                </h3><p class="mt-1 text-meta text-muted">
+                  Next dated items in this displayed range.
+                </p>
+              </div>
+              <ul class="divide-y divide-line">
+                <li
+                  v-for="entry in comingUp"
+                  :key="globalEventKey(entry)"
+                  class="p-3"
+                >
+                  <p class="mb-2 text-meta font-medium text-ink-soft">
+                    {{ DateTime.fromISO(globalEventDay(entry), { zone: zone }).toFormat('ccc d LLL') }}
+                  </p>
+                  <GlobalCalendarEventLink
+                    :event="entry"
+
+                    compact
+                  />
+                </li>
+              </ul>
+            </section>
           </div>
         </div>
-      </div>
-
-      <div class="mt-5 space-y-2 md:hidden">
-        <RouterLink
-          v-for="event in filteredEvents"
-          :key="eventKey(event)"
-          :to="eventRoute(event)"
-          class="block rounded-xl border border-line bg-surface p-4 focus-ring"
+        <div
+          v-else
+          class="space-y-5"
+          aria-live="polite"
         >
-          <div class="flex items-start justify-between gap-3">
-            <div>
-              <div class="text-13 font-medium text-muted">
-                {{ DateTime.fromISO(event.occurs_at, { zone: event.project_timezone }).toFormat("d LLL") }}
-              </div>
-              <div class="mt-1 text-14 font-medium">
-                {{ event.title }}
-              </div>
-              <div class="mt-0.5 text-13 text-muted">
-                {{ event.project_name }}
-              </div>
-            </div>
-            <StatusBadge
-              v-if="isPast(event)"
-              label="Overdue"
-              tone="amber"
-            />
-            <StatusBadge
-              v-else-if="event.status"
-              :label="event.subject_type === 'commitment' && !event.is_recurring_occurrence ? executionStatusLabel(event.status) : presentLabel(event.status)"
-              :tone="statusTone(event.status)"
-            />
-          </div>
-          <div class="mt-2 flex flex-wrap gap-2 text-13 text-muted">
-            <span
-              class="inline-flex items-center gap-1"
-              :class="calendarPresentation(event.event_type).softClass"
-            >
-              <AppIcon
-                :name="calendarPresentation(event.event_type).icon"
-                :size="14"
-              />
-              {{ typeLabel(event.event_type) }}
-            </span>
-            <span v-if="eventTime(event)">{{ eventTime(event) }}</span>
-            <span
-              v-if="event.amount_minor != null"
-              class="font-medium text-ink-soft"
-            >{{ format(event.amount_minor, event.currency) }}</span>
-          </div>
-        </RouterLink>
-      </div>
-    </template>
-
-    <AppModal
-      :open="!!selectedDay"
-      :title="selectedDayLabel"
-      size="lg"
-      @close="selectedDay = null"
-    >
-      <div class="space-y-2">
-        <RouterLink
-          v-for="event in selectedDayEvents"
-          :key="eventKey(event)"
-          :to="eventRoute(event)"
-          class="flex items-start gap-3 rounded-lg border border-line p-3 hover:bg-paper focus-ring"
-          :class="eventStatusClass(event)"
-          :aria-label="eventAccessibleLabel(event)"
-          @click="selectedDay = null"
-        >
-          <span
-            class="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border"
-            :class="calendarPresentation(event.event_type).markerClass"
+          <button
+            v-if="selectedDay"
+            class="focus-ring calendar-button"
+            @click="selectedDay = null"
           >
-            <AppIcon
-              :name="calendarPresentation(event.event_type).icon"
-              :size="16"
-            />
-          </span>
-          <span class="min-w-0 flex-1">
-            <span class="block [overflow-wrap:anywhere] text-14 font-medium">{{ event.title }}</span>
-            <span class="mt-0.5 block text-13 text-muted">{{ event.project_name }}</span>
-            <span
-              class="mt-1 block text-13"
-              :class="calendarPresentation(event.event_type).softClass"
+            Show all dates
+          </button>
+          <section
+            v-for="day in agenda"
+            :key="day.key"
+            :aria-label="day.date.toFormat('cccc, d LLLL yyyy')"
+            class="agenda-day"
+          >
+            <div class="flex items-center gap-3 mb-3">
+              <div
+                class="w-12 shrink-0 rounded-lg border border-line bg-surface py-2 text-center"
+                aria-hidden="true"
+              >
+                <span class="block text-xs uppercase text-muted">{{ day.date.toFormat('LLL') }}</span><span class="block text-lg font-semibold">{{ day.date.day }}</span>
+              </div>
+              <h3 class="text-sm font-semibold">
+                {{ day.date.toFormat('cccc, d LLLL yyyy') }}{{ day.key === today ? ' · Today' : '' }}
+              </h3>
+            </div>
+            <ul
+              v-if="day.entries.length"
+              class="rounded-xl border border-line bg-surface divide-y divide-line"
             >
-              {{ typeLabel(event.event_type) }}<span v-if="event.occurrence_date"> · Recurring · <span>{{ presentLabel(event.status) }}</span></span>
-              <span v-if="event.amount_minor != null"> · {{ format(event.amount_minor, event.currency) }}</span>
-            </span>
-          </span>
-        </RouterLink>
-      </div>
-    </AppModal>
+              <li
+                v-for="entry in day.entries"
+                :key="globalEventKey(entry)"
+              >
+                <GlobalCalendarEventLink
+                  :event="entry"
+                />
+              </li>
+            </ul>
+            <p
+              v-else
+              class="text-sm text-muted"
+            >
+              Nothing scheduled for this day.
+            </p>
+          </section>
+        </div>
+      </template>
+    </section>
   </PageContainer>
 </template>
+
+<style scoped>
+.calendar-button { @apply min-h-11 rounded-lg border border-line bg-surface px-3 py-2 text-sm; }
+.calendar-filter { @apply text-ink-soft; }
+.calendar-button[aria-pressed="true"] { @apply bg-brand-soft text-brand border-brand/40; }
+.calendar-layout { display: grid; gap: 1.25rem; min-width: 0; }
+@media (min-width: 1400px) { .calendar-layout { grid-template-columns: minmax(0, 1fr) 280px; align-items: start; } }
+</style>

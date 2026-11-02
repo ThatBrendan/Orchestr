@@ -5,7 +5,7 @@ import { useMoney } from "@/composables/useMoney";
 import { useProjectTime } from "@/composables/useProjectTime";
 import { isProjectModuleVisible, profileDefinition } from "@/lib/projectProfiles";
 import AppIcon from "@/components/ui/AppIcon.vue";
-import ProgressBar from "@/components/ui/ProgressBar.vue";
+
 
 const props = defineProps<{ project: MyProject }>();
 
@@ -33,50 +33,36 @@ const attention = computed(() => props.project.attention_count ?? 0);
 <template>
   <RouterLink
     :to="{ name: 'project.overview', params: { projectId: project.project_id } }"
-    class="row-hover block border rounded-xl p-5 border-line bg-surface hover:bg-[#FBFBFA] transition-colors"
+    :aria-label="`Open project: ${project.name}`"
+    class="group block rounded-xl border border-line bg-surface p-4 sm:p-5 hover:border-brand/40 focus-ring transition-colors"
   >
-    <div class="flex flex-col sm:flex-row items-start justify-between gap-3 sm:gap-6">
+    <div class="flex items-start justify-between gap-4">
       <div class="min-w-0 [overflow-wrap:anywhere]">
-        <div class="font-medium text-[15.5px]">
+        <h3 class="text-card-heading text-ink">
           {{ project.name }}
-          <span class="ml-2 text-13 font-normal capitalize text-muted">{{ project.status }}</span>
-        </div>
-        <div class="text-13 mt-0.5 text-muted">
-          {{ dates }}
-        </div>
-        <div class="mt-3 flex items-center gap-2 text-13 text-ink-soft flex-wrap">
-          <span class="tnum">{{ project.progress_pct ?? 0 }}%</span>
-          <span class="text-muted">complete</span>
-          <span
-            v-if="showBudget"
-            class="text-line"
-          >·</span>
-          <span
-            v-if="showBudget"
-            class="tnum"
-          >{{ spendLine }}</span>
-        </div>
-        <div class="mt-2 text-13 text-muted">
-          {{ profile.label }}
-        </div>
+        </h3>
+        <p class="mt-1 text-meta text-muted">
+          <span class="capitalize">{{ project.status }}</span> · {{ profile.label }} · {{ dates }}
+        </p>
       </div>
-      <div class="text-left sm:text-right sm:max-w-[45%]">
-        <div
-          v-if="attention > 0 && (project.status === 'draft' || project.status === 'active')"
-          class="text-13 font-medium text-amber"
-        >
-          {{ attention }} {{ attention === 1 ? "item needs" : "items need" }} attention
-        </div>
-        <div class="mt-3 inline-flex items-center gap-1 text-[13.5px] font-medium text-brand-dark">
-          Open project <AppIcon
-            name="chevronRight"
-            :size="16"
-          />
-        </div>
-      </div>
+      <AppIcon
+        name="chevronRight"
+        :size="18"
+        class="mt-1 shrink-0 text-brand"
+      />
     </div>
-    <div class="mt-4">
-      <ProgressBar :value="project.progress_pct" />
+    <p
+      v-if="attention > 0 && (project.status === 'draft' || project.status === 'active')"
+      class="mt-3 text-sm font-medium text-warning"
+    >
+      {{ attention }} {{ attention === 1 ? 'item needs' : 'items need' }} attention
+    </p>
+    <div class="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-meta text-ink-soft">
+      <span class="tnum">{{ project.progress_pct ?? 0 }}% complete</span>
+      <span
+        v-if="showBudget"
+        class="tnum"
+      >{{ spendLine }}</span>
     </div>
   </RouterLink>
 </template>

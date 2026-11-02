@@ -234,7 +234,7 @@ function canDeleteTask(task: Task): boolean {
 <template>
   <div class="mt-9">
     <div class="flex items-center justify-between mb-3">
-      <h2 class="font-display text-[17px] font-semibold">
+      <h2 class="font-display text-section-heading font-semibold">
         Activities
       </h2>
       <AppButton
@@ -249,7 +249,7 @@ function canDeleteTask(task: Task): boolean {
 
     <form
       v-if="showAddForm"
-      class="border rounded-xl p-3.5 mb-3 space-y-2.5 border-line bg-[#FBFBFA]"
+      class="border rounded-xl p-3.5 mb-3 space-y-2.5 border-line bg-surface-subtle"
       @submit.prevent="submitAdd"
     >
       <input
@@ -262,7 +262,7 @@ function canDeleteTask(task: Task): boolean {
         <select
           v-model="addForm.item_type"
           aria-label="Activity type"
-          class="border rounded-lg px-2.5 py-2 text-13.5 focus-ring border-line bg-surface"
+          class="border rounded-lg px-2.5 py-2 text-sm focus-ring border-line bg-surface"
         >
           <option value="task">
             Task
@@ -283,7 +283,7 @@ function canDeleteTask(task: Task): boolean {
         <select
           v-model="addForm.assignee_member_id"
           aria-label="Assigned to"
-          class="border rounded-lg px-2.5 py-2 text-13.5 focus-ring border-line bg-surface"
+          class="border rounded-lg px-2.5 py-2 text-sm focus-ring border-line bg-surface"
         >
           <option value="">
             Unassigned
@@ -300,12 +300,12 @@ function canDeleteTask(task: Task): boolean {
           v-model="addForm.due_on"
           aria-label="Activity due date"
           type="date"
-          class="border rounded-lg px-2.5 py-2 text-13.5 focus-ring border-line"
+          class="border rounded-lg px-2.5 py-2 text-sm focus-ring border-line"
         >
         <select
           v-model="addForm.repeat"
           aria-label="Activity repeat"
-          class="border rounded-lg px-2.5 py-2 text-13.5 focus-ring border-line bg-surface"
+          class="border rounded-lg px-2.5 py-2 text-sm focus-ring border-line bg-surface"
         >
           <option
             v-for="option in REPEAT_OPTIONS"
@@ -318,7 +318,7 @@ function canDeleteTask(task: Task): boolean {
         <select
           v-model="addForm.commitment_id"
           aria-label="Linked activity"
-          class="border rounded-lg px-2.5 py-2 text-13.5 focus-ring border-line bg-surface"
+          class="border rounded-lg px-2.5 py-2 text-sm focus-ring border-line bg-surface"
         >
           <option value="">
             No linked activity

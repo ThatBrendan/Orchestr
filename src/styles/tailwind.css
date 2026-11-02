@@ -1,10 +1,7 @@
-@import "@fontsource/inter/400.css";
-@import "@fontsource/inter/500.css";
-@import "@fontsource/inter/600.css";
-@import "@fontsource/inter/700.css";
-@import "@fontsource/space-grotesk/500.css";
-@import "@fontsource/space-grotesk/600.css";
-@import "@fontsource/space-grotesk/700.css";
+@import "@fontsource/plus-jakarta-sans/latin-400.css";
+@import "@fontsource/plus-jakarta-sans/latin-500.css";
+@import "@fontsource/plus-jakarta-sans/latin-600.css";
+@import "@fontsource/plus-jakarta-sans/latin-700.css";
 
 @tailwind base;
 @tailwind components;
@@ -26,13 +23,50 @@
 }
 
 @layer base {
+  :root {
+    --brand: 101 72 184;
+    --brand-hover: 80 53 152;
+    --brand-soft: 242 238 250;
+    --accent: 15 118 110;
+    --accent-soft: 232 246 243;
+    --page: 250 249 247;
+    --surface: 255 255 255;
+    --surface-subtle: 244 245 244;
+    --text: 31 35 40;
+    --text-secondary: 76 83 91;
+    --text-muted: 103 110 119;
+    --border: 222 225 228;
+    --success: 15 118 110;
+    --success-soft: 232 246 243;
+    --warning: 145 92 15;
+    --warning-soft: 255 246 226;
+    --danger: 181 51 51;
+    --danger-soft: 253 238 238;
+  }
+  h1, h2, h3 { @apply font-semibold tracking-tight; }
+  h1 { @apply text-page-title; }
+  h2 { @apply text-section-heading; }
+  h3 { @apply text-card-heading; }
+  label { @apply text-sm font-medium text-ink-soft; }
+  :where(button, a, input, select, textarea, summary):focus-visible {
+    outline: 2px solid rgb(var(--brand));
+    outline-offset: 3px;
+  }
+  :where(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]):not([type="hidden"]):not([type="button"]):not([type="submit"]), select, textarea) {
+    @apply rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink;
+    min-height: 2.75rem;
+  }
+  input::placeholder, textarea::placeholder { color: rgb(var(--text-muted)); }
+  input, select, textarea { accent-color: rgb(var(--brand)); }
+  :where(button, input, select, textarea):disabled { cursor: not-allowed; opacity: 0.55; }
+
   html,
   body,
   #app {
     height: 100%;
   }
   body {
-    @apply bg-paper text-ink font-sans text-[15px] antialiased;
+    @apply bg-paper text-ink font-sans text-body antialiased;
   }
   /* Public hash targets clear the sticky marketing header. */
   #product,
@@ -41,13 +75,13 @@
   #features {
     scroll-margin-top: 5rem;
   }
-  /* prototype scrollbar */
+  /* Low-contrast scrollbars retain a visible thumb. */
   ::-webkit-scrollbar {
     width: 8px;
     height: 8px;
   }
   ::-webkit-scrollbar-thumb {
-    background: #dededa;
+    background: rgb(var(--border));
     border-radius: 8px;
   }
 }
@@ -62,11 +96,11 @@
   .focus-ring:focus-visible {
     outline: 2px solid theme("colors.brand.DEFAULT");
     outline-offset: 2px;
-    border-radius: 6px;
+    border-radius: 0.625rem;
   }
 }
 
-/* prototype motion */
+/* Shared restrained motion; reduced-motion override below. */
 .fade-in {
   animation: fadeIn 0.18s ease;
 }
@@ -106,4 +140,9 @@
     transition-duration: 0.001ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+/* Invalid state must win over existing form border utilities. */
+:is(input, select, textarea)[aria-invalid="true"] {
+  border-color: rgb(var(--danger));
 }

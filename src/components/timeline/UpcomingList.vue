@@ -6,7 +6,7 @@ import { useProjectTime } from "@/composables/useProjectTime";
 import StatusBadge from "@/components/ui/StatusBadge.vue";
 import { userFacingActivityStatus } from "@/lib/presentation";
 
-const props = defineProps<{ events: TimelineEvent[]; timezone: string }>();
+const props = defineProps<{ events: TimelineEvent[]; timezone: string; compact?: boolean }>();
 const t = computed(() => useProjectTime(props.timezone));
 
 // "Completed items" (BUSINESS_RULES §Timeline): a resolved commitment/payment is shown
@@ -18,6 +18,7 @@ const DEADLINE_TYPES = new Set(["payment_due", "task_due", "recurring_commitment
 
 interface Item {
   label: string;
+  source: string;
   status: string | null;
   link: { name: string; params: { projectId: string; decisionId?: string }; query: Record<string,string> } | null;
   time: string;
@@ -42,6 +43,7 @@ const groups = computed<Group[]>(() => {
     const time = e.all_day ? "" : t.value.time(e.occurs_at);
     byDay.get(day)!.items.push({
       label: e.title,
+      source: e.subject_type === "payment_schedule" ? "Payment" : e.subject_type === "decision" ? "Decision" : e.subject_type === "task" ? "Task" : "Activity",
       schedule: e.subject_type === "payment_schedule",
       status: e.subject_type === "payment_schedule" ? (paymentScheduleLabels[e.status ?? ""] ?? null) : e.subject_type === "decision" ? ({ voting_open: "Voting open", voting_closed: "Voting closed", resolved: "Resolved" }[e.status ?? ""] ?? null) : e.is_recurring_occurrence ? e.status : null,
       link: e.subject_type === 'payment_schedule' ? {name:'project.commitments',params:{projectId:e.project_id},query:{commitment:e.subject_id,section:'payments'}} : e.subject_type === 'decision' ? { name: 'project.decision', params: { projectId: e.project_id, decisionId: e.subject_id }, query: {} } : ['commitment','task'].includes(e.subject_type) ? {name:'project.commitments',params:{projectId:e.project_id},query:{[e.subject_type==='task'?'item':'commitment']:e.subject_id,...(e.occurrence_date?{occurrence:e.occurrence_date}:{})}}:null,
@@ -61,11 +63,18 @@ const groups = computed<Group[]>(() => {
       v-for="g in groups"
       :key="g.day"
       class="px-4 py-3.5"
+      :class="compact ? 'sm:flex sm:gap-4' : ''"
     >
-      <div class="text-[12.5px] font-medium mb-2 text-muted">
+      <div
+        :class="compact ? 'text-meta sm:w-32 sm:shrink-0 sm:pt-3' : 'text-[12.5px]'"
+        class="font-medium mb-2 text-muted"
+      >
         {{ g.day }}
       </div>
-      <div class="space-y-2">
+      <div
+        class="space-y-2"
+        :class="compact ? 'min-w-0 flex-1' : ''"
+      >
         <div
           v-for="(i, idx) in g.items"
           :key="idx"
@@ -74,7 +83,7 @@ const groups = computed<Group[]>(() => {
           <span
             v-if="i.time || i.allDay"
             class="tnum w-12 shrink-0"
-            :class="i.overdue ? 'text-danger font-medium' : 'text-ink-soft'"
+            :class="i.overdue ? (compact ? 'text-warning font-medium' : 'text-danger font-medium') : 'text-ink-soft'"
           >
             {{ i.allDay ? "All day" : i.time }}
           </span>
@@ -83,6 +92,7 @@ const groups = computed<Group[]>(() => {
               v-if="i.link"
               :to="i.link"
               class="block focus-ring hover:underline"
+              :style="compact ? { minHeight: '44px' } : undefined"
               :class="i.done ? 'text-success' : ''"
             >
               <span
@@ -99,10 +109,22 @@ const groups = computed<Group[]>(() => {
               aria-hidden="true"
             >✓ </span>{{ i.label }}</span>
             <div
+              v-if="compact"
+              class="mt-1 text-meta text-muted"
+            >
+              {{ i.source }}
+            </div>
+            <div
               v-if="i.status && !i.overdue"
               class="mt-1"
             >
+              <span
+                v-if="compact"
+                class="text-meta"
+                :class="i.done ? 'text-success' : 'text-muted'"
+              >{{ i.schedule ? i.status : userFacingActivityStatus(i.status) }}</span>
               <StatusBadge
+                v-else
                 :label="i.schedule ? i.status : userFacingActivityStatus(i.status)"
                 :tone="i.schedule ? paymentScheduleTone(i.status ?? '') : i.done ? 'success' : 'amber'"
                 class="capitalize"
@@ -112,7 +134,12 @@ const groups = computed<Group[]>(() => {
               v-else-if="i.overdue"
               class="mt-1"
             >
+              <span
+                v-if="compact"
+                class="text-meta text-warning"
+              >Overdue</span>
               <StatusBadge
+                v-else
                 label="Overdue"
                 tone="danger"
               />

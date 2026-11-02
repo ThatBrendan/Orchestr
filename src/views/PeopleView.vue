@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { Dialog, DialogPanel, DialogTitle } from "@headlessui/vue";
+import { useExecutionDialogFocus } from "@/composables/useExecutionDialogFocus";
 import { computed, ref } from "vue";
 import { RouterLink } from "vue-router";
 import { useGlobalPeople } from "@/composables/useGlobalPeople";
@@ -18,6 +20,8 @@ const { projects } = useMyProjects();
 const search = ref("");
 const selectedProject = ref("");
 const selectedPerson = ref<GlobalPerson | null>(null);
+const peopleHeading = ref<HTMLElement | null>(null);
+useExecutionDialogFocus(computed(() => selectedPerson.value !== null), peopleHeading);
 
 const filteredPeople = computed(() => {
   const term = search.value.trim().toLowerCase();
@@ -45,23 +49,29 @@ function roleTone(role: string) {
   <PageContainer width="lg">
     <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
       <div>
-        <h1 class="font-display text-[26px] font-semibold tracking-tight">
+        <h1
+          ref="peopleHeading"
+          tabindex="-1"
+          class="font-display text-page-title font-semibold tracking-tight"
+        >
           People
         </h1>
-        <p class="mt-1.5 text-14.5 text-ink-soft">
+        <p class="mt-1.5 text-body text-ink-soft">
           Everyone you plan with across your projects.
         </p>
       </div>
-      <div class="grid gap-2 sm:grid-cols-2 md:w-[30rem]">
+      <div class="grid min-w-0 gap-2 sm:grid-cols-2 md:w-[30rem]">
         <input
           v-model="search"
+          aria-label="Search people"
           type="search"
           placeholder="Search people..."
-          class="border rounded-lg px-3 py-2 text-14 focus-ring border-line bg-surface"
+          class="min-w-0 w-full border rounded-lg px-3 py-2 text-14 focus-ring border-line bg-surface"
         >
         <select
           v-model="selectedProject"
-          class="border rounded-lg px-3 py-2 text-14 focus-ring border-line bg-surface"
+          aria-label="Filter people by project"
+          class="min-w-0 w-full border rounded-lg px-3 py-2 text-14 focus-ring border-line bg-surface"
         >
           <option value="">
             All projects
@@ -112,7 +122,7 @@ function roleTone(role: string) {
       <button
         v-for="person in filteredPeople"
         :key="person.person_key"
-        class="flex w-full items-center gap-3.5 px-4 py-3.5 text-left hover:bg-[#FBFBFA] focus-ring"
+        class="flex w-full items-center gap-3.5 px-4 py-3.5 text-left hover:bg-surface-subtle focus-ring"
         @click="selectedPerson = person"
       >
         <AppAvatar
@@ -122,7 +132,7 @@ function roleTone(role: string) {
         />
         <div class="min-w-0 flex-1">
           <div class="flex flex-wrap items-center gap-2">
-            <span class="text-14 font-medium">{{ person.display_name }}</span>
+            <span class="text-14 font-medium [overflow-wrap:anywhere]">{{ person.display_name }}</span>
             <StatusBadge
               v-if="person.is_current_user"
               label="You"
@@ -141,12 +151,13 @@ function roleTone(role: string) {
       </button>
     </div>
 
-    <div
+    <Dialog
       v-if="selectedPerson"
-      class="fixed inset-0 z-40 bg-black/20 px-4 py-6"
-      @click.self="selectedPerson = null"
+      :open="true"
+      class="fixed inset-0 z-40 bg-ink/40 px-4 py-6"
+      @close="selectedPerson = null"
     >
-      <aside class="ml-auto flex h-full w-full max-w-md flex-col rounded-xl border border-line bg-surface shadow-xl">
+      <DialogPanel class="ml-auto flex h-full w-full max-w-md flex-col rounded-xl border border-line bg-surface">
         <div class="flex items-start gap-3 border-b border-line p-5">
           <AppAvatar
             :name="selectedPerson.display_name"
@@ -154,9 +165,9 @@ function roleTone(role: string) {
             :size="44"
           />
           <div class="min-w-0 flex-1">
-            <h2 class="font-display text-[21px] font-semibold tracking-tight">
+            <DialogTitle class="text-section-heading [overflow-wrap:anywhere]">
               {{ selectedPerson.display_name }}
-            </h2>
+            </DialogTitle>
             <div class="mt-1 flex flex-wrap gap-2">
               <StatusBadge
                 v-if="selectedPerson.is_current_user"
@@ -179,7 +190,7 @@ function roleTone(role: string) {
           </AppButton>
         </div>
         <div class="flex-1 overflow-y-auto p-5">
-          <h3 class="text-13 font-semibold uppercase tracking-wide text-ink-soft">
+          <h3 class="text-sm font-semibold text-ink-soft">
             Shared projects
           </h3>
           <div class="mt-3 space-y-2">
@@ -187,9 +198,9 @@ function roleTone(role: string) {
               v-for="project in selectedPerson.projects"
               :key="project.project_id + project.member_id"
               :to="{ name: 'project.people', params: { projectId: project.project_id } }"
-              class="block rounded-lg border border-line px-3 py-2.5 hover:bg-[#F6F6F4] focus-ring"
+              class="block rounded-lg border border-line px-3 py-2.5 hover:bg-surface-subtle focus-ring"
             >
-              <div class="flex items-center justify-between gap-3">
+              <div class="flex flex-wrap items-center justify-between gap-3 [overflow-wrap:anywhere]">
                 <span class="text-14 font-medium">{{ project.project_name }}</span>
                 <StatusBadge
                   :label="roleLabel(project.role)"
@@ -205,7 +216,7 @@ function roleTone(role: string) {
             </RouterLink>
           </div>
         </div>
-      </aside>
-    </div>
+      </DialogPanel>
+    </Dialog>
   </PageContainer>
 </template>

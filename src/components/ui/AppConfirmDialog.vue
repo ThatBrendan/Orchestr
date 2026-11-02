@@ -13,7 +13,7 @@ const props = withDefaults(
   }>(),
   { confirmLabel: "Confirm", danger: false, loading: false },
 );
-const emit = defineEmits<{ close: []; confirm: [] }>();
+const emit = defineEmits<{ close: []; confirm: []; afterClose: [] }>();
 </script>
 
 <template>
@@ -22,6 +22,7 @@ const emit = defineEmits<{ close: []; confirm: [] }>();
     :busy="props.loading"
     :title="props.title"
     @close="emit('close')"
+    @after-close="emit('afterClose')"
   >
     <p class="text-14 text-ink-soft">
       {{ props.message }}
@@ -38,7 +39,7 @@ const emit = defineEmits<{ close: []; confirm: [] }>();
       <AppButton
         size="sm"
         :loading="props.loading"
-        :class="props.danger ? '!bg-danger hover:!bg-danger' : ''"
+        :variant="props.danger ? 'danger' : 'primary'"
         @click="emit('confirm')"
       >
         {{ props.confirmLabel }}

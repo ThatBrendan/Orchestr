@@ -1,0 +1,10 @@
+import assert from 'node:assert/strict';
+import { build } from 'vite';
+const result = await build({ configFile: false, logLevel: 'silent', build: { write: false, minify: false, lib: { entry: 'src/lib/attentionDestination.ts', formats: ['es'] } } });
+const output = Array.isArray(result) ? result[0] : result;
+const { attentionDestination } = await import(`data:text/javascript;base64,${Buffer.from(output.output.find(item => item.type === 'chunk').code).toString('base64')}`);
+assert.deepEqual(attentionDestination('p',{subject_type:'decision',subject_id:'d'}).to,{name:'project.decision',params:{projectId:'p',decisionId:'d'}});
+for(const [subject,query] of [['commitment',{commitment:'a'}],['task',{item:'a'}]]) assert.deepEqual(attentionDestination('p',{subject_type:subject,subject_id:'a'}).to,{name:'project.commitments',params:{projectId:'p'},query});
+for(const [subject,section] of [['payment_schedule','payments'],['reimbursement','reimbursements']]) assert.deepEqual(attentionDestination('p',{subject_type:subject,subject_id:'schedule-id',params:{activity_id:'activity-id'}}).to,{name:'project.commitments',params:{projectId:'p'},query:{commitment:'activity-id',section}});
+for(const finding of [{subject_type:'decision'},{subject_type:'payment_schedule',params:null},{subject_type:'reimbursement',params:{activity_id:42}},{subject_type:'project',subject_id:'p'}]) assert.equal(attentionDestination('p',finding).to.name,'project.health');
+console.log('PASS: attention links preserve object IDs, existing query contracts and safe Health fallback.');

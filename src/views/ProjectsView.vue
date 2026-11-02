@@ -21,10 +21,10 @@ const groups = [{ id: "active", label: "Active" }, { id: "past", label: "Past" }
   <PageContainer>
     <div class="flex items-center justify-between gap-4">
       <div>
-        <h1 class="font-display text-[26px] font-semibold tracking-tight">
+        <h1 class="font-display text-page-title font-semibold tracking-tight">
           Projects
         </h1>
-        <p class="mt-1.5 text-14.5 text-ink-soft">
+        <p class="mt-1.5 text-body text-ink-soft">
           Everything you're currently planning.
         </p>
       </div>

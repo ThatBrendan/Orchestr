@@ -164,12 +164,12 @@ try {
   await test('Activity/payment/delete at '+width+'px',async({page,state})=>{
    await page.setViewportSize({width,height:900});await login(page);
    await go(page,'/app/projects/'+state.project.id+'/activities');
-  assert.equal(await page.getByRole('button',{name:'Add activity',exact:true}).count(),0);
-  await page.getByRole('button',{name:'New category',exact:true}).click();
+  assert.equal(await page.getByRole('button',{name:'Add activity',exact:true}).count(),1);
+  await page.getByRole('button',{name:'Add activity',exact:true}).click();
   let categoryDialog=page.getByRole('dialog');
   await categoryDialog.getByLabel('Category name').fill('Transport');
   await categoryDialog.getByRole('button',{name:'Save category',exact:true}).click();
-  await page.getByRole('button',{name:'Add activity',exact:true}).click();
+  await page.getByRole('button',{name:'Add activity',exact:true}).first().click();
    let dialog=page.getByRole('dialog');
    assert.equal(await dialog.getByText('Owner',{exact:true}).count(),0);
    assert.equal(await dialog.getByRole('button',{name:/Add location/}).count(),0);
@@ -229,10 +229,10 @@ try {
  });
  await test('Activity Cost and assigned Viewer controls',async({page,state})=>{
   await login(page);await go(page,'/app/projects/'+state.project.id+'/areas');
-    await page.getByRole('button',{name:'New category',exact:true}).click();let categoryDialog=page.getByRole('dialog');
+    await page.getByRole('button',{name:'Add activity',exact:true}).click();let categoryDialog=page.getByRole('dialog');
     await categoryDialog.getByLabel('Category name').fill('Transport');
     await categoryDialog.getByRole('button',{name:'Save category',exact:true}).click();
-    await page.getByRole('button',{name:'Add activity',exact:true}).click();let d=page.getByRole('dialog');
+    await page.getByRole('button',{name:'Add activity',exact:true}).first().click();let d=page.getByRole('dialog');
   await d.getByLabel('Activity title *').fill('Cost activity');await d.getByLabel(/^Cost /).fill('12.50');await d.getByLabel('Activity type').selectOption('task');
   await d.getByRole('button',{name:'Create activity',exact:true}).click();await d.waitFor({state:'hidden'});
   assert.equal(state.calls.find(c=>c.path.endsWith('/create_activity_in_category')).body.p_fields.estimated_cost_minor,1250);
@@ -245,7 +245,7 @@ try {
  await test('Public copy and responsive layout',async({page})=>{
   for(const width of [375,430,768,1280]){
    await page.setViewportSize({width,height:900});await page.goto(origin+'/');
-   await page.getByRole('heading',{name:'Plan together. Keep everything in one place.'}).waitFor();
+   await page.getByRole('heading',{name:'Plans need more than messages.'}).waitFor();
    assert(!(await page.textContent('main')).includes('It fragments'));await fits(page,'Landing fits');
   }
   await page.goto(origin+'/about');await page.getByText(/I'm Brendan Ugo-Emeribe, founder of Orchestrio/).waitFor();await fits(page,'About fits');

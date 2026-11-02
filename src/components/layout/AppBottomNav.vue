@@ -27,6 +27,7 @@ function isActive(match: readonly string[]) {
       :key="item.label"
       :to="item.to"
       class="flex-1 flex flex-col items-center justify-center gap-1"
+      :aria-current="isActive(item.match) ? 'page' : undefined"
       :class="isActive(item.match) ? 'text-brand-dark' : 'text-muted'"
     >
       <AppIcon

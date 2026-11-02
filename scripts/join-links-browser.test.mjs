@@ -65,22 +65,21 @@ async function session(id,name) {
  return {page,context,calls,login,get signupRedirect(){return signupRedirect;}};
 }
 async function fits(page){assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'No horizontal page overflow');for(const d of await page.getByRole('dialog').all())assert(await d.evaluate(el=>el.scrollWidth<=el.clientWidth),'No dialog overflow');}
-async function settings(page){await page.goto(origin+`/app/projects/${project.id}/people`);await page.getByRole('heading',{name:'Invite link',exact:true}).waitFor();}
+async function settings(page){await page.goto(origin+`/app/projects/${project.id}/people`);await page.getByRole('heading',{name:'People',exact:true}).waitFor();}
 try{
  const owner=await session(ownerId,'Organiser');await owner.login();await settings(owner.page);
  await owner.page.getByLabel('Checking notifications',{exact:true}).waitFor({state:'hidden'});
  assert.equal(await owner.page.getByLabel('Unread notifications',{exact:true}).count(),0);
  assert.equal(await owner.page.getByLabel('Notification status unavailable',{exact:true}).count(),0);
  assert(owner.calls.some(p=>p.endsWith('/get_my_notification_unread_state')));
+ await owner.page.evaluate(()=>{Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async()=>{throw Error('denied');}}});});
  await owner.page.getByRole('button',{name:'Copy invite link',exact:true}).click();
  const field=owner.page.getByLabel('Join link');await field.waitFor();
  const firstToken=activeToken;assert.equal(new URL(await field.inputValue()).pathname,'/join/'+firstToken);
  await owner.page.evaluate(()=>{Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async text=>{window.copiedJoinLink=text;}}});});
- await owner.page.getByRole('button',{name:'Copy invite link',exact:true}).click();await owner.page.getByText('Invite link copied',{exact:true}).waitFor();assert.equal(new URL(await owner.page.evaluate(()=>window.copiedJoinLink)).pathname,'/join/'+firstToken);
+ await owner.page.getByRole('button',{name:'Copy invite link',exact:true}).click();await owner.page.getByText('Invite link copied.',{exact:true}).waitFor();assert.equal(new URL(await owner.page.evaluate(()=>window.copiedJoinLink)).pathname,'/join/'+firstToken);
  await owner.page.evaluate(()=>{Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async()=>{throw Error('denied');}}});});
  await owner.page.getByRole('button',{name:'Copy invite link',exact:true}).click();await owner.page.getByText('Copy the invite link from the field below.',{exact:true}).waitFor();
- await settings(owner.page);
- assert.equal(new URL(await owner.page.getByLabel('Join link',{exact:true}).inputValue()).pathname,'/join/'+firstToken);
  const alice=await session('33000000-0000-4000-8000-000000000004','Alice');
  await alice.page.goto(origin+'/join/'+firstToken);await alice.page.getByText(/Sign in or create an account to request access/).waitFor();assert(!(await alice.page.textContent('body')).includes(project.name));assert(!alice.calls.some(p=>/\/projects$|\/commitments$|\/project_members$/.test(p)));
  await alice.page.getByRole('link',{name:'Log in',exact:true}).click();await alice.page.getByLabel('Email',{exact:true}).fill('alice@example.test');await alice.page.getByLabel(/^Password/).fill('password123');await alice.page.getByRole('button',{name:'Log in',exact:true}).click();await alice.page.waitForURL(origin+'/join/'+firstToken);
@@ -96,7 +95,7 @@ try{
   await owner.page.setViewportSize({width,height:1000});await alice.page.setViewportSize({width,height:900});await fits(owner.page);await fits(alice.page);
 
  }
- await owner.page.getByRole('button',{name:'Disable link',exact:true}).click();await owner.page.getByText('Join link disabled.',{exact:true}).waitFor();await owner.page.getByRole('button',{name:'Copy invite link',exact:true}).click();await owner.page.getByText('Invite link copied',{exact:true}).waitFor();const secondToken=activeToken;assert.notEqual(secondToken,firstToken);
+ await owner.page.getByText('Invite link settings',{exact:true}).click();await owner.page.getByRole('button',{name:'Disable link',exact:true}).click();await owner.page.getByText('Join link disabled.',{exact:true}).waitFor();await owner.page.evaluate(()=>{Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async text=>{window.copiedJoinLink=text;}}});});await owner.page.getByRole('button',{name:'Copy invite link',exact:true}).click();await owner.page.getByText('Invite link copied.',{exact:true}).waitFor();const secondToken=activeToken;assert.notEqual(secondToken,firstToken);
  await alice.page.reload();await alice.page.getByText('This join link is no longer available.',{exact:true}).waitFor();
  await owner.page.getByRole('button',{name:'Approve Alice',exact:true}).click();await owner.page.getByText('Access approved.',{exact:true}).waitFor();assert(members.has('33000000-0000-4000-8000-000000000004'));
  await alice.page.goto(origin+'/join/'+secondToken);await alice.page.getByRole('link',{name:'Open project',exact:true}).click();await alice.page.getByRole('heading',{name:project.name,exact:true}).waitFor();assert.equal(await alice.page.getByRole('button',{name:'Open project settings'}).count(),0);
@@ -108,9 +107,9 @@ try{
  const bob=await session('33000000-0000-4000-8000-000000000005','Bob');await bob.login('/join/'+secondToken);await bob.page.getByRole('button',{name:'Request access',exact:true}).click();await bob.page.getByText('Your access request is pending approval.',{exact:true}).waitFor();
  await settings(owner.page);await owner.page.getByRole('button',{name:'Decline Bob',exact:true}).click();await owner.page.getByText('Access request declined.',{exact:true}).waitFor();assert(!members.has('33000000-0000-4000-8000-000000000005'));
  await bob.page.getByRole('button',{name:'Check status',exact:true}).click();await bob.page.getByRole('button',{name:'Request access',exact:true}).click();await bob.page.getByText('Your access request is pending approval.',{exact:true}).waitFor();
- await settings(owner.page);await owner.page.getByRole('button',{name:'Disable link',exact:true}).click();await owner.page.getByText('Join link disabled.',{exact:true}).waitFor();await owner.page.getByRole('button',{name:'Approve Bob',exact:true}).waitFor();assert(members.has('33000000-0000-4000-8000-000000000004'));
+ await settings(owner.page);await owner.page.getByText('Invite link settings',{exact:true}).click();await owner.page.getByRole('button',{name:'Disable link',exact:true}).click();await owner.page.getByText('Join link disabled.',{exact:true}).waitFor();await owner.page.getByRole('button',{name:'Approve Bob',exact:true}).waitFor();assert(members.has('33000000-0000-4000-8000-000000000004'));
  await bob.page.reload();await bob.page.getByText('This join link is no longer available.',{exact:true}).waitFor();
- await owner.page.getByRole('button',{name:'Copy invite link',exact:true}).click();await owner.page.getByLabel('Join link').waitFor();
+ await owner.page.evaluate(()=>{Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async()=>{throw Error('denied');}}});});await owner.page.getByRole('button',{name:'Copy invite link',exact:true}).click();await owner.page.getByLabel('Join link').waitFor();
  const fresh=await session('33000000-0000-4000-8000-000000000006','Fresh');await fresh.page.goto(origin+'/join/'+activeToken);await fresh.page.getByRole('link',{name:'Create account',exact:true}).click();
  await fresh.page.waitForURL('**/signup?**');
  assert(new URL(fresh.page.url()).searchParams.get('redirect')==='/join/'+activeToken);

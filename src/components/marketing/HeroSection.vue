@@ -6,36 +6,33 @@ import AppIcon from "@/components/ui/AppIcon.vue";
 import ProductPreview from "./ProductPreview.vue";
 
 const { isAuthenticated } = useAuth();
-const primary = computed(() =>
-  isAuthenticated.value
-    ? { to: { name: "dashboard" }, label: "Open Orchestrio" }
-    : { to: { name: "signup" }, label: "Start planning" },
-);
+const primary = computed(() => isAuthenticated.value
+  ? { to: { name: "dashboard" }, label: "Open Orchestrio" }
+  : { to: { name: "signup" }, label: "Get started" });
 </script>
 
 <template>
-  <section
-    class="relative overflow-hidden"
-    aria-labelledby="hero-heading"
-  >
-    <div class="max-w-6xl mx-auto px-5 md:px-8 pt-16 md:pt-24 pb-14 md:pb-20">
-      <div class="max-w-2xl">
+  <section aria-labelledby="hero-heading">
+    <div class="max-w-6xl mx-auto px-5 md:px-8 py-14 md:py-20 lg:py-24 grid lg:grid-cols-[0.9fr_1.1fr] gap-12 lg:gap-10 items-center">
+      <div>
+        <p class="inline-flex rounded-full bg-brand-soft text-brand-dark px-3 py-2 text-13 font-semibold">
+          Planning, beyond the group chat
+        </p>
         <h1
           id="hero-heading"
-          class="font-display text-[34px] leading-[1.12] md:text-[52px] md:leading-[1.08] font-semibold tracking-tight"
+          class="mt-6 text-[38px] sm:text-[48px] lg:text-[52px] leading-[1.12] font-bold tracking-tight"
         >
-          Plan together. Keep <span class="text-brand">everything in one place</span>.
+          Plans need more <span class="text-brand">than messages.</span>
         </h1>
-        <p class="mt-5 text-[16px] md:text-[18px] leading-relaxed text-ink-soft max-w-xl">
-          Organise categories, activities, costs, deadlines and people without piecing everything together from chats, spreadsheets and notes.
+        <p class="mt-5 text-base sm:text-lg leading-relaxed text-ink-soft max-w-xl">
+          Turn scattered planning into organised execution. Bring Activities, people, decisions, dates and money into one calm, shared project.
         </p>
         <div class="mt-8 flex flex-wrap items-center gap-3">
           <AppButton
             :to="primary.to"
             size="lg"
           >
-            {{ primary.label }}
-            <AppIcon
+            {{ primary.label }} <AppIcon
               name="arrowRight"
               :size="16"
             />
@@ -48,11 +45,16 @@ const primary = computed(() =>
             See how it works
           </AppButton>
         </div>
+        <p class="mt-6 flex items-start gap-2 text-13 leading-relaxed text-ink-soft">
+          <AppIcon
+            name="checkCircle"
+            class="text-accent shrink-0 mt-0.5"
+            :size="16"
+          />
+          Real-world coordination, without project-management complexity.
+        </p>
       </div>
-
-      <div class="mt-12 md:mt-16">
-        <ProductPreview class="max-w-3xl" />
-      </div>
+      <ProductPreview />
     </div>
   </section>
 </template>

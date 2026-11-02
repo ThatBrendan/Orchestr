@@ -59,7 +59,7 @@ const workflow = computed(() => activityWorkflow(props.commitment.activity_type)
 const nextTransitions = computed(() => commitmentStatusActions(props.commitment.activity_type, props.commitment.status));
 const bookingActions = computed(() => bookingStatusActions(props.commitment.status));
 const secondaryActions = computed(() => secondaryActivityActions(props.commitment.activity_type, props.commitment.status));
-const statusTone = (s: string) => (s === "cancelled" ? "neutral" : s === "completed" ? "success" : "amber");
+const statusTone = (s: string) => (s === "cancelled" ? "neutral" : s === "completed" ? "success" : "neutral");
 
 const { financials, refetch: refetchFinancials } = useCommitmentFinancials(computed(() => props.commitment.id));
 const shares = useCostShares(() => props.commitment.id);
@@ -132,13 +132,13 @@ const repeatLabel = computed(() =>
   >
     <div class="space-y-6">
       <div class="flex items-center justify-between flex-wrap gap-2">
-        <div class="flex items-center gap-2">
+        <div class="flex flex-wrap items-center gap-2">
           <StatusBadge
             :label="commitmentStatusLabel(props.commitment.activity_type, props.commitment.status)"
             :tone="statusTone(props.commitment.status)"
           />
-          <span class="text-13 text-muted">{{ activityTypeLabel(props.commitment.activity_type) }}</span>
-          <span class="text-13 text-muted">Category: {{ categoryLabel(props.commitment.kind) }}</span>
+          <span class="text-meta text-muted">{{ activityTypeLabel(props.commitment.activity_type) }}</span>
+          <span class="text-meta text-muted">Category: {{ categoryLabel(props.commitment.kind) }}</span>
         </div>
         <AppButton
           v-if="viewerCanComplete && !isRecurring && nextTransitions.some(t=>t.to==='completed')"
@@ -147,13 +147,6 @@ const repeatLabel = computed(() =>
         >
           Complete
         </AppButton>
-        <span
-          v-else-if="props.commitment.status === 'completed'"
-          class="inline-flex items-center gap-1 rounded px-2 py-1 bg-success-soft text-success text-[12.5px] font-medium"
-        >
-          <span aria-hidden="true">✓</span>
-          Complete
-        </span>
         <div
           v-if="props.canEdit && !isRecurring && props.commitment.status !== 'completed'"
           class="flex flex-wrap items-center gap-2"
@@ -167,8 +160,8 @@ const repeatLabel = computed(() =>
           >
             {{ t.label }}
           </AppButton>
-          <details class="text-13">
-            <summary class="cursor-pointer focus-ring rounded px-2 py-1 text-muted">
+          <details class="text-meta">
+            <summary class="cursor-pointer focus-ring rounded-lg min-h-11 px-3 py-3 text-muted">
               More
             </summary>
             <div class="flex flex-wrap gap-2 mt-2">
@@ -195,6 +188,72 @@ const repeatLabel = computed(() =>
           </details>
         </div>
       </div>
+      <div class="grid sm:grid-cols-2 gap-x-6 gap-y-3 text-sm">
+        <div v-if="props.commitment.starts_at">
+          <div class="text-meta text-muted">
+            {{ dateStartLabel }}
+          </div>
+          <div>{{ props.commitment.is_all_day ? time.dateOnly(props.commitment.starts_at) : time.dateTime(props.commitment.starts_at) }}</div>
+        </div>
+        <div v-if="props.commitment.ends_at">
+          <div class="text-meta text-muted">
+            Ends
+          </div>
+          <div>{{ props.commitment.is_all_day ? time.dateOnly(props.commitment.ends_at) : time.dateTime(props.commitment.ends_at) }}</div>
+        </div>
+        <div v-if="hasLocation">
+          <div class="text-meta text-muted">
+            Location
+          </div>
+          <div v-if="props.commitment.location_label">
+            {{ props.commitment.location_label }}
+          </div>
+          <div
+            v-if="props.commitment.location_address"
+            class="text-meta text-muted"
+          >
+            {{ props.commitment.location_address }}
+          </div>
+        </div>
+        <div>
+          <div class="text-meta text-muted">
+            Assigned to
+          </div>
+          <div>{{ props.commitment.owner_member_id ? memberName(props.commitment.owner_member_id) : 'Unassigned' }}</div>
+        </div>
+        <div v-if="hasSupplierBooking">
+          <div class="text-meta text-muted">
+            {{ supplierLabel }}
+          </div>
+          <div v-if="props.commitment.supplier_name">
+            {{ props.commitment.supplier_name }}
+          </div>
+          <div
+            v-if="props.commitment.supplier_contact"
+            class="text-meta text-muted"
+          >
+            {{ props.commitment.supplier_contact }}
+          </div>
+          <div
+            v-if="props.commitment.booking_reference"
+            class="text-meta text-muted"
+          >
+            {{ props.commitment.booking_reference }}
+          </div>
+        </div>
+        <div v-if="isRecurring">
+          <div class="text-meta text-muted">
+            Repeats
+          </div>
+          <div>{{ repeatLabel }}</div>
+          <div
+            v-if="!props.commitment.recurrence_active && props.commitment.recurrence_end_date"
+            class="text-meta text-muted"
+          >
+            Stopped after {{ DateTime.fromISO(props.commitment.recurrence_end_date).toFormat("d LLL yyyy") }}
+          </div>
+        </div>
+      </div>
       <section
         v-if="props.commitment.activity_type === 'booking'"
         class="rounded-xl border border-line p-4"
@@ -202,7 +261,7 @@ const repeatLabel = computed(() =>
       >
         <div class="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p class="text-13 text-muted mb-1">
+            <p class="text-meta text-muted mb-1">
               Booking
             </p><StatusBadge
               :label="bookingStatusLabel(props.commitment.status, props.commitment.booking_confirmed)"
@@ -227,112 +286,40 @@ const repeatLabel = computed(() =>
         </div>
         <p
           v-if="!isRecurring && ['idea', 'researching', 'confirmed'].includes(props.commitment.status)"
-          class="text-13 text-muted mt-3"
+          class="text-meta text-muted mt-3"
         >
           {{ props.commitment.status === 'idea' ? 'Start the activity, then record its booking here.' : 'Finish the booking steps here before completing the activity.' }} Booking and execution are tracked separately.
         </p>
       </section>
 
-      <div class="grid sm:grid-cols-2 gap-x-6 gap-y-3 text-14">
-        <div v-if="props.commitment.starts_at">
-          <div class="text-13 text-muted">
-            {{ dateStartLabel }}
-          </div>
-          <div>{{ props.commitment.is_all_day ? time.dateOnly(props.commitment.starts_at) : time.dateTime(props.commitment.starts_at) }}</div>
-        </div>
-        <div v-if="props.commitment.ends_at">
-          <div class="text-13 text-muted">
-            Ends
-          </div>
-          <div>{{ props.commitment.is_all_day ? time.dateOnly(props.commitment.ends_at) : time.dateTime(props.commitment.ends_at) }}</div>
-        </div>
-        <div v-if="hasLocation">
-          <div class="text-13 text-muted">
-            Location
-          </div>
-          <div v-if="props.commitment.location_label">
-            {{ props.commitment.location_label }}
-          </div>
-          <div
-            v-if="props.commitment.location_address"
-            class="text-13 text-muted"
-          >
-            {{ props.commitment.location_address }}
-          </div>
-        </div>
-        <div v-if="props.commitment.owner_member_id">
-          <div class="text-13 text-muted">
-            Assigned to
-          </div>
-          <div>{{ memberName(props.commitment.owner_member_id) }}</div>
-        </div>
-        <div v-if="hasSupplierBooking">
-          <div class="text-13 text-muted">
-            {{ supplierLabel }}
-          </div>
-          <div v-if="props.commitment.supplier_name">
-            {{ props.commitment.supplier_name }}
-          </div>
-          <div
-            v-if="props.commitment.supplier_contact"
-            class="text-13 text-muted"
-          >
-            {{ props.commitment.supplier_contact }}
-          </div>
-          <div
-            v-if="props.commitment.booking_reference"
-            class="text-13 text-muted"
-          >
-            {{ props.commitment.booking_reference }}
-          </div>
-        </div>
-        <div v-if="isRecurring">
-          <div class="text-13 text-muted">
-            Repeats
-          </div>
-          <div>{{ repeatLabel }}</div>
-          <div
-            v-if="!props.commitment.recurrence_active && props.commitment.recurrence_end_date"
-            class="text-13 text-muted"
-          >
-            Stopped after {{ DateTime.fromISO(props.commitment.recurrence_end_date).toFormat("d LLL yyyy") }}
-          </div>
-        </div>
-      </div>
       <section
         v-if="costBearing"
-        class="grid grid-cols-1 sm:grid-cols-3 gap-3 rounded-xl border border-line p-4 text-14"
+        class="grid grid-cols-1 sm:grid-cols-3 gap-3 rounded-xl border border-line p-4 text-sm"
       >
         <div>
-          <p class="text-muted text-13">
+          <p class="text-muted text-meta">
             Cost
           </p>{{ format(cost, props.currency) }}
         </div>
         <div>
-          <p class="text-muted text-13">
+          <p class="text-muted text-meta">
             Paid
           </p>{{ format(financials?.net_paid_minor, props.currency) }}
         </div>
         <div>
-          <p class="text-muted text-13">
+          <p class="text-muted text-meta">
             Remaining
           </p>{{ format(financials?.outstanding_minor, props.currency) }}
         </div>
       </section>
       <div v-if="props.commitment.notes">
-        <h3 class="text-13 font-medium mb-2">
+        <h3 class="text-meta font-medium mb-2">
           {{ isRecurring ? 'Instructions' : 'Notes' }}
         </h3>
-        <p class="text-14 text-ink-soft whitespace-pre-wrap [overflow-wrap:anywhere]">
+        <p class="text-sm text-ink-soft whitespace-pre-wrap [overflow-wrap:anywhere]">
           {{ props.commitment.notes }}
         </p>
       </div>
-      <ResourceComments
-        v-if="props.open"
-        :key="props.commitment.id"
-        :resource="{ type: 'activity', id: props.commitment.id }"
-        :timezone="props.timezone"
-      />
       <OccurrencePanel
         v-if="isRecurring"
         :project-id="props.projectId"
@@ -373,6 +360,12 @@ const repeatLabel = computed(() =>
       :currency="props.currency"
       :timezone="props.timezone"
       :can-edit="props.canEditPayments"
+    />
+    <ResourceComments
+      v-if="props.open"
+      :key="props.commitment.id"
+      :resource="{ type: 'activity', id: props.commitment.id }"
+      :timezone="props.timezone"
     />
     <AppConfirmDialog
       :open="outstandingOpen"

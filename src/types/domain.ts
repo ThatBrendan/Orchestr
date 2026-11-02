@@ -23,6 +23,7 @@ export type AdminHealthSummary = Database["public"]["Functions"]["get_admin_proj
 export interface ProjectContextProject {
   id: string;
   name: string;
+  description: string | null;
   status: ProjectStatus;
   profile: ProjectProfile;
   module_visibility: Record<string, boolean>;

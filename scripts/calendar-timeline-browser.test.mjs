@@ -1,0 +1,301 @@
+/** Run against local Vite only. Every backend request is mocked; no email or remote data is touched. */
+import assert from 'node:assert/strict';
+const { chromium } = await import(process.env.PLAYWRIGHT_MODULE || 'playwright');
+const origin = process.env.AUTH_TEST_ORIGIN || 'http://127.0.0.1:5173';
+assert(['localhost', '127.0.0.1'].includes(new URL(origin).hostname), 'Tests require a local app');
+const browser = await chromium.launch({ headless: true, channel: process.env.AUTH_TEST_BROWSER || 'chrome' });
+const user = { id: '00000000-0000-4000-8000-000000000001', email: 'beta@example.test', aud: 'authenticated', role: 'authenticated', created_at: new Date().toISOString(), email_confirmed_at: new Date().toISOString(), app_metadata: { provider: 'email' }, user_metadata: {}, identities: [] };
+let passed = 0;
+const runtimeReports=[];
+async function fixture(options = {}) {
+  const context = await browser.newContext(options);
+  const violations=[];
+  const runtime={consoleErrors:[],vueWarnings:[],exceptions:[],failedRequests:[],apiFailures:[],expectedFailures:[],knownStartupWarnings:[]};
+
+  await context.exposeBinding('reportCsp',(_source,v)=>violations.push(v));
+  await context.addInitScript(()=>document.addEventListener('securitypolicyviolation',event=>window.reportCsp({directive:event.violatedDirective,uri:event.blockedURI})));
+  const page = await context.newPage();
+  page.setDefaultTimeout(10000);
+  page.on('pageerror',e=>runtime.exceptions.push(e.message));
+  page.on('console',m=>{
+    if(m.type()==='warning' && /Vue warn/.test(m.text())){
+      // Existing main.ts calls app.use(Analytics), although Analytics is a Vue component.
+      // Record this exact startup warning; do not suppress any other Vue warning.
+      if(m.text()==='[Vue warn]: A plugin must either be a function or an object with an "install" function.')runtime.knownStartupWarnings.push(m.text());
+      else runtime.vueWarnings.push(m.text());
+    }
+    if(m.type()==='error' && !(m.text().includes('status of 500') && runtime.expectedFailures.some(url=>url===m.location().url)))runtime.consoleErrors.push(m.text());
+  });
+  page.on('requestfailed',r=>{if(!r.failure()?.errorText.includes('ERR_ABORTED'))runtime.failedRequests.push({url:r.url(),error:r.failure()?.errorText});});
+  page.on('response',r=>{if(r.status()>=400 && !runtime.expectedFailures.includes(r.url()))runtime.apiFailures.push({url:r.url(),status:r.status()});});
+  const project = {id:'00000000-0000-4000-8000-000000000010',name:'Beta Trip',status:'active',profile:'group_trip',module_visibility:{},currency:'GBP',timezone:'UTC',starts_on:null,ends_on:null,description:null,deleted_at:null};
+  const state = { project, globalEvents:[], extraProjects:[], calendar:[], timeline:[], categories: [], activities: [], tasks: [], payments: [], deleteFail: false, role:'organizer', unread:true, notificationUnread:false, invitations:[], user: structuredClone(user), calls: [], signupSession: false, error: null, nonceRequired: false };
+  const token = () => {
+    const payload = { sub: state.user.id, exp: Math.floor(Date.now()/1000)+3600, role: 'authenticated', aud: 'authenticated' };
+    return { access_token: `e30.${Buffer.from(JSON.stringify(payload)).toString('base64url')}.signature`, refresh_token: 'mock-refresh-token', expires_in: 3600, token_type: 'bearer', user: state.user };
+  };
+  await context.route('**/*', async route => {
+    const req = route.request();
+    const url = new URL(req.url());
+    if (url.origin === origin && !url.pathname.startsWith('/auth/v1/') && !url.pathname.startsWith('/rest/v1/')) return route.continue();
+    const body = req.postDataJSON();
+    state.calls.push({ path: url.pathname, query: Object.fromEntries(url.searchParams), body, method: req.method() });
+    const reply = (data, status = 200) => route.fulfill({ status, headers: {'x-supabase-api-version':'2024-01-01','access-control-expose-headers':'x-supabase-api-version'}, contentType: 'application/json', body: JSON.stringify(data) });
+    if (state.failReads && (url.pathname.endsWith('/get_project_health') || url.pathname.endsWith('/get_my_notification_unread_state') || url.pathname.endsWith('/v_my_notification_inbox'))) return reply({code:'57014',message:'PRIVATE SQL statement timeout',details:'PRIVATE QUERY'},500);
+    if(url.pathname.endsWith('/get_my_notification_unread_state')) return reply(state.notificationUnread);
+    if(url.pathname.endsWith('/list_my_invitations')) return reply(state.invitations);
+    if(url.pathname.endsWith('/mark_all_notifications_read')) {state.notificationUnread=false;return reply(2);}
+    if(url.pathname.endsWith('/v_my_notification_inbox') && req.method()==='HEAD') return route.fulfill({status:200,headers:{'content-range':'*/0','access-control-expose-headers':'content-range'},body:''});
+    if (url.pathname.startsWith('/auth/v1/')) {
+      const endpoint = url.pathname.split('/').at(-1);
+      if (state.error?.endpoint === endpoint) return reply({ code: state.error.code, msg: 'SECRET PROVIDER DETAIL' }, state.error.status || 400);
+      if (endpoint === 'signup') return reply(state.signupSession ? token() : { ...state.user, email_confirmed_at: null });
+      if (endpoint === 'token') {
+        if (state.tokenDelay) await new Promise(resolve=>setTimeout(resolve,state.tokenDelay));
+        return reply(token());
+      }
+      if (endpoint === 'user') {
+        if (req.method() === 'PUT' && state.nonceRequired && body.nonce !== '123456') return reply({code:'reauthentication_needed', msg:'PRIVATE'}, 400);
+        return reply(state.user);
+      }
+      return reply({});
+    }
+    const end=url.pathname.split('/').at(-1);
+    if(state.failRead===end){runtime.expectedFailures.push(req.url());return reply({code:'57014',message:'PRIVATE QUERY'},500);}
+    if(state.readDelay && ['get_project_calendar','get_project_timeline_events','get_my_timeline_events'].includes(end))await new Promise(r=>setTimeout(r,state.readDelay));
+    if(end==='config')return reply({configured:false});
+    if(end==='user_calendar_connections')return reply(null);
+    if(end==='get_project_calendar')return reply(state.calendar.filter(e=>{const day=e.start_date??e.start_at.slice(0,10);return day>=body.p_range_start&&day<body.p_range_end;}));
+    if(end==='get_project_timeline_events')return reply(state.timeline);
+    if(end==='get_my_timeline_events')return reply(state.globalEvents.filter(e=>e.occurs_at>=body.p_start && e.occurs_at<=body.p_end));
+    if(end==='get_decisions')return reply([{id:body.p_decision,project_id:project.id,title:'Choose train',status:'open',options:[],can_manage:false,can_vote:false,writable:true,vote_count:0}]);
+    if(url.pathname.endsWith('/v_project_items'))return reply(state.activities.filter(a=>!a.deleted_at).map(a=>({...a,source:'commitment',financial_id:a.id,item_type:a.activity_type,assignee_member_id:a.owner_member_id,area_id:a.area_id??null,item_date:a.starts_at,cost_minor:a.estimated_cost_minor,paid_minor:0,outstanding_minor:a.estimated_cost_minor??0})));
+    if(url.pathname.endsWith('/project_areas')) { if(req.method()==='POST') { const category={id:'00000000-0000-4000-8000-'+String(state.categories.length+80).padStart(12,'0'),project_id:project.id,...(Array.isArray(body)?body[0]:body)}; state.categories.push(category); return reply(category); } return reply(state.categories); }
+    if(url.pathname.endsWith('/v_area_totals'))return reply([{area_id:null,item_count:state.activities.filter(a=>!a.deleted_at).length,spent_minor:0}]);
+    if(url.pathname.endsWith('/complete_assigned_item')){const a=state.activities.find(a=>a.id===body.p_item);assert.equal(a.owner_member_id,'00000000-0000-4000-8000-000000000020');a.status='completed';return reply(null);}
+    const mid='00000000-0000-4000-8000-000000000020';
+    if(url.pathname.endsWith('/v_member_directory')) return reply([{member_id:mid,project_id:project.id,user_id:user.id,role:state.role,status:'active',display_name:'Beta'}]);
+    if(url.pathname.endsWith('/create_project')) { Object.assign(state.project,{name:body.p_name, starts_on:body.p_starts_on,ends_on:body.p_ends_on});return reply(project.id); }
+    if(url.pathname.endsWith('/create_activity_in_category')) {
+      const a={id:'00000000-0000-4000-8000-'+String(state.activities.length+40).padStart(12,'0'),project_id:project.id,status:'idea',created_by:mid,cost_split_mode:'none',recurrence_frequency:null,actual_cost_minor:null,confirmed_cost_minor:null,deleted_at:null,area_id:body.p_category,...body.p_fields};
+      state.activities.push(a);return reply(a);
+    }
+    if(url.pathname.endsWith('/save_activity_with_split')) {
+      const a={id:'00000000-0000-4000-8000-'+String(state.activities.length+40).padStart(12,'0'),project_id:project.id,status:'idea',created_by:mid,cost_split_mode:'none',recurrence_frequency:null,actual_cost_minor:null,confirmed_cost_minor:null,deleted_at:null,...body.p_fields};
+      state.activities.push(a);return reply(a);
+    }
+    if(url.pathname.endsWith('/soft_delete_commitment')) {
+      if(state.deleteFail) return reply({code:'42501',message:'PRIVATE DATABASE DETAIL'},403);
+      const a=state.activities.find(a=>a.id===body.p_commitment);a.deleted_at=new Date().toISOString();return reply(a.id);
+    }
+    if(url.pathname.endsWith('/commitments')) {
+      if(req.method()==='PATCH') {
+        const a=state.activities.find(a=>'eq.'+a.id===url.searchParams.get('id'));
+        const paid=state.payments.filter(p=>p.commitment_id===a.id).reduce((sum,p)=>sum+p.amount_minor,0);
+        if(body.status==='completed' && paid<(a.estimated_cost_minor??0))return reply({code:'P0001',message:'orchestr:financial_unsettled:Unsettled'},400);
+        Object.assign(a,body);return reply(a);
+      }
+      assert.equal(url.searchParams.get('deleted_at'),'is.null');
+      return reply(state.activities.filter(a=>!a.deleted_at));
+    }
+    if(url.pathname.endsWith('/v_commitment_financials')) {
+      const a=state.activities.find(a=>'eq.'+a.id===url.searchParams.get('commitment_id'));
+      const paid=state.payments.filter(p=>p.commitment_id===a?.id).reduce((sum,p)=>sum+(p.direction==='incoming'?-1:1)*p.amount_minor,0);
+      return reply({commitment_id:a?.id,effective_cost_minor:a?.estimated_cost_minor??0,net_paid_minor:paid,outstanding_minor:Math.max(0,(a?.estimated_cost_minor??0)-paid)});
+    }
+    if(url.pathname.endsWith('/payments')) {
+      if(req.method()==='POST'){const p={id:crypto.randomUUID(),...body};state.payments.push(p);return reply(p);}
+      return reply(state.payments.filter(p=>'eq.'+p.commitment_id===url.searchParams.get('commitment_id')));
+    }
+    if(url.pathname.endsWith('/create_task_with_cost')) {const t={id:crypto.randomUUID(),status:'open',project_id:project.id,recurrence_frequency:null,...body.p_fields};state.tasks.push(t);return reply(t);}
+    if(url.pathname.endsWith('/complete_assigned_task')) {const t=state.tasks.find(t=>t.id===body.p_task);assert.equal(t.assignee_member_id,mid);t.status='done';return reply(null);}
+    if(url.pathname.endsWith('/tasks')) return reply(state.tasks);
+    if(url.pathname.endsWith('/get_resource_comments')) return reply({items:[],next_cursor:null,can_comment:true});
+    if (url.pathname.endsWith('/projects')) {
+      if(req.method()==='PATCH') {
+        assert.equal(url.searchParams.get('status'), `eq.${state.project.status}`);
+        Object.assign(state.project,body);
+      }
+      return reply(state.extraProjects.find(p=>'eq.'+p.id===url.searchParams.get('id'))??state.project);
+    }
+    if(url.pathname.endsWith('/project_members')) return reply([{id:'00000000-0000-4000-8000-000000000020',project_id:project.id,user_id:user.id,role:state.role,status:'active',deleted_at:null}]);
+    if(url.pathname.endsWith('/v_my_projects')) return reply(state.noProjects ? [] : [state.project,...state.extraProjects].map(p=>({...p,project_id:p.id,progress_pct:0,attention_count:0})));
+    if(url.pathname.endsWith('/v_my_activity_notifications')) return route.fulfill({status:200,contentType:'application/json',headers:{'content-range':state.unread?'0-0/1':'*/0','access-control-expose-headers':'content-range'},body:JSON.stringify(state.unread?[{id:'00000000-0000-4000-8000-000000000030',project_id:project.id,commitment_id:'00000000-0000-4000-8000-000000000040',activity_title:'Book restaurant',project_name:project.name,created_at:new Date().toISOString(),read_at:null}]:[])});
+    if(url.pathname.endsWith('/mark_notification_read')) {state.unread=false;return reply(body.p_notification);}
+    if (url.pathname.endsWith('/get_invitation')) return reply([{ project_name: 'Shared test project', inviter_name: 'Inviter', role:'member', status:'pending' }]);
+    if (url.pathname.endsWith('/accept_invitation')) return reply('00000000-0000-4000-8000-000000000003');
+    if (url.pathname.endsWith('/users')) return reply({ id:state.user.id, email:state.user.email, display_name:'Beta', timezone:'Europe/London', default_currency:'GBP' });
+    return reply([]);
+  });
+  return { context, page, state, violations, runtime };
+}
+async function test(name, fn, options) {
+  if (process.env.AUTH_TEST_FILTER && !name.includes(process.env.AUTH_TEST_FILTER)) return;
+  const f = await fixture(options);
+  try { await fn(f); assert.deepEqual(f.violations, [], "No CSP violations"); for(const [kind,items] of Object.entries(f.runtime))if(!['expectedFailures','knownStartupWarnings'].includes(kind))assert.deepEqual(items,[],kind); runtimeReports.push({name,...f.runtime,calendarRequests:f.state.calls.filter(c=>c.path.endsWith('/get_project_calendar')).length}); passed++; console.log(`PASS: ${name}`); }
+  catch (e) { console.error((await f.page.textContent("body")).slice(0,1500),); throw e; }
+  finally { await f.context.close(); }
+}
+async function login(page) {
+  await page.goto(origin+'/login');
+  await page.getByLabel('Email', {exact:true}).fill(user.email);
+  await page.getByLabel(/^Password/).fill('password123');
+  await page.getByRole('button',{name:'Log in',exact:true}).click();
+  await page.waitForURL(origin+'/app');
+}
+async function go(page,path) {
+  await page.evaluate(async path=>document.querySelector('#app').__vue_app__.config.globalProperties.$router.push(path),path);
+}
+async function fits(page,label) {
+  assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),label);
+}
+function populate(state){
+ const activity=crypto.randomUUID(),decision=crypto.randomUUID();state.project.timezone='Europe/London';state.activities=[{id:activity,title:'Evening arrival with a long readable title',activity_type:'event',kind:'transport',project_id:state.project.id,status:'idea',starts_at:'2026-10-07T23:30:00Z',estimated_cost_minor:null,deleted_at:null}];
+ const base={project_id:state.project.id,activity_id:activity,activity_title:'Evening arrival with a long readable title',activity_type:'event',start_at:null,end_at:null,start_date:'2026-10-08',end_date:null,all_day:true,status:'idea',category_name:'Travel',assigned_member:'Beta',amount_minor:null,currency_code:'GBP',occurrence_date:null};
+ state.calendar=[{...base,entry_id:'activity:'+activity,source_type:'activity',source_id:activity,title:state.activities[0].title,start_at:'2026-10-07T23:30:00Z',start_date:null,all_day:false},{...base,entry_id:'decision:'+decision,source_type:'decision',source_id:decision,title:'Choose train',status:'open',start_at:'2026-10-08T22:59:59Z',start_date:null,all_day:false},{...base,entry_id:'payment:one',source_type:'payment_schedule',source_id:crypto.randomUUID(),title:'Pay train deposit',status:'upcoming',amount_minor:12500},{...base,entry_id:'occurrence:one',source_type:'activity_occurrence',source_id:activity,title:'Weekly check-in',status:'pending',occurrence_date:'2026-10-08'},{...base,entry_id:'activity:span',source_type:'activity',source_id:activity,title:'Three-day visit',end_date:'2026-10-10'}];
+ state.timeline=[{project_id:state.project.id,subject_id:activity,subject_type:'commitment',title:'Past preparation',occurs_at:'2026-10-06T11:00:00Z',event_type:'commitment_start',status:'completed',all_day:false},{project_id:state.project.id,subject_id:decision,subject_type:'decision',title:'Choose train',occurs_at:'2026-10-08T22:59:59Z',event_type:'decision_deadline',status:'voting_open',all_day:false},{project_id:state.project.id,subject_id:activity,subject_type:'payment_schedule',title:'Pay train deposit',occurs_at:'2026-10-09T00:00:00Z',event_type:'payment_due',status:'upcoming',all_day:true},{project_id:state.project.id,subject_id:activity,subject_type:'commitment',title:'Weekly check-in',occurs_at:'2026-10-10T09:00:00Z',event_type:'recurring_commitment_due',status:'pending',all_day:false,is_recurring_occurrence:true,occurrence_date:'2026-10-10'}].reverse();
+}
+
+function populateGlobal(state){
+ populate(state);state.project.name='London planning';state.project.timezone='Europe/London';
+ const la={...state.project,id:'00000000-0000-4000-8000-000000000011',name:'Los Angeles production with a long project name',timezone:'America/Los_Angeles'};
+ const tokyo={...state.project,id:'00000000-0000-4000-8000-000000000012',name:'Tokyo launch',timezone:'Asia/Tokyo'};state.extraProjects=[la,tokyo];
+ function event(project,title,occurs_at,subject_type='commitment',event_type='commitment_start',extra={}){return {project_id:project.id,project_name:project.name,project_timezone:project.timezone,currency:'GBP',subject_id:state.activities[0].id,title,occurs_at,subject_type,event_type,all_day:false,status:'idea',amount_minor:null,occurrence_date:null,series_id:null,is_recurring_occurrence:false,occurrence_status:null,...extra};}
+ state.globalEvents=[
+ event(state.project,'London near-midnight Activity with a long title', '2026-10-07T23:30:00Z'),
+ event(la,'Los Angeles same instant','2026-10-07T23:30:00Z'),
+ event(tokyo,'Tokyo local morning','2026-10-07T15:30:00Z'),
+ event(la,'Recurring production check','2026-10-08T07:00:00Z','commitment','recurring_commitment_due',{all_day:true,is_recurring_occurrence:true,occurrence_date:'2026-10-08',status:'upcoming'}),
+ event(state.project,'Choose launch date','2026-10-08T22:59:59Z','decision','decision_deadline',{subject_id:state.calendar[1].source_id,status:'voting_open'}),
+ event(state.project,'London wrap-up','2026-10-08T21:00:00Z','commitment','commitment_end'),
+ event(state.project,'Venue deposit','2026-10-08T23:00:00Z','payment_schedule','payment_schedule_due',{all_day:true,status:'upcoming'}),
+ event(tokyo,'Recorded payment','2026-10-08T15:00:00Z','payment','payment_made',{all_day:true,status:'paid',amount_minor:5000}),
+ event(state.project,'Existing milestone','2026-10-09T23:00:00Z','milestone','milestone',{all_day:true,status:null}),
+ event(state.project,'Project begins','2026-10-10T23:00:00Z','project','project_start',{all_day:true,status:'active'}),
+ event(state.project,'Existing task date','2026-10-11T23:00:00Z','task','task_due',{all_day:true,status:'open'}),
+ ].reverse();
+}
+
+async function capture(page,name){await page.evaluate(()=>document.fonts.ready);await page.waitForTimeout(200);await page.evaluate(()=>window.scrollTo({top:0,behavior:'instant'}));await fits(page,name);await page.screenshot({path:'/tmp/orchestrio-phase5-'+name+'.png',fullPage:true});}
+try{
+ for(const [width,height] of [[1440,900],[1280,900],[1024,768],[768,1024],[430,932],[390,844],[375,812]])await test('Calendar Timeline viewport '+width,async({page,state})=>{
+  await page.clock.setFixedTime(new Date('2026-10-07T23:45:00Z'));const errors=[];page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});await page.setViewportSize({width,height});populate(state);await login(page);await go(page,'/app/projects/'+state.project.id+'/calendar');await page.getByRole('heading',{name:'October 2026',exact:true}).waitFor();
+  assert.equal(await page.getByRole('button',{name:width<640?'Agenda':'Month',exact:true}).getAttribute('aria-pressed'),'true');await page.getByRole('button',{name:'Month',exact:true}).click();await page.getByRole('table',{name:'Month calendar',exact:true}).waitFor();await capture(page,'month-'+width);if(width>=1024){await page.getByRole('button',{name:'Thursday, 8 October 2026, 5 entries',exact:true}).click();await page.getByRole('heading',{name:'Thursday, 8 October 2026 · Today',exact:true}).waitFor();await page.getByRole('button',{name:'Show all dates',exact:true}).click();}const day=page.getByRole('button',{name:'Thursday, 8 October 2026, 5 entries',exact:true});assert.equal(await day.getAttribute('aria-current'),'date');assert((await day.boundingBox()).height>=44);await day.focus();await page.keyboard.press('Enter');await page.getByRole('heading',{name:'Thursday, 8 October 2026 · Today',exact:true}).waitFor();assert.equal(await day.getAttribute('aria-pressed'),'true');await capture(page,'dense-day-'+width);
+  await page.getByRole('button',{name:'Show all dates',exact:true}).click();await page.getByRole('button',{name:'Agenda',exact:true}).click();await page.getByRole('heading',{name:'Saturday, 10 October 2026',exact:true}).waitFor();await page.getByText(/00:30 · Activity/).waitFor();await capture(page,'agenda-'+width);
+  await page.getByRole('group',{name:'Calendar sources',exact:true}).getByRole('button',{name:'Decisions',exact:true}).click();assert.equal(await page.getByRole('link',{name:/Payment due:/}).count(),0);await page.getByRole('link',{name:'Decision deadline: Choose train, Open',exact:true}).waitFor();await page.getByRole('button',{name:'All',exact:true}).click();await page.getByRole('button',{name:'Next month',exact:true}).click();await page.getByRole('heading',{name:'November 2026',exact:true}).waitFor();await page.getByText(/Nothing scheduled in this range/).waitFor();await capture(page,'empty-range-'+width);await page.getByRole('button',{name:'Previous month',exact:true}).click();await page.getByRole('heading',{name:'October 2026',exact:true}).waitFor();await page.getByRole('button',{name:'Today',exact:true}).click();
+  await go(page,'/app/projects/'+state.project.id+'/timeline');await page.getByRole('link',{name:/Past preparation/}).waitFor();const texts=await page.locator('ol a').allTextContents();assert(texts[0].includes('Choose train'));assert(texts.at(-1).includes('Past preparation'));await page.getByRole('heading',{name:'Upcoming',exact:true}).waitFor();await page.getByRole('heading',{name:'Recent',exact:true}).waitFor();await capture(page,'timeline-'+width);
+  state.timeline=state.timeline.slice(0,1);await page.reload();await page.getByRole('link',{name:/Weekly check-in/}).waitFor();await capture(page,'timeline-sparse-'+width);state.timeline=[];await page.reload();await page.getByText('Nothing on the timeline yet.',{exact:true}).waitFor();await capture(page,'timeline-empty-'+width);state.calendar=[];await go(page,'/app/projects/'+state.project.id+'/calendar');await page.getByText(/Nothing scheduled in this range/).waitFor();await capture(page,'calendar-empty-'+width);assert.deepEqual(errors,[]);
+ });
+ await test('Canonical Calendar and Timeline destinations',async({page,state})=>{
+  await page.clock.setFixedTime(new Date('2026-10-07T23:45:00Z'));populate(state);await login(page);const base='/app/projects/'+state.project.id;
+  for(const [label,part] of [['Activity · event: Evening arrival with a long readable title, Pending','commitment='+state.activities[0].id],['Decision deadline: Choose train, Open','/decisions/'+state.calendar[1].source_id],['Payment due: Pay train deposit, Upcoming','section=payments'],['Activity · event: Weekly check-in, Pending','occurrence=2026-10-08']]){await go(page,base+'/calendar');await page.getByRole('button',{name:'Agenda',exact:true}).click();const link=page.getByRole('link',{name:label,exact:true}).first();await link.focus();await page.keyboard.press('Enter');await page.waitForURL(url=>url.href.includes(part));}
+  for(const [label,part] of [['Past preparation','commitment='+state.activities[0].id],['Choose train','/decisions/'+state.calendar[1].source_id],['Pay train deposit','section=payments'],['Weekly check-in','occurrence=2026-10-10']]){await go(page,base+'/timeline');await page.getByRole('link',{name:new RegExp(label)}).click();await page.waitForURL(url=>url.href.includes(part));}
+ });
+ await test('Local loading and retry retains project navigation',async({page,state})=>{
+  await page.clock.setFixedTime(new Date('2026-10-07T23:45:00Z'));populate(state);state.readDelay=900;await login(page);await go(page,'/app/projects/'+state.project.id+'/calendar');await page.getByRole('status',{name:'Loading calendar',exact:true}).waitFor();await page.getByRole('heading',{name:'October 2026',exact:true}).waitFor();state.readDelay=0;state.failRead='get_project_calendar';await page.reload();await page.getByRole('button',{name:'Try again',exact:true}).waitFor({timeout:20000});assert(!(await page.locator('body').innerText()).includes('PRIVATE'));await go(page,'/app/projects/'+state.project.id+'/timeline');await page.getByRole('link',{name:/Past preparation/}).waitFor();state.failRead='get_project_timeline_events';await page.reload();await page.getByRole('button',{name:'Try again',exact:true}).waitFor({timeout:20000});state.failRead=null;await page.getByRole('button',{name:'Try again',exact:true}).click();await page.getByRole('link',{name:/Past preparation/}).waitFor();await page.getByRole('link',{name:'Overview',exact:true}).waitFor();
+ });
+
+ for(const [width,height] of [[1440,900],[1280,900],[1024,768],[768,1024],[430,932],[390,844],[375,812]])await test('Calendar refinement states '+width,async({page,state})=>{
+  await page.clock.setFixedTime(new Date('2026-10-07T23:45:00Z'));populate(state);
+  await login(page);const base='/app/projects/'+state.project.id;
+  state.readDelay=1200;await go(page,base+'/calendar');
+  await page.getByRole('status',{name:'Loading calendar',exact:true}).waitFor();await capture(page,'loading-'+width);
+  await page.getByRole('status',{name:'Loading calendar',exact:true}).waitFor({state:'hidden'});state.readDelay=0;
+  await page.getByRole('button',{name:'Month',exact:true}).click();
+  const day=page.getByRole('button',{name:'Thursday, 8 October 2026, 5 entries',exact:true});
+  await page.keyboard.press('Tab');await day.focus();await page.keyboard.press('Enter');
+  assert.notEqual(await day.evaluate(e=>getComputedStyle(e).outlineStyle),'none');
+  const selected=page.getByRole('region',{name:'Selected day',exact:true});
+  assert.equal(await selected.locator('li').count(),5);
+  const boundary=selected.getByRole('link',{name:/Evening arrival/});
+  assert((await boundary.innerText()).includes('00:30'));
+  assert((await boundary.getAttribute('aria-description')).includes('Europe/London'));
+  assert.equal(await selected.getByRole('link',{name:/Weekly check-in/}).count(),1);
+  assert((await selected.getByRole('link',{name:/Weekly check-in/}).getAttribute('href')).includes('occurrence=2026-10-08'));
+  const grid=await page.getByRole('table',{name:'Month calendar'}).boundingBox(),panel=await selected.boundingBox();
+  assert(width>=1400 ? panel.x>grid.x+grid.width : panel.y>grid.y+grid.height,'Responsive selected-day placement');
+  assert.equal(await page.getByRole('region',{name:'Coming up',exact:true}).locator('li').count(),3);
+  await capture(page,'selected-refinement-'+width);
+  const sources=page.getByRole('group',{name:'Calendar sources',exact:true});
+  for(const [source,count] of [['Activities',3],['Decisions',1],['Payments',1],['All',5]]){
+   await sources.getByRole('button',{name:source,exact:true}).click();assert.equal(await selected.locator('li').count(),count);
+  }
+  await page.getByRole('button',{name:'Sunday, 11 October 2026, 0 entries',exact:true}).click();
+  await selected.getByText('Nothing scheduled for this day.',{exact:true}).waitFor();await capture(page,'selected-empty-'+width);
+  await page.getByRole('button',{name:'Show all dates',exact:true}).click();
+  await page.getByRole('button',{name:'Agenda',exact:true}).click();
+  const agendaDay=page.getByRole('region',{name:'Thursday, 8 October 2026',exact:true});
+  assert.equal(await agendaDay.locator('li').count(),5);
+  assert.equal(await page.getByRole('link',{name:/Weekly check-in/}).count(),1);
+  const initial=state.calls.filter(c=>c.path.endsWith('/get_project_calendar')).length;
+  await page.waitForTimeout(500);assert.equal(state.calls.filter(c=>c.path.endsWith('/get_project_calendar')).length,initial,'No repeated request loop');
+  await page.getByRole('link',{name:'Calendar settings',exact:true}).click();await page.waitForURL('**/settings#calendar-sync-settings');
+  await page.getByText('Google Calendar connection is not configured for this environment yet.',{exact:true}).waitFor();
+  await go(page,base+'/calendar');state.failRead='get_project_calendar';await page.reload();
+  await page.getByRole('button',{name:'Try again',exact:true}).waitFor({timeout:20000});
+  assert(!(await page.locator('body').innerText()).includes('PRIVATE'));
+  await page.getByRole('link',{name:'Overview',exact:true}).waitFor();await capture(page,'calendar-error-'+width);
+  state.failRead=null;await page.getByRole('button',{name:'Try again',exact:true}).click();
+  await page.getByRole('button',{name:'Try again',exact:true}).waitFor({state:'hidden'});
+  await page.getByRole('button',{name:'Month',exact:true}).click();await page.getByRole('button',{name:'Thursday, 8 October 2026, 5 entries',exact:true}).waitFor();
+ },{viewport:{width,height},timezoneId:'America/Los_Angeles'});
+
+ for(const [width,height] of [[1440,900],[1280,900],[1024,768],[768,1024],[430,932],[390,844],[375,812]])await test('Timeline refinement states '+width,async({page,state})=>{
+  await page.clock.setFixedTime(new Date('2026-10-07T23:45:00Z'));populate(state);
+  const seed=state.timeline.find(e=>e.subject_type==='commitment');
+  state.timeline.push({...seed,title:'Boundary preparation with a very long title that wraps safely across the Timeline on a narrow screen',occurs_at:'2026-10-07T23:30:00Z',status:'completed',is_recurring_occurrence:false}, {...seed,title:'At the current instant',occurs_at:'2026-10-07T23:45:00Z',status:'pending',is_recurring_occurrence:false}, {...seed,title:'Same-day follow-up',occurs_at:'2026-10-08T01:00:00Z',status:'pending',is_recurring_occurrence:false});
+  const mixed=structuredClone(state.timeline);
+  await login(page);state.readDelay=1000;await go(page,'/app/projects/'+state.project.id+'/timeline');
+  await page.getByRole('status',{name:'Loading timeline',exact:true}).waitFor();await capture(page,'timeline-loading-'+width);
+  await page.getByRole('status',{name:'Loading timeline',exact:true}).waitFor({state:'hidden'});state.readDelay=0;
+  const upcoming=page.getByRole('region',{name:'Upcoming',exact:true}),recent=page.getByRole('region',{name:'Recent',exact:true});
+  assert.equal(await upcoming.locator('ol a').count(),5);assert.equal(await recent.locator('ol a').count(),2);
+  assert((await upcoming.locator('ol a').first().innerText()).includes('At the current instant'));
+  assert((await recent.locator('ol a').first().innerText()).includes('Past preparation'));
+  assert.equal(await upcoming.getByRole('region',{name:'Thursday 8 Oct 2026',exact:true}).locator('li').count(),3);
+  const boundary=recent.getByRole('link',{name:/Boundary preparation/});assert((await boundary.innerText()).includes('00:30'));assert((await boundary.getAttribute('aria-description')).includes('Thursday 8 Oct 2026, Europe/London'));
+  await page.keyboard.press('Tab');await boundary.focus();assert.notEqual(await boundary.evaluate(e=>getComputedStyle(e).outlineStyle),'none');assert((await boundary.boundingBox()).height>=44);
+  await capture(page,'timeline-refined-'+width);
+  const count=state.calls.filter(c=>c.path.endsWith('/get_project_timeline_events')).length;await page.waitForTimeout(500);assert.equal(state.calls.filter(c=>c.path.endsWith('/get_project_timeline_events')).length,count);
+  const call=state.calls.find(c=>c.path.endsWith('/get_project_timeline_events'));assert(call.body.p_start && call.body.p_end,'Bounded query retained');
+  state.timeline=mixed.filter(e=>new Date(e.occurs_at)<new Date('2026-10-07T23:45:00Z'));await page.reload();await page.getByText('Nothing coming up yet.',{exact:true}).waitFor();await capture(page,'timeline-recent-only-'+width);
+  state.timeline=mixed.filter(e=>new Date(e.occurs_at)>=new Date('2026-10-07T23:45:00Z'));await page.reload();await page.getByText('No recent events yet.',{exact:true}).waitFor();await capture(page,'timeline-upcoming-only-'+width);
+  state.timeline=[];await page.reload();await page.getByText('Nothing on the timeline yet.',{exact:true}).waitFor();await capture(page,'timeline-fully-empty-'+width);
+  state.timeline=mixed;state.failRead='get_project_timeline_events';await page.reload();await page.getByRole('button',{name:'Try again',exact:true}).waitFor({timeout:20000});assert(!(await page.locator('body').innerText()).includes('PRIVATE'));await page.getByRole('link',{name:'Overview',exact:true}).waitFor();await capture(page,'timeline-error-'+width);state.failRead=null;await page.getByRole('button',{name:'Try again',exact:true}).click();await page.getByRole('heading',{name:'Upcoming',exact:true}).waitFor();
+ },{viewport:{width,height},timezoneId:'America/Los_Angeles'});
+
+ for(const [width,height] of [[1440,900],[1280,900],[1024,768],[768,1024],[430,932],[390,844],[375,812]])await test('Global Calendar viewport '+width,async({page,state})=>{
+  await page.clock.setFixedTime(new Date('2026-10-07T23:45:00Z'));populateGlobal(state);await login(page);state.readDelay=1000;await go(page,'/app/calendar');
+  await page.getByRole('status',{name:'Loading calendar',exact:true}).waitFor();await capture(page,'global-loading-'+width);await page.getByRole('status',{name:'Loading calendar',exact:true}).waitFor({state:'hidden'});state.readDelay=0;
+  assert.equal(await page.getByRole('button',{name:width<640?'Agenda':'Month',exact:true}).getAttribute('aria-pressed'),'true');await page.getByRole('button',{name:'Month',exact:true}).click();
+  const day=page.getByRole('button',{name:'Thursday, 8 October 2026, 5 entries',exact:true});await day.waitFor();await page.keyboard.press('Tab');await day.focus();await page.keyboard.press('Enter');assert.equal(await day.getAttribute('aria-current'),'date');assert.equal(await day.getAttribute('aria-pressed'),'true');assert.notEqual(await day.evaluate(e=>getComputedStyle(e).outlineStyle),'none');assert((await day.boundingBox()).height>=44);
+  const selected=page.getByRole('region',{name:'Selected day',exact:true});assert.equal(await selected.locator('li').count(),5);assert.equal(await selected.getByRole('link',{name:/Recurring production check/}).count(),1);
+  const london=selected.getByRole('link',{name:/London near-midnight/});assert((await london.innerText()).includes('00:30'));assert((await london.innerText()).includes('Europe/London'));assert((await selected.getByRole('link',{name:/Tokyo local morning/}).innerText()).includes('00:30'));await selected.getByText('Asia/Tokyo',{exact:true}).waitFor();await selected.getByText('America/Los_Angeles',{exact:true}).waitFor();
+  const grid=await page.getByRole('table',{name:'Month calendar'}).boundingBox(),panel=await selected.boundingBox();assert(width>=1400?panel.x>grid.x+grid.width:panel.y>grid.y+grid.height);assert.equal(await page.getByRole('region',{name:'Coming up',exact:true}).locator('li').count(),3);await capture(page,'global-selected-'+width);
+  await page.getByRole('button',{name:'Wednesday, 7 October 2026, 1 entries',exact:true}).click();assert((await selected.getByRole('link',{name:/Los Angeles same instant/}).innerText()).includes('16:30'));await page.getByRole('button',{name:'Tuesday, 13 October 2026, 0 entries',exact:true}).click();await selected.getByText('Nothing scheduled for this day.',{exact:true}).waitFor();await capture(page,'global-empty-day-'+width);
+  await page.getByRole('button',{name:'Show all dates',exact:true}).click();await page.getByRole('button',{name:'Agenda',exact:true}).click();assert.equal(await page.getByRole('region',{name:'Thursday, 8 October 2026',exact:true}).locator('li').count(),5);await capture(page,'global-agenda-'+width);
+  const filter=page.getByRole('group',{name:'Calendar event types',exact:true});await filter.getByRole('button',{name:'Decision deadline',exact:true}).click();assert.equal(await page.getByRole('region',{name:'Cross-project calendar',exact:true}).locator('li').count(),1);await filter.getByRole('button',{name:'All',exact:true}).click();await page.getByLabel('Filter calendar by project',{exact:true}).selectOption(state.extraProjects[0].id);assert.equal(await page.getByRole('region',{name:'Cross-project calendar',exact:true}).locator('li').count(),2);await page.getByLabel('Filter calendar by project',{exact:true}).selectOption('');
+  const calls=state.calls.filter(c=>c.path.endsWith('/get_my_timeline_events'));assert(calls.length>0);const initial=calls.length;await page.waitForTimeout(400);assert.equal(state.calls.filter(c=>c.path.endsWith('/get_my_timeline_events')).length,initial);assert.equal(calls[0].body.p_start,'2026-09-28T23:00:00.000Z');assert.equal(calls[0].body.p_end,'2026-11-02T23:59:59.999Z');
+  await page.getByRole('button',{name:'Next month',exact:true}).click();await page.getByRole('heading',{name:'November 2026',exact:true}).waitFor();await page.getByText('Nothing scheduled this month.',{exact:true}).waitFor();await capture(page,'global-empty-month-'+width);await page.getByRole('button',{name:'Previous month',exact:true}).click();await page.getByRole('heading',{name:'October 2026',exact:true}).waitFor();await page.getByRole('button',{name:'Today',exact:true}).click();
+  state.failRead='get_my_timeline_events';await page.reload();await page.getByRole('button',{name:'Try again',exact:true}).waitFor({timeout:20000});assert(!(await page.locator('body').innerText()).includes('PRIVATE'));await capture(page,'global-error-'+width);state.failRead=null;await page.getByRole('button',{name:'Try again',exact:true}).click();await page.getByRole('button',{name:'Try again',exact:true}).waitFor({state:'hidden'});
+ },{viewport:{width,height},timezoneId:'America/Los_Angeles'});
+ await test('Global Calendar destinations and empty account',async({page,state})=>{
+  await page.clock.setFixedTime(new Date('2026-10-07T23:45:00Z'));populateGlobal(state);await login(page);
+  for(const [title,projectId,part] of [
+   ['London near-midnight',state.project.id,'commitment='+state.activities[0].id],
+   ['Recurring production check',state.extraProjects[0].id,'occurrence=2026-10-08'],
+   ['Choose launch date',state.project.id,'/overview'],
+   ['Venue deposit',state.project.id,'section=payments'],
+   ['Recorded payment',state.extraProjects[1].id,'/budget'],
+   ['Existing milestone',state.project.id,'/timeline'],
+   ['Existing task date',state.project.id,'item='+state.activities[0].id],
+   ['Project begins',state.project.id,'/overview'],
+  ]){await go(page,'/app/calendar');await page.getByRole('button',{name:'Agenda',exact:true}).click();const link=page.getByRole('link',{name:new RegExp(title)});await link.focus();await page.keyboard.press('Enter');await page.waitForURL(url=>url.href.includes(projectId)&&url.href.includes(part));}
+  state.globalEvents=[];await go(page,'/app/calendar');await page.getByText('Nothing scheduled this month.',{exact:true}).waitFor();await page.getByRole('button',{name:'Month',exact:true}).click();await page.getByRole('table',{name:'Month calendar'}).waitFor();state.noProjects=true;await page.reload();await page.getByText('Nothing scheduled this month.',{exact:true}).waitFor();assert.equal(await page.getByLabel('Filter calendar by project').locator('option').count(),1);await capture(page,'global-no-projects');
+ });
+ await test('Global Calendar DST and project month boundary',async({page,state})=>{
+  await page.clock.setFixedTime(new Date('2026-10-25T00:00:00Z'));populateGlobal(state);const seed=state.globalEvents.find(e=>e.project_timezone==='Europe/London');state.globalEvents=[{...seed,title:'Before fallback',occurs_at:'2026-10-25T00:30:00Z',all_day:false},{...seed,title:'After fallback',occurs_at:'2026-10-25T01:30:00Z',all_day:false},{...seed,title:'Tokyo next month',project_timezone:'Asia/Tokyo',occurs_at:'2026-10-31T15:30:00Z',all_day:false}];await login(page);await go(page,'/app/calendar');await page.getByRole('button',{name:'Agenda',exact:true}).click();const day=page.getByRole('region',{name:'Sunday, 25 October 2026',exact:true});assert.equal(await day.locator('li').count(),2);for(const link of await day.getByRole('link').all())assert((await link.innerText()).includes('01:30'));assert.equal(await page.getByRole('link',{name:/Tokyo next month/}).count(),0);await page.getByRole('button',{name:'Next month',exact:true}).click();await page.getByRole('region',{name:'Sunday, 1 November 2026',exact:true}).getByRole('link',{name:/Tokyo next month/}).waitFor();
+ },{timezoneId:'America/Los_Angeles'});
+ await (await import('node:fs/promises')).writeFile('/tmp/orchestrio-calendar-runtime.json',JSON.stringify(runtimeReports,null,2));
+ console.log(passed+' Calendar/Timeline browser scenarios passed. Runtime: 0 unexpected console errors, Vue warnings, API failures, request failures or rendering exceptions.');
+}finally{await browser.close();}

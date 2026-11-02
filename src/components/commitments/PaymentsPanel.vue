@@ -256,28 +256,28 @@ const scheduleTone = (schedule: typeof schedules.value[number]) => paymentSchedu
       </div>
       <form
         v-if="showScheduleForm"
-        class="border rounded-lg p-3 mb-3 space-y-2 border-line bg-[#FBFBFA]"
+        class="border rounded-lg p-3 mb-3 space-y-2 border-line bg-surface-subtle"
         @submit.prevent="submitSchedule"
       >
         <input
           v-model="scheduleForm.title"
           aria-label="Payment label"
           placeholder="Label, e.g. Deposit"
-          class="w-full border rounded-lg px-3 py-2 text-13.5 focus-ring border-line"
+          class="w-full border rounded-lg px-3 py-2 text-sm focus-ring border-line"
         >
         <div class="grid sm:grid-cols-2 gap-2">
           <input
             v-model="scheduleForm.amount_major"
             aria-label="Payment amount"
             :placeholder="`Amount (${props.currency})`"
-            class="min-w-0 max-w-full border rounded-lg px-3 py-2 text-13.5 focus-ring border-line"
+            class="min-w-0 max-w-full border rounded-lg px-3 py-2 text-sm focus-ring border-line"
           >
           <input
             v-model="scheduleForm.due_on"
             aria-label="Payment due date"
             required
             type="date"
-            class="min-w-0 max-w-full border rounded-lg px-2.5 py-2 text-13.5 focus-ring border-line"
+            class="min-w-0 max-w-full border rounded-lg px-2.5 py-2 text-sm focus-ring border-line"
           >
         </div>
         <p
@@ -321,8 +321,8 @@ const scheduleTone = (schedule: typeof schedules.value[number]) => paymentSchedu
               :label="scheduleStatus(schedule)"
               :tone="scheduleTone(schedule)"
             />
-            <span class="min-w-0 [overflow-wrap:anywhere] text-13.5 font-medium">{{ schedule.title }}</span>
-            <span class="max-w-full [overflow-wrap:anywhere] text-13.5 sm:ml-auto">{{ format(schedule.scheduled_amount_minor, props.currency) }}</span>
+            <span class="min-w-0 [overflow-wrap:anywhere] text-sm font-medium">{{ schedule.title }}</span>
+            <span class="max-w-full [overflow-wrap:anywhere] text-sm sm:ml-auto">{{ format(schedule.scheduled_amount_minor, props.currency) }}</span>
           </div>
           <div class="text-13 text-muted mt-1">
             Due {{ time.dateOnly(schedule.due_on) }} · {{ format(schedule.net_paid_minor, props.currency) }} paid · {{ format(schedule.outstanding_minor, props.currency) }} outstanding
@@ -411,7 +411,7 @@ const scheduleTone = (schedule: typeof schedules.value[number]) => paymentSchedu
     </details>
     <form
       v-if="showAddForm"
-      class="border rounded-lg p-3.5 mb-3 space-y-3 border-line bg-[#FBFBFA]"
+      class="border rounded-lg p-3.5 mb-3 space-y-3 border-line bg-surface-subtle"
       @submit.prevent="submitAdd"
     >
       <label
@@ -430,7 +430,7 @@ const scheduleTone = (schedule: typeof schedules.value[number]) => paymentSchedu
           v-if="schedules.length"
           v-model="addForm.payment_schedule_id"
           aria-label="Payment schedule"
-          class="min-w-0 max-w-full border rounded-lg px-2.5 py-2 text-13.5 focus-ring border-line bg-surface"
+          class="min-w-0 max-w-full border rounded-lg px-2.5 py-2 text-sm focus-ring border-line bg-surface"
         >
           <option value="">
             Choose schedule
@@ -453,7 +453,7 @@ const scheduleTone = (schedule: typeof schedules.value[number]) => paymentSchedu
           v-if="mode !== 'refund'"
           v-model="addForm.type"
           aria-label="Payment type"
-          class="min-w-0 max-w-full border rounded-lg px-2.5 py-2 text-13.5 focus-ring border-line bg-surface"
+          class="min-w-0 max-w-full border rounded-lg px-2.5 py-2 text-sm focus-ring border-line bg-surface"
         >
           <option
             v-for="t in TYPES"
@@ -469,7 +469,7 @@ const scheduleTone = (schedule: typeof schedules.value[number]) => paymentSchedu
           :max="mode === 'scheduled' ? undefined : today()"
           required
           type="date"
-          class="min-w-0 max-w-full border rounded-lg px-2.5 py-2 text-13.5 focus-ring border-line"
+          class="min-w-0 max-w-full border rounded-lg px-2.5 py-2 text-sm focus-ring border-line"
         >
       </div>
       <input
@@ -478,7 +478,7 @@ const scheduleTone = (schedule: typeof schedules.value[number]) => paymentSchedu
         type="text"
         inputmode="decimal"
         :placeholder="`Amount (${props.currency})`"
-        class="w-full border rounded-lg px-3 py-2 text-13.5 focus-ring border-line"
+        class="w-full border rounded-lg px-3 py-2 text-sm focus-ring border-line"
       >
       <p
         v-if="addError"
@@ -529,8 +529,8 @@ const scheduleTone = (schedule: typeof schedules.value[number]) => paymentSchedu
             :label="presentLabel(p.status)"
             :tone="statusTone(p.status)"
           />
-          <span class="text-13.5">{{ presentLabel(p.type) }}</span>
-          <span class="max-w-full [overflow-wrap:anywhere] text-13.5 font-medium sm:ml-auto">{{ format(p.amount_minor, props.currency) }}</span>
+          <span class="text-sm">{{ presentLabel(p.type) }}</span>
+          <span class="max-w-full [overflow-wrap:anywhere] text-sm font-medium sm:ml-auto">{{ format(p.amount_minor, props.currency) }}</span>
         </div>
         <div class="text-13 text-muted mt-1">
           <span v-if="p.due_on">Due {{ time.dateOnly(p.due_on) }}</span>
@@ -560,18 +560,18 @@ const scheduleTone = (schedule: typeof schedules.value[number]) => paymentSchedu
 
         <form
           v-if="markPaidRowId === p.id"
-          class="mt-2.5 border rounded-lg p-3 space-y-2 border-line bg-[#FBFBFA]"
+          class="mt-2.5 border rounded-lg p-3 space-y-2 border-line bg-surface-subtle"
           @submit.prevent="submitMarkPaid"
         >
           <div class="grid grid-cols-2 gap-2">
             <input
               v-model="markPaidForm.paid_on"
               type="date"
-              class="min-w-0 max-w-full border rounded-lg px-2.5 py-2 text-13.5 focus-ring border-line"
+              class="min-w-0 max-w-full border rounded-lg px-2.5 py-2 text-sm focus-ring border-line"
             >
             <select
               v-model="markPaidForm.paid_by_member_id"
-              class="min-w-0 max-w-full border rounded-lg px-2.5 py-2 text-13.5 focus-ring border-line bg-surface"
+              class="min-w-0 max-w-full border rounded-lg px-2.5 py-2 text-sm focus-ring border-line bg-surface"
             >
               <option value="">
                 Paid by (optional)
@@ -588,7 +588,7 @@ const scheduleTone = (schedule: typeof schedules.value[number]) => paymentSchedu
           <input
             v-model="markPaidForm.method"
             placeholder="Method (optional)"
-            class="w-full border rounded-lg px-2.5 py-2 text-13.5 focus-ring border-line"
+            class="w-full border rounded-lg px-2.5 py-2 text-sm focus-ring border-line"
           >
           <p
             v-if="markPaidError"

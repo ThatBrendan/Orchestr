@@ -28,7 +28,7 @@ const initials = computed(() =>
   <div
     v-else
     class="rounded-full flex items-center justify-center font-semibold shrink-0"
-    :class="tone === 'ink' ? 'bg-ink text-white' : 'bg-[#F0F0EE] text-ink-soft'"
+    :class="tone === 'ink' ? 'bg-ink text-white' : 'bg-surface-subtle text-ink-soft'"
     :style="{ width: size + 'px', height: size + 'px', fontSize: Math.round(size * 0.42) + 'px' }"
   >
     {{ initials }}

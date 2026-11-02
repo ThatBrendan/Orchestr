@@ -13,7 +13,7 @@ export function useMyProfile() {
     queryFn: () => profileService.getMyProfile(userId.value!),
     enabled: computed(() => !!userId.value),
   });
-  return { profile: q.data, isPending: q.isPending };
+  return { profile: q.data, isPending: q.isPending, isError: q.isError, error: q.error, refetch: q.refetch };
 }
 
 export function useUpdateMyDisplayName() {

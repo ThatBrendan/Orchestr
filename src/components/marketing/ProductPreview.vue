@@ -1,120 +1,119 @@
 <script setup lang="ts">
-/**
- * Static marketing visual — a composed, illustrative snapshot of the Orchestrio
- * product surface. NO network calls, NO composables, NO live data. The sample
- * content below is fixed marketing copy, scoped to this component.
- */
-import StatTile from "@/components/ui/StatTile.vue";
-import ProgressBar from "@/components/ui/ProgressBar.vue";
-import SeverityIcon from "@/components/ui/SeverityIcon.vue";
-import StatusBadge from "@/components/ui/StatusBadge.vue";
-import { presentLabel } from "@/lib/presentation";
-
-const SAMPLE = {
-  name: "Team offsite — Lisbon",
-  dates: "12–15 March",
-  progress: 68,
-  tiles: [
-    { value: "£9,000", label: "Total budget" },
-    { value: "£7,240", label: "Cost" },
-    { value: "£1,760", label: "Remaining" },
-    { value: "68%", label: "Complete" },
-  ],
-  findings: [
-    { severity: "blocker" as const, text: "£1,200 venue balance overdue" },
-    { severity: "warning" as const, text: "Airport transfer task is overdue" },
-    { severity: "warning" as const, text: "Dinner booking has no reference" },
-  ],
-  commitments: [
-    { title: "Venue hire", owner: "Priya", status: "Booked", tone: "accent" as const },
-    { title: "Flights", owner: "Sam", status: "Confirmed", tone: "accent" as const },
-    { title: "Airport transfer", owner: "Unassigned", status: "Researching", tone: "amber" as const },
-  ],
-};
+import AppIcon from "@/components/ui/AppIcon.vue";
+// Fixed illustration only. No product controls, live data or requests.
 </script>
 
 <template>
-  <div
-    class="rounded-2xl border border-line bg-surface shadow-[0_1px_2px_rgba(20,20,18,0.04),0_12px_32px_-12px_rgba(20,20,18,0.12)] overflow-hidden"
-    role="img"
-    aria-label="Illustration of the Orchestrio project workspace: costs, activities, people and upcoming work"
-  >
-    <!-- header -->
-    <div class="px-5 pt-5">
-      <div class="flex items-start justify-between gap-4">
+  <figure class="relative min-w-0">
+    <div
+      class="absolute -inset-2 sm:-inset-3 rounded-[28px] bg-brand-soft/60 sm:-rotate-2"
+      aria-hidden="true"
+    />
+    <div class="relative rounded-2xl border border-line bg-surface p-4 sm:p-6 shadow-[0_20px_50px_-20px_rgba(31,35,40,0.22)]">
+      <div class="flex flex-wrap justify-between gap-2 border-b border-line pb-4 text-13 text-muted">
+        <span>Projects <span
+          aria-hidden="true"
+          class="mx-1"
+        >/</span> <span class="text-ink">Summer launch</span></span>
+        <span class="text-brand-dark">Illustrative project</span>
+      </div>
+      <div class="mt-5 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <div class="font-medium text-[15px]">
-            {{ SAMPLE.name }}
-          </div>
-          <div class="text-13 text-muted mt-0.5">
-            {{ SAMPLE.dates }}
-          </div>
+          <p class="text-xl sm:text-2xl font-bold tracking-tight">
+            A launch worth sharing
+          </p>
+          <p class="mt-1 text-13 text-ink-soft">
+            18 June · 5 people, one plan
+          </p>
         </div>
-        <div class="text-13 font-medium text-amber shrink-0">
-          3 need attention
+        <div
+          class="flex -space-x-2"
+          role="img"
+          aria-label="Project members: Alex, Priya and three others"
+        >
+          <span
+            v-for="(member, i) in ['AL', 'PR', '+3']"
+            :key="member"
+            class="w-8 h-8 rounded-full border-2 border-surface flex items-center justify-center text-13 font-semibold"
+            :class="i === 1 ? 'bg-accent-soft text-accent' : 'bg-brand-soft text-brand-dark'"
+            aria-hidden="true"
+          >{{ member }}</span>
         </div>
       </div>
-      <div class="mt-3">
-        <ProgressBar :value="SAMPLE.progress" />
+      <div
+        class="mt-5 flex flex-wrap gap-x-5 gap-y-2 border-b border-line pb-3 text-13 text-ink-soft"
+        aria-hidden="true"
+      >
+        <span class="text-brand font-semibold">Overview</span><span>Activities</span><span>Decisions</span><span>Budget</span><span>People</span>
       </div>
-    </div>
-
-    <!-- tiles -->
-    <div class="mt-5 px-5 py-4 border-y border-line flex flex-wrap gap-x-8 gap-y-3 bg-[#FCFCFB]">
-      <StatTile
-        v-for="t in SAMPLE.tiles"
-        :key="t.label"
-        :value="t.value"
-        :label="t.label"
-      />
-    </div>
-
-    <div class="grid sm:grid-cols-2">
-      <!-- commitments -->
-      <div class="p-5 sm:border-r border-line">
-        <div class="text-[11px] font-semibold uppercase tracking-wide text-muted">
-          Activities
+      <div class="mt-4 flex items-start gap-3 rounded-xl border border-amber/20 bg-amber-soft p-3.5">
+        <AppIcon
+          name="alert"
+          :size="20"
+          class="text-amber shrink-0 mt-0.5"
+        />
+        <div>
+          <p class="text-13 font-semibold text-amber">
+            Needs attention · Due tomorrow
+          </p>
+          <p class="mt-1 text-sm font-semibold">
+            Venue deposit
+          </p>
+          <p class="mt-1 text-13 text-ink-soft">
+            £240 outstanding · Alex is responsible
+          </p>
         </div>
-        <div class="mt-2.5 space-y-2.5">
-          <div
-            v-for="c in SAMPLE.commitments"
-            :key="c.title"
-            class="flex items-center gap-3"
-          >
-            <div class="min-w-0 flex-1">
-              <div class="text-14 font-medium truncate">
-                {{ c.title }}
-              </div>
-              <div
-                class="text-13 text-ink-soft"
-              >
-                {{ c.owner }}
-              </div>
-            </div>
-            <StatusBadge
-              :label="presentLabel(c.status)"
-              :tone="c.tone"
+      </div>
+      <p class="mt-5 mb-3 text-13 font-semibold">
+        Coming up in the plan
+      </p>
+      <div class="space-y-3">
+        <div class="flex items-start gap-3 rounded-xl border border-line p-3">
+          <div class="rounded-lg bg-brand-soft p-2 text-brand">
+            <AppIcon
+              name="checkCircle"
+              :size="18"
             />
           </div>
+          <div class="min-w-0 flex-1">
+            <p class="text-sm font-semibold">
+              Prepare the launch demo
+            </p>
+            <p class="mt-1 text-13 text-ink-soft">
+              16 Jun · Priya · In progress
+            </p>
+          </div>
         </div>
-      </div>
-
-      <!-- health -->
-      <div class="p-5 border-t sm:border-t-0 border-line">
-        <div class="text-[11px] font-semibold uppercase tracking-wide text-muted">
-          Needs attention
-        </div>
-        <div class="mt-2.5 space-y-2.5">
-          <div
-            v-for="(f, i) in SAMPLE.findings"
-            :key="i"
-            class="flex items-center gap-3"
-          >
-            <SeverityIcon :severity="f.severity" />
-            <span class="text-13.5 text-ink-soft">{{ f.text }}</span>
+        <div class="flex items-start gap-3 rounded-xl border border-line p-3">
+          <div class="rounded-lg bg-accent-soft p-2 text-accent">
+            <AppIcon
+              name="people"
+              :size="18"
+            />
+          </div>
+          <div>
+            <p class="text-sm font-semibold">
+              Choose the event format
+            </p>
+            <p class="mt-1 text-13 text-ink-soft">
+              Decision · 4 of 5 people voted
+            </p>
           </div>
         </div>
       </div>
+      <div class="mt-5 pt-4 border-t border-line flex flex-wrap justify-between gap-3 text-13">
+        <span class="text-ink-soft">Budget <strong class="text-ink">£2,000</strong></span>
+        <span class="text-accent font-semibold">6 of 10 Activities complete</span>
+      </div>
+      <div
+        class="mt-3 h-1.5 rounded-full bg-accent-soft"
+        aria-hidden="true"
+      >
+        <div class="h-full w-3/5 rounded-full bg-accent" />
+      </div>
     </div>
-  </div>
+    <figcaption class="relative mt-5 text-center text-13 text-muted">
+      The people, the details, the next step. Together.
+    </figcaption>
+  </figure>
 </template>
