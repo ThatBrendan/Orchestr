@@ -72,9 +72,7 @@ function focusHeading() { heading.value?.focus({ preventScroll: true }); }
         class="text-section-heading focus-ring"
       >
         Health
-      </h2><p class="mt-1 text-sm text-muted">
-        What needs attention in this project.
-      </p>
+      </h2>
     </header>
     <div class="flex items-center justify-between flex-wrap gap-3 mb-5">
       <div class="flex items-center gap-3">
@@ -169,7 +167,7 @@ function focusHeading() { heading.value?.focus({ preventScroll: true }); }
       >
         <summary class="min-h-11 px-4 py-3 text-sm text-success cursor-pointer rounded-lg focus-ring">
           <h3 class="inline font-medium">
-            Passed · {{ pagePassed.length }} on this page
+            Passed checks · {{ pagePassed.length }}
           </h3>
         </summary><div class="divide-y divide-line">
           <FindingCard
