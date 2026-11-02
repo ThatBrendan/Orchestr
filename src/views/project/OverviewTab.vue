@@ -57,7 +57,7 @@ watch(() => health.needsAttention.value.length, () => {
     <section
       v-if="hasDates || directory.members.value.length || upcoming.events.value.length || project?.timezone"
       aria-label="Project context"
-      class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4"
+      class="grid grid-cols-2 gap-3 sm:grid-cols-2 xl:grid-cols-4"
     >
       <div
         v-if="project?.starts_on"

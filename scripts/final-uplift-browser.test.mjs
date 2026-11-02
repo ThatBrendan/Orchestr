@@ -154,7 +154,7 @@ function finding(code,severity,extra={}){return {code,severity,subject_type:'com
 function populate(state){state.notes=[note(state,'Travel reference information','Arrival instructions and meeting point.\nPlease keep this information current.'),note(state,'Long project reference',Array.from({length:24},(_,i)=>'Section '+(i+1)+': Durable project information and reference details.').join('\n'))];state.findings=[finding('schedule_conflict','blocker'),finding('missing_owner','warning'),finding('missing_cost','info'),finding('on_budget','ok',{subject_type:'project',subject_label:null,message:'The project is within its budget.',resolution:''})];}
 async function capture(page,name){await page.evaluate(()=>document.fonts.ready);await page.waitForTimeout(180);await fits(page,name);for(const d of await page.locator('[id^="headlessui-dialog-panel"]').all())assert(await d.evaluate(el=>el.scrollWidth<=el.clientWidth));await page.screenshot({path:'/tmp/orchestrio-final-'+name+'.png',fullPage:true});}
 try {
- for(const [width,height] of [[1280,900],[1024,768],[768,1024],[430,932],[390,844],[375,812]])await test('Cross-app and Settings '+width,async({page,state})=>{
+ for(const [width,height] of [[1440,900],[1280,900],[1024,768],[768,1024],[430,932],[390,844],[375,812]])await test('Cross-app and Settings '+width,async({page,state})=>{
   await page.setViewportSize({width,height});const errors=[];page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
   state.project.name='LongProjectNameWithoutSpaces'.repeat(5);populate(state);await login(page);
   const base='/app/projects/'+state.project.id;

@@ -41,7 +41,7 @@ function save() {
       My payment preferences
     </h2>
     <p class="text-meta text-muted">
-      Add multiple payment preferences so people can choose how to reimburse you. Only people with an eligible reimbursement to pay you can see them. For Starling Settle Up, choose Other / Custom.
+      Payment links open external providers. Orchestrio does not process or hold funds. People can use them only for eligible reimbursements to you.
     </p>
     <p
       v-if="query.isPending.value"

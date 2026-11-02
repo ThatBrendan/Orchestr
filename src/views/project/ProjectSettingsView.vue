@@ -164,7 +164,7 @@ const status = computed(() => project.value?.status);
     </div>
 
     <template v-else>
-      <div>
+      <div class="rounded-xl border border-line bg-surface p-4 sm:p-5">
         <SectionHeading label="General" />
         <form
           class="mt-3 space-y-4"
@@ -239,7 +239,7 @@ const status = computed(() => project.value?.status);
         </form>
       </div>
 
-      <div>
+      <div class="rounded-xl border border-line bg-surface p-4 sm:p-5">
         <SectionHeading label="Preferences" />
         <div class="mt-3 space-y-2">
           <label class="min-h-11 flex items-center gap-2 text-sm text-ink-soft">
@@ -265,7 +265,7 @@ const status = computed(() => project.value?.status);
         </div>
       </div>
 
-      <div>
+      <div class="rounded-xl border border-line bg-surface p-4 sm:p-5">
         <SectionHeading label="Status" />
         <p class="mt-2 text-sm text-ink-soft">
           Current status: <span class="font-medium capitalize">{{ status }}</span>
@@ -318,7 +318,7 @@ const status = computed(() => project.value?.status);
 
       <div
         v-if="canDelete || (status !== 'archived' && canArchive)"
-        class="border-t border-line pt-6"
+        class="rounded-xl border border-danger/20 bg-surface p-4 sm:p-5"
       >
         <SectionHeading label="Danger zone" />
         <p
@@ -329,6 +329,7 @@ const status = computed(() => project.value?.status);
         </p>
         <AppButton
           v-if="status !== 'archived' && canArchive"
+          class="!text-danger"
           variant="secondary"
           size="sm"
           :loading="setStatus.isPending.value"

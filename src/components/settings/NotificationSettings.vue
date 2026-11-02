@@ -39,7 +39,7 @@ async function toggle(category: NotificationCategory) {
       Notifications
     </h2>
     <p class="text-meta text-muted">
-      Choose optional in-app updates across your projects. Essential workflow updates always arrive.
+      Essential workflow updates always arrive.
     </p>
     <p
       v-if="query.isPending.value"

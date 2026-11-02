@@ -8,7 +8,9 @@ import { useProjectCalendar } from '@/composables/useProjectCalendar';
 import { entryDay, entryOnDay } from '@/lib/executionCalendar';
 import CalendarEntryLink from '@/components/calendar/CalendarEntryLink.vue';
 import ErrorState from '@/components/ui/ErrorState.vue';
-import SkeletonBlock from '@/components/ui/SkeletonBlock.vue';
+import CalendarToolbar from '@/components/calendar/CalendarToolbar.vue';
+import CalendarMonthGrid from '@/components/calendar/CalendarMonthGrid.vue';
+import CalendarLoading from '@/components/calendar/CalendarLoading.vue';
 import AppIcon from '@/components/ui/AppIcon.vue';
 import type { IconName } from '@/components/ui/icons';
 const route = useRoute();
@@ -104,109 +106,18 @@ function selectDay(day: string) { selectedDay.value = day; }
         />{{ f.label }}
       </button>
     </div>
-    <div class="rounded-xl border border-line bg-surface p-3 sm:p-4 flex flex-wrap items-center gap-3">
-      <div class="flex items-center gap-1">
-        <button
-          class="focus-ring calendar-button !px-3"
-          aria-label="Previous month"
-          @click="move(-1)"
-        >
-          <AppIcon
-            name="chevronLeft"
-            :size="18"
-          />
-        </button>
-        <button
-          class="focus-ring calendar-button !px-3"
-          aria-label="Next month"
-          @click="move(1)"
-        >
-          <AppIcon
-            name="chevronRight"
-            :size="18"
-          />
-        </button>
-      </div>
-      <h3
-        class="text-base font-semibold"
-        aria-live="polite"
-      >
-        {{ anchor.toFormat('LLLL yyyy') }}
-      </h3>
-      <button
-        class="focus-ring calendar-button"
-        @click="goToday"
-      >
-        Today
-      </button>
-      <div
-        class="flex gap-1 rounded-lg bg-surface-subtle p-1 sm:ml-auto"
-        role="group"
-        aria-label="Calendar view"
-      >
-        <button
-          class="focus-ring calendar-button calendar-view"
-          :aria-pressed="view === 'month'"
-          @click="selectedView = 'month'"
-        >
-          Month
-        </button>
-        <button
-          class="focus-ring calendar-button calendar-view"
-          :aria-pressed="view === 'agenda'"
-          @click="selectedView = 'agenda'"
-        >
-          Agenda
-        </button>
-      </div>
-    </div>
-    <div
+    <CalendarToolbar
+      :label="anchor.toFormat('LLLL yyyy')"
+      :view="view"
+      @previous="move(-1)"
+      @next="move(1)"
+      @today="goToday"
+      @update:view="selectedView = $event"
+    />
+    <CalendarLoading
       v-if="calendar.isPending.value"
-      role="status"
-      aria-label="Loading calendar"
-      class="calendar-layout"
-    >
-      <div
-        v-if="view === 'month'"
-        class="rounded-xl border border-line bg-surface p-3"
-      >
-        <div
-          class="grid grid-cols-7 gap-2"
-          aria-hidden="true"
-        >
-          <SkeletonBlock
-            v-for="i in 7"
-            :key="'heading'+i"
-            height="24px"
-          />
-          <SkeletonBlock
-            v-for="i in 35"
-            :key="i"
-            height="64px"
-          />
-        </div>
-      </div>
-      <div
-        v-else
-        class="space-y-3"
-      >
-        <SkeletonBlock
-          v-for="i in 4"
-          :key="i"
-          height="96px"
-          rounded="0.75rem"
-        />
-      </div>
-      <div
-        v-if="view === 'month'"
-        class="rounded-xl border border-line bg-surface p-5 space-y-4"
-      >
-        <SkeletonBlock
-          width="65%"
-          height="24px"
-        /><SkeletonBlock height="80px" /><SkeletonBlock height="80px" />
-      </div>
-    </div>
+      :view="view"
+    />
     <ErrorState
       v-else-if="calendar.isError.value"
       :error="calendar.error.value"
@@ -224,74 +135,24 @@ function selectDay(day: string) { selectedDay.value = day; }
         class="calendar-layout"
       >
         <div class="min-w-0">
-          <div class="rounded-xl border border-line bg-surface overflow-hidden">
-            <table
-              class="w-full table-fixed border-collapse"
-              aria-label="Month calendar"
-            >
-              <thead>
-                <tr>
-                  <th
-                    v-for="day in ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']"
-                    :key="day"
-                    scope="col"
-                    class="py-3 text-xs font-medium text-muted bg-surface-subtle"
-                  >
-                    {{ day }}
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr
-                  v-for="(week, index) in weeks"
-                  :key="index"
-                >
-                  <td
-                    v-for="day in week"
-                    :key="day.key"
-                    class="calendar-day border border-line align-top p-0.5 sm:p-1"
-                    :class="[day.date.month !== anchor.month ? 'bg-surface-subtle/60 text-muted' : '', selectedDay === day.key ? 'selected-day' : '']"
-                  >
-                    <button
-                      class="focus-ring w-full min-h-11 rounded-lg text-sm text-center p-1"
-                      :class="selectedDay === day.key ? 'bg-brand text-white font-semibold' : day.key === today ? 'font-bold underline decoration-2 underline-offset-4 bg-brand-soft text-brand' : 'hover:bg-brand-soft'"
-                      :aria-label="`${day.date.toFormat('cccc, d LLLL yyyy')}, ${day.entries.length} entries`"
-                      :aria-description="!compactMonth && day.entries.length > 2 ? `${day.entries.length - 2} more entries. Select this date to see all entries.` : undefined"
-                      :aria-current="day.key === today ? 'date' : undefined"
-                      :aria-pressed="selectedDay === day.key"
-                      @click="selectDay(day.key)"
-                    >
-                      {{ day.date.day }}<span
-                        v-if="day.key === today"
-                        class="sr-only"
-                      > Today</span>
-                      <span
-                        v-if="compactMonth && day.entries.length"
-                        class="block text-xs"
-                      >· {{ day.entries.length }}<span class="sr-only"> entries</span></span>
-                      <span
-                        v-if="!compactMonth && day.entries.length > 2"
-                        class="block text-xs font-medium"
-                      >+{{ day.entries.length - 2 }} more</span>
-                    </button>
-                    <div
-                      v-if="!compactMonth"
-                      class="mt-1 space-y-1"
-                    >
-                      <CalendarEntryLink
-                        v-for="entry in day.entries.slice(0, 2)"
-                        :key="entry.entry_id"
-                        :entry="entry"
-                        :day="day.key"
-                        :timezone="timezone"
-                        compact
-                      />
-                    </div>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+          <CalendarMonthGrid
+            :weeks="weeks"
+            :anchor-month="anchor.month"
+            :today="today"
+            :selected-day="selectedDay"
+            :compact-month="compactMonth"
+            :entry-key="entry => entry.entry_id"
+            @select="selectDay"
+          >
+            <template #entry="{entry, day}">
+              <CalendarEntryLink
+                :entry="entry"
+                :day="day"
+                :timezone="timezone"
+                compact
+              />
+            </template>
+          </CalendarMonthGrid>
         </div>
         <div class="min-w-0 space-y-5">
           <section
@@ -431,13 +292,8 @@ function selectDay(day: string) { selectedDay.value = day; }
 
 <style scoped>
 .calendar-button { @apply min-h-11 rounded-lg border border-line bg-surface px-3 py-2 text-sm; }
-.calendar-view { @apply border-transparent bg-transparent; }
 .calendar-filter { @apply text-ink-soft; }
 .calendar-button[aria-pressed="true"] { @apply bg-brand-soft text-brand border-brand/40; }
-.calendar-view[aria-pressed="true"] { @apply bg-surface shadow-sm; }
 .calendar-layout { display: grid; gap: 1.25rem; min-width: 0; }
-.calendar-day { height: 5.5rem; }
-.selected-day { box-shadow: inset 0 0 0 2px rgb(var(--brand)); background: rgb(var(--brand-soft)); }
-@media (min-width: 1024px) { .calendar-day { height: 10rem; } }
 @media (min-width: 1400px) { .calendar-layout { grid-template-columns: minmax(0, 1fr) 280px; align-items: start; } }
 </style>

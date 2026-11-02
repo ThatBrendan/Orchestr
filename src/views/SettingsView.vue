@@ -72,9 +72,6 @@ async function saveName() {
     <h1 class="font-display text-page-title font-semibold tracking-tight">
       Settings
     </h1>
-    <p class="mt-1.5 text-body text-ink-soft">
-      Manage your account and preferences.
-    </p>
 
     <div class="mt-8 space-y-3">
       <h2 class="text-section-heading">
