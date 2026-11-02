@@ -26,7 +26,7 @@ import { presentLabel } from "@/lib/presentation";
 const route = useRoute();
 const projectId = computed(() => String(route.params.projectId));
 const { members, isPending, isError, error, refetch } = useMemberDirectory(projectId);
-const { allowed, project } = useProjectContext();
+const { allowed, project, context } = useProjectContext();
 const toast = useToast();
 const { format } = useMoney();
 const budgetVisible = computed(() => isProjectModuleVisible(project.value?.profile,project.value?.module_visibility,"budget"));
@@ -81,40 +81,45 @@ async function confirmRemoveNow() {
 
 const focusFallback = ref<HTMLElement | null>(null);
 const restoreDialogFocus = useExecutionDialogFocus(computed(() => inviteOpen.value || !!confirmRemove.value), focusFallback);
+
+const joinAccess = ref<InstanceType<typeof ProjectJoinAccess> | null>(null);
+const joinBusy = ref(false);
+const joinState = ref({ loading: false, pendingCount: 0, error: "" });
+
+function copyInviteLink() {
+  void joinAccess.value?.copy();
+}
+
+function onJoinAccessChange(value: { loading: boolean; pendingCount: number; error: string }) {
+  joinState.value = value;
+}
 </script>
 
 <template>
-  <div class="space-y-6 max-w-4xl fade-in">
-    <h2
-      ref="focusFallback"
-      tabindex="-1"
-      class="text-section-heading focus-ring"
-    >
-      People
-    </h2>
-    <div
-      v-if="isPending"
-      class="space-y-2"
-      role="status"
-      aria-label="Loading members"
-    >
-      <SkeletonBlock
-        v-for="i in 4"
-        :key="i"
-        height="56px"
-        rounded="0.5rem"
-      />
-    </div>
-    <ErrorState
-      v-else-if="isError"
-      :error="error"
-      :retry="() => refetch()"
-    />
-    <template v-else>
-      <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
-        <p class="text-sm text-ink-soft">
-          {{ roster.length }} {{ roster.length === 1 ? "person" : "people" }}
-        </p>
+  <div class="space-y-8 max-w-4xl fade-in">
+    <header class="flex flex-wrap items-start justify-between gap-4">
+      <div>
+        <h2
+          ref="focusFallback"
+          tabindex="-1"
+          class="text-section-heading focus-ring"
+        >
+          People
+        </h2>
+      </div>
+      <div
+        v-if="allowed('project.invite')"
+        class="flex flex-wrap gap-2"
+      >
+        <AppButton
+          size="sm"
+          variant="secondary"
+          :loading="joinBusy"
+          :disabled="joinBusy || archived"
+          @click="copyInviteLink"
+        >
+          Copy invite link
+        </AppButton>
         <AppButton
           v-if="canInvite"
           size="sm"
@@ -124,95 +129,148 @@ const restoreDialogFocus = useExecutionDialogFocus(computed(() => inviteOpen.val
           Create invitation
         </AppButton>
       </div>
+    </header>
+    <p
+      v-if="archived"
+      class="text-meta text-warning"
+    >
+      This project is archived — membership is read-only.
+    </p>
 
-      <EmptyState
-        v-if="roster.length === 0"
-        message="No one has been added to this project yet."
-      >
-        <template
-          v-if="canInvite"
-          #action
+    <section
+      aria-labelledby="people-members-heading"
+      class="space-y-4"
+    >
+      <div class="flex items-baseline justify-between gap-3">
+        <h3
+          id="people-members-heading"
+          class="text-section-heading"
         >
-          <AppButton
-            size="sm"
-            @click="inviteOpen = true"
-          >
-            Invite someone
-          </AppButton>
-        </template>
-      </EmptyState>
-
+          Members
+        </h3>
+        <p
+          v-if="!isPending && !isError"
+          class="text-meta text-muted"
+        >
+          {{ roster.length }} {{ roster.length === 1 ? 'person' : 'people' }}
+        </p>
+      </div>
       <div
-        v-else
-        class="border rounded-xl divide-y divide-line border-line bg-surface"
+        v-if="isPending"
+        class="grid gap-3 xl:grid-cols-2"
+        role="status"
+        aria-label="Loading members"
       >
         <div
+          v-for="i in 4"
+          :key="i"
+          class="flex gap-4 rounded-xl border border-line p-4"
+        >
+          <SkeletonBlock
+            width="48px"
+            height="48px"
+            rounded="50%"
+          />
+          <div class="flex-1 space-y-3">
+            <SkeletonBlock
+              width="75%"
+              height="20px"
+            /><SkeletonBlock
+              width="45%"
+              height="16px"
+            />
+          </div>
+        </div>
+      </div>
+      <ErrorState
+        v-else-if="isError"
+        :error="error"
+        :retry="() => refetch()"
+      />
+      <EmptyState
+        v-else-if="roster.length === 0"
+        message="No one has been added to this project yet."
+      />
+      <div
+        v-else
+        class="grid gap-3 xl:grid-cols-2"
+      >
+        <article
           v-for="m in roster"
           :key="m.member_id"
-          class="px-4 py-3.5"
+          class="min-w-0 rounded-xl border border-line bg-surface p-4"
+          :aria-label="m.display_name"
         >
-          <div class="flex flex-wrap items-center gap-3.5">
-            <AppAvatar
-              :name="m.display_name"
-              :url="m.avatar_url"
-              :size="36"
-            />
+          <div class="flex items-start gap-3.5">
+            <span
+              aria-hidden="true"
+              class="rounded-full"
+              :class="m.role === 'organizer' ? 'ring-2 ring-brand/20 ring-offset-2' : ''"
+            >
+              <AppAvatar
+                :name="m.display_name"
+                :url="m.avatar_url"
+                :size="48"
+                :tone="m.role === 'organizer' ? 'ink' : 'muted'"
+              />
+            </span>
             <div class="min-w-0 flex-1 [overflow-wrap:anywhere]">
-              <div class="text-card-heading font-semibold">
-                {{ m.display_name }}
-              </div>
-              <div class="text-meta text-muted capitalize">
+              <h4 class="text-card-heading font-semibold">
+                {{ m.display_name }} <span
+                  v-if="m.member_id === context?.memberId"
+                  class="text-meta font-normal text-muted"
+                >· You</span>
+              </h4>
+              <p
+                class="mt-1 text-meta"
+                :class="m.role === 'organizer' ? 'text-brand' : 'text-muted'"
+              >
                 {{ presentLabel(m.role) }}{{ m.status === 'invited' ? ' · Invited' : '' }}
-              </div>
+              </p>
               <p
                 v-if="budgetVisible && balanceLabel(m.member_id)"
-                class="mt-1 text-meta text-muted"
+                class="mt-2 text-meta text-muted"
               >
                 {{ balanceLabel(m.member_id) }}
               </p>
             </div>
-            <details
-              v-if="canManage"
-              class="w-full sm:w-auto"
-            >
-              <summary
-                class="cursor-pointer min-h-11 rounded-lg px-3 py-3 text-sm text-ink-soft focus-ring"
-                :aria-label="`Manage ${m.display_name}`"
-              >
-                Manage<span class="sr-only"> {{ m.display_name }}</span>
-              </summary>
-              <div class="mt-2 flex flex-wrap items-center gap-2">
-                <select
-                  v-if="canManage"
-                  class="min-h-11 border rounded-lg px-3 py-2 text-sm focus-ring border-line bg-surface"
-                  :disabled="updateRole.isPending.value || removeMember.isPending.value"
-                  :value="m.role"
-                  :aria-label="`Role for ${m.display_name}`"
-                  @change="onRoleChange(m.member_id, $event)"
-                >
-                  <option value="organizer">
-                    Organizer
-                  </option>
-                  <option value="member">
-                    Member
-                  </option>
-                  <option value="viewer">
-                    Viewer
-                  </option>
-                </select>
-
-                <AppButton
-                  v-if="canManage"
-                  variant="secondary"
-                  size="sm"
-                  :aria-label="`Remove ${m.display_name}`"
-                  @click="confirmRemove = { id: m.member_id, name: m.display_name }"
-                >
-                  Remove
-                </AppButton>
-              </div>
-            </details>
           </div>
+          <details
+            v-if="canManage"
+            class="mt-3 border-t border-line pt-1"
+          >
+            <summary
+              class="cursor-pointer min-h-11 rounded-lg px-2 py-3 text-meta text-ink-soft focus-ring"
+              :aria-label="`Manage ${m.display_name}`"
+            >
+              Manage<span class="sr-only"> {{ m.display_name }}</span>
+            </summary>
+            <div class="mt-1 flex flex-wrap items-center gap-2">
+              <select
+                class="min-h-11 border rounded-lg px-3 py-2 text-sm focus-ring border-line bg-surface"
+                :disabled="updateRole.isPending.value || removeMember.isPending.value"
+                :value="m.role"
+                :aria-label="`Role for ${m.display_name}`"
+                @change="onRoleChange(m.member_id, $event)"
+              >
+                <option value="organizer">
+                  Organizer
+                </option><option value="member">
+                  Member
+                </option><option value="viewer">
+                  Viewer
+                </option>
+              </select>
+              <AppButton
+                variant="secondary"
+                size="sm"
+                :aria-label="`Remove ${m.display_name}`"
+                @click="confirmRemove = { id: m.member_id, name: m.display_name }"
+              >
+                Remove
+              </AppButton>
+            </div>
+          </details>
           <p
             v-if="rowError[m.member_id]"
             role="alert"
@@ -220,72 +278,87 @@ const restoreDialogFocus = useExecutionDialogFocus(computed(() => inviteOpen.val
           >
             {{ rowError[m.member_id] }}
           </p>
-        </div>
+        </article>
       </div>
       <p
         v-if="budgetVisible && settlement.isError.value"
         role="status"
-        class="mt-3 text-meta text-muted"
+        class="text-meta text-muted"
       >
         Balance information is unavailable. Membership controls are still available.
       </p>
+      <p
+        v-if="!isError && removedCount > 0"
+        class="text-meta text-muted"
+      >
+        {{ removedCount }} former {{ removedCount === 1 ? 'member has' : 'members have' }} been removed.
+      </p>
+    </section>
+
+    <section
+      v-if="allowed('project.invite')"
+      aria-labelledby="people-invitations-heading"
+      class="space-y-4"
+    >
+      <h3
+        id="people-invitations-heading"
+        class="text-section-heading"
+      >
+        Invitations
+      </h3>
       <ProjectJoinAccess
         v-if="allowed('project.invite')"
+        ref="joinAccess"
         :key="projectId"
-        class="mt-6"
         :project-id="projectId"
         :read-only="archived"
+        @busy-change="joinBusy = $event"
+        @access-change="onJoinAccessChange"
       />
-      <section
-        v-if="allowed('project.invite')"
-        class="mt-6 space-y-3"
+      <div
+        v-if="invitations.isPending.value"
+        role="status"
+        aria-label="Loading invitations"
+        class="space-y-3"
       >
-        <h2 class="text-section-heading">
-          Invitations
-        </h2>
-        <p
-          v-if="invitations.isPending.value"
-          class="text-meta text-muted"
-        >
-          Loading invitations…
-        </p>
-        <ErrorState
-          v-else-if="invitations.isError.value"
-          :error="invitations.error.value"
-          :retry="() => invitations.refetch()"
+        <SkeletonBlock
+          v-for="i in 2"
+          :key="i"
+          height="88px"
+          rounded="0.75rem"
         />
-        <p
-          v-else-if="!invitations.data.value?.length"
-          class="text-meta text-muted"
-        >
-          No outstanding invitations.
-        </p>
-        <div
+      </div>
+      <ErrorState
+        v-else-if="invitations.isError.value"
+        :error="invitations.error.value"
+        :retry="() => invitations.refetch()"
+      />
+      <p
+        v-else-if="!invitations.data.value?.length && !joinState.loading && !joinState.pendingCount && !joinState.error"
+        class="text-meta text-muted"
+      >
+        No pending invitations.
+      </p>
+      <div
+        v-else
+        class="grid gap-3 xl:grid-cols-2"
+      >
+        <article
           v-for="inv in invitations.data.value"
           :key="inv.id"
-          class="border border-line rounded-xl bg-surface p-4 text-sm [overflow-wrap:anywhere]"
+          class="min-w-0 rounded-xl border border-dashed border-line bg-surface-subtle p-4 [overflow-wrap:anywhere]"
         >
-          <span>{{ inv.email }}</span>
-          <p class="text-meta text-muted capitalize">
+          <p class="text-body font-medium">
+            {{ inv.email }}
+          </p>
+          <p class="mt-2 text-meta text-muted">
             {{ inv.status === 'pending' ? 'Pending invitation' : presentLabel(inv.status) }} · {{ presentLabel(inv.role) }}
           </p>
-        </div>
-      </section>
-      <p
-        v-if="removedCount > 0"
-        class="mt-3 text-meta text-muted"
-      >
-        {{ removedCount }} former {{ removedCount === 1 ? "member has" : "members have" }} been removed.
-      </p>
-      <p
-        v-if="archived"
-        class="mt-3 text-meta text-warning"
-      >
-        This project is archived — membership is read-only.
-      </p>
-    </template>
+        </article>
+      </div>
+    </section>
 
-    <p class="mt-6 text-meta text-muted">
+    <p class="border-t border-line pt-4 text-meta text-muted">
       Choose how others can reimburse you in <RouterLink
         :to="{ name: 'settings', hash: '#payment-links-settings' }"
         class="min-h-11 inline-flex items-center rounded-lg text-brand underline focus-ring"

@@ -6,14 +6,29 @@ assert(['localhost', '127.0.0.1'].includes(new URL(origin).hostname), 'Tests req
 const browser = await chromium.launch({ headless: true, channel: process.env.AUTH_TEST_BROWSER || 'chrome' });
 const user = { id: '00000000-0000-4000-8000-000000000001', email: 'beta@example.test', aud: 'authenticated', role: 'authenticated', created_at: new Date().toISOString(), email_confirmed_at: new Date().toISOString(), app_metadata: { provider: 'email' }, user_metadata: {}, identities: [] };
 let passed = 0;
+const runtimeReports=[];
 async function fixture(options = {}) {
   const context = await browser.newContext(options);
   const violations=[];
+  const runtime={consoleErrors:[],vueWarnings:[],exceptions:[],failedRequests:[],apiFailures:[],expectedFailures:[],knownStartupWarnings:[]};
   await context.exposeBinding('reportCsp',(_source,v)=>violations.push(v));
   await context.addInitScript(()=>document.addEventListener('securitypolicyviolation',event=>window.reportCsp({directive:event.violatedDirective,uri:event.blockedURI})));
   const page = await context.newPage();
   const browserErrors=[];page.on('pageerror',e=>browserErrors.push(e.stack));page.on('console',m=>{if(m.type()==='error')browserErrors.push(m.text());});
   page.setDefaultTimeout(10000);
+  page.on('pageerror',e=>runtime.exceptions.push(e.message));
+  page.on('console',m=>{
+    if(m.type()==='warning' && /Vue warn/.test(m.text())){
+      // Existing main.ts calls app.use(Analytics), although Analytics is a Vue component.
+      // Record this exact startup warning; do not suppress any other Vue warning.
+      if(m.text()==='[Vue warn]: A plugin must either be a function or an object with an "install" function.')runtime.knownStartupWarnings.push(m.text());
+      else runtime.vueWarnings.push(m.text());
+    }
+    if(m.type()==='error' && !(m.text().includes('status of 500') && runtime.expectedFailures.some(url=>url===m.location().url)))runtime.consoleErrors.push(m.text());
+  });
+  page.on('requestfailed',r=>{if(!r.failure()?.errorText.includes('ERR_ABORTED'))runtime.failedRequests.push({url:r.url(),error:r.failure()?.errorText});});
+  page.on('response',r=>{if(r.status()>=400 && !runtime.expectedFailures.includes(r.url()))runtime.apiFailures.push({url:r.url(),status:r.status()});});
+
   const project = {id:'00000000-0000-4000-8000-000000000010',name:'Beta Trip',status:'active',profile:'group_trip',module_visibility:{},currency:'GBP',timezone:'UTC',starts_on:null,ends_on:null,description:null,deleted_at:null};
   const state = { project, financials:{total_target_minor:null,net_actual_spend_minor:0,settled_variance_minor:null}, budgetCategories:[], balances:[], balanceLines:[], history:[], requests:[], projectInvites:[], roster:null, linkToken:null, reimbursements:[], acknowledged:true, categories: [], activities: [], tasks: [], payments: [], deleteFail: false, role:'organizer', unread:true, notificationUnread:false, invitations:[], user: structuredClone(user), calls: [], signupSession: false, error: null, nonceRequired: false };
   const token = () => {
@@ -47,8 +62,8 @@ async function fixture(options = {}) {
       return reply({});
     }
     const end=url.pathname.split('/').at(-1);
-    if(state.failResource===end)return reply({code:'57014',message:'PRIVATE'},500);
-    if(state.readDelay && ['v_project_financials','v_member_directory'].includes(end))await new Promise(r=>setTimeout(r,state.readDelay));
+    if(state.failResource===end){runtime.expectedFailures.push(req.url());return reply({code:'57014',message:'PRIVATE'},500);}
+    if(state.readDelay && ['v_project_financials','v_member_directory','get_project_join_access','invitations'].includes(end))await new Promise(r=>setTimeout(r,state.readDelay));
     if(end==='v_project_financials')return reply({project_id:project.id,...state.financials});
     if(end==='v_budget_category_actuals')return reply(state.budgetCategories);
     if(end==='v_project_member_settlements')return reply(state.balances);
@@ -60,8 +75,8 @@ async function fixture(options = {}) {
     if(end==='get_project_join_access')return reply({active:!!state.linkToken,token:state.linkToken,pending_count:state.requests.length,requests:state.requests.slice(body.p_offset,body.p_offset+25)});
     if(end==='ensure_project_join_link'){state.linkToken??='a'.repeat(64);return reply(state.linkToken);}
     if(end==='disable_project_join_link'){state.linkToken=null;return reply(null);}
-    if(end==='review_project_join_request'){state.requests=state.requests.filter(r=>r.id!==body.p_request);return reply(null);}
-    if(end==='invitations')return reply(state.projectInvites);
+    if(end==='review_project_join_request'){const r=state.requests.find(r=>r.id===body.p_request);if(body.p_approve)state.roster.push({member_id:crypto.randomUUID(),display_name:r.display_name,role:'member',status:'active'});state.requests=state.requests.filter(r=>r.id!==body.p_request);return reply(null);}
+    if(end==='invitations')return reply(state.projectInvites.filter(i=>i.status!=='accepted'));
     if(end==='create_invitation'){const id=crypto.randomUUID();state.projectInvites.push({id,email:body.p_email,role:body.p_role,status:'pending',expires_at:'2099-01-01',created_at:new Date().toISOString()});return reply(id);}
     if(end==='set_project_budget'){state.financials.total_target_minor=body.p_amount;return reply(null);}
     if(end==='record_item_settlement'){state.history.push({id:crypto.randomUUID(),commitment_id:body.p_item,paid_by_member_id:body.p_from,amount_minor:body.p_amount,paid_on:body.p_date,status:'paid',settlement_group_id:crypto.randomUUID()});return reply(null);}
@@ -127,12 +142,12 @@ async function fixture(options = {}) {
     if (url.pathname.endsWith('/users')) return reply({ id:state.user.id, email:state.user.email, display_name:'Beta', timezone:'Europe/London', default_currency:'GBP' });
     return reply([]);
   });
-  return { context, page, state, violations, browserErrors };
+  return { context, page, state, violations, browserErrors, runtime };
 }
 async function test(name, fn, options) {
   if (process.env.AUTH_TEST_FILTER && !name.includes(process.env.AUTH_TEST_FILTER)) return;
   const f = await fixture(options);
-  try { await fn(f); assert.deepEqual(f.violations, [], "No CSP violations"); passed++; console.log(`PASS: ${name}`); }
+  try { await fn(f); assert.deepEqual(f.violations, [], "No CSP violations");for(const [kind,items] of Object.entries(f.runtime))if(!['expectedFailures','knownStartupWarnings'].includes(kind))assert.deepEqual(items,[],kind);runtimeReports.push({name,...f.runtime}); passed++; console.log(`PASS: ${name}`); }
   catch (e) { console.error(f.browserErrors);console.error((await f.page.textContent("body")).slice(0,1500),); throw e; }
   finally { await f.context.close(); }
 }
@@ -161,7 +176,7 @@ function populated(state){
  state.projectInvites=[{id:crypto.randomUUID(),email:'avery.long.invitation.address@example.test',role:'member',status:'pending',expires_at:'2099-01-01',created_at:'2026-10-24'},{id:crypto.randomUUID(),email:'expired@example.test',role:'viewer',status:'pending',expires_at:'2020-01-01',created_at:'2020-01-01'}];
  state.reimbursements=[{id:crypto.randomUUID(),project_id:state.project.id,commitment_id:activity,debtor_member_id:mid,creditor_member_id:state.roster[1].member_id,debtor_name:'Beta',creditor_name:state.roster[1].display_name,activity_title:'Train tickets for the group',status:'open',amount_minor:15000,currency:'GBP',is_debtor:true,is_creditor:false,needs_review:false}];
 }
-async function capture(page,name){await page.evaluate(()=>document.fonts.ready);await page.waitForTimeout(180);await fits(page,name);for(const p of await page.locator('[id^="headlessui-dialog-panel"]').all())assert(await p.evaluate(el=>el.scrollWidth<=el.clientWidth),'Dialog fits');await page.screenshot({path:'/tmp/orchestrio-phase4-'+name+'.png',fullPage:true});}
+async function capture(page,name){await page.evaluate(()=>document.fonts.ready);await page.waitForTimeout(180);await page.evaluate(()=>window.scrollTo({top:0,behavior:'instant'}));await fits(page,name);for(const p of await page.locator('[id^="headlessui-dialog-panel"]').all())assert(await p.evaluate(el=>el.scrollWidth<=el.clientWidth),'Dialog fits');await page.screenshot({path:'/tmp/orchestrio-phase4-'+name+'.png',fullPage:true});}
 try {
  for(const [width,height] of [[1440,900],[1280,900],[1024,768],[768,1024],[430,932],[390,844],[375,812]])await test('Budget and People viewport '+width,async({page,state})=>{
   const errors=[];page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});await page.setViewportSize({width,height});await login(page);await go(page,'/app/projects/'+state.project.id+'/budget');await page.getByText('Split an Activity cost to see what each person owes.',{exact:true}).waitFor();await capture(page,'budget-empty-'+width);
@@ -170,7 +185,7 @@ try {
   state.balances.forEach(m=>m.remaining_minor=0);await page.reload();await page.getByText('Everyone is settled.',{exact:true}).waitFor();await capture(page,'budget-settled-'+width);
   await go(page,'/app/projects/'+state.project.id+'/people');await page.getByRole('button',{name:'Approve Riley',exact:true}).waitFor();await page.getByText('Expired · Viewer',{exact:true}).waitFor();await capture(page,'people-'+width);
   await page.getByLabel('Manage Alexandra with a very long family name',{exact:true}).click();await page.getByLabel('Role for Alexandra with a very long family name',{exact:true}).waitFor();await capture(page,'people-manage-'+width);
-  state.requests=[];state.projectInvites=[];state.roster=[state.roster[0]];state.balances=[];await page.reload();await page.getByText('No pending join requests.',{exact:true}).waitFor();await page.getByText('No outstanding invitations.',{exact:true}).waitFor();await capture(page,'people-empty-invites-'+width);assert.deepEqual(errors,[]);
+  state.requests=[];state.projectInvites=[];state.roster=[state.roster[0]];state.balances=[];await page.reload();await page.getByText('No pending invitations.',{exact:true}).waitFor();assert.equal(await page.getByRole('heading',{name:'Join requests',exact:true}).count(),0);await capture(page,'people-empty-invites-'+width);assert.deepEqual(errors,[]);
  });
  await test('Budget target, drilldown, settlement and history',async({page,state})=>{
   populated(state);await login(page);await go(page,'/app/projects/'+state.project.id+'/budget');await page.getByRole('button',{name:'Edit budget',exact:true}).click();let dialog=page.getByRole('dialog');await dialog.getByLabel(/Approximate total budget/).fill('1250.50');await dialog.getByRole('button',{name:'Save budget',exact:true}).click();await page.getByText('£1,250.50',{exact:true}).waitFor();assert.equal(state.calls.find(c=>c.path.endsWith('/set_project_budget')).body.p_amount,125050);
@@ -181,7 +196,7 @@ try {
  });
  await test('Membership role removal invitation and join actions',async({page,state})=>{
   populated(state);await login(page);await go(page,'/app/projects/'+state.project.id+'/people');await page.getByRole('button',{name:'Approve Riley',exact:true}).click();await page.getByText('Access approved.',{exact:true}).waitFor();await page.getByRole('button',{name:'Decline Jordan',exact:true}).click();await page.getByText('Access request declined.',{exact:true}).waitFor();assert.deepEqual(state.calls.filter(c=>c.path.endsWith('/review_project_join_request')).map(c=>c.body.p_approve),[true,false]);
-  await page.getByRole('button',{name:'Copy invite link',exact:true}).click();await page.getByLabel('Join link',{exact:true}).waitFor();assert((await page.getByLabel('Join link',{exact:true}).inputValue()).endsWith('/join/'+state.linkToken));await page.getByText('Link settings',{exact:true}).click();await page.getByRole('button',{name:'Disable link',exact:true}).click();await page.getByText('Join link disabled.',{exact:true}).waitFor();assert.equal(state.linkToken,null);
+  await page.getByRole('button',{name:'Copy invite link',exact:true}).click();await page.getByText('Invite link copied.',{exact:true}).waitFor();await page.getByText('Invite link settings',{exact:true}).click();await page.getByRole('button',{name:'Disable link',exact:true}).click();await page.getByText('Join link disabled.',{exact:true}).waitFor();assert.equal(state.linkToken,null);
   await page.getByLabel('Manage Sam',{exact:true}).click();await page.getByLabel('Role for Sam',{exact:true}).selectOption('member');await page.getByText('Role updated.',{exact:true}).waitFor();assert.equal(state.roster[2].role,'member');await page.getByRole('button',{name:'Remove Sam',exact:true}).click();await page.getByRole('dialog').getByRole('button',{name:'Remove',exact:true}).click();await page.getByText('1 former member has been removed.',{exact:true}).waitFor();
   await page.getByRole('button',{name:'Create invitation',exact:true}).click();const d=page.getByRole('dialog');await d.getByLabel('Email address').fill('new@example.test');await d.getByLabel('Role').selectOption('viewer');await d.getByRole('button',{name:'Create invitation',exact:true}).click();await page.getByText('new@example.test',{exact:true}).waitFor();assert.equal(state.projectInvites.at(-1).role,'viewer');assert.equal(state.calls.filter(c=>c.path.includes('/functions/')).length,0);
  });
@@ -203,5 +218,41 @@ try {
   populated(state);state.readDelay=900;await page.setViewportSize({width:375,height:812});await login(page);await go(page,'/app/projects/'+state.project.id+'/budget');await page.getByRole('status',{name:'Loading budget',exact:true}).waitFor();const edit=page.getByRole('button',{name:'Edit budget',exact:true});await edit.focus();await page.keyboard.press('Enter');await page.getByLabel(/Approximate total budget/).waitFor();await capture(page,'budget-dialog-375');await page.keyboard.press('Escape');await page.waitForTimeout(250);assert(await edit.evaluate(el=>el===document.activeElement));
   await go(page,'/app/projects/'+state.project.id+'/people');await page.getByRole('button',{name:'Create invitation',exact:true}).focus();await page.keyboard.press('Enter');await page.getByLabel('Email address').waitFor();await capture(page,'invite-dialog-375');await page.keyboard.press('Escape');await page.waitForTimeout(250);assert(await page.getByRole('button',{name:'Create invitation',exact:true}).evaluate(el=>el===document.activeElement));
  });
+
+ for(const [width,height] of [[1440,900],[1280,900],[1024,768],[768,1024],[430,932],[390,844],[375,812]])await test('People refinement states '+width,async({page,state,context})=>{
+  populated(state);state.roster[1].avatar_url=origin+'/fixture-avatar.svg';
+  await context.route('**/fixture-avatar.svg',r=>r.fulfill({contentType:'image/svg+xml',body:'<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48"><rect width="48" height="48" fill="#e8e4f7"/><circle cx="24" cy="18" r="8" fill="#5b4bc4"/><path d="M8 48v-8a16 16 0 0 1 32 0v8" fill="#5b4bc4"/></svg>'}));
+  state.projectInvites.push({id:crypto.randomUUID(),email:'revoked@example.test',role:'viewer',status:'revoked',expires_at:'2099-01-01'}, {id:crypto.randomUUID(),email:'accepted@example.test',role:'member',status:'accepted',expires_at:'2099-01-01'});
+  state.projectInvites[0].email='averylongunbrokeninvitationaddressforwrappingchecks@example.test';
+  await login(page);state.readDelay=1100;await go(page,'/app/projects/'+state.project.id+'/people');
+  await page.getByRole('status',{name:'Loading members',exact:true}).waitFor();await page.getByRole('status',{name:'Loading access requests',exact:true}).waitFor();await page.getByRole('status',{name:'Loading invitations',exact:true}).waitFor();await capture(page,'people-loading-'+width);state.readDelay=0;
+  const members=page.getByRole('region',{name:'Members',exact:true});await members.getByRole('heading',{name:'Beta · You',exact:true}).waitFor();
+  assert.equal(await members.locator('article').count(),3);assert.equal(await members.locator('img').count(),1);assert(await members.locator('img').evaluate(i=>i.complete && i.naturalWidth>0));
+  await page.getByText('Revoked · Viewer',{exact:true}).waitFor();await page.getByText('Expired · Viewer',{exact:true}).waitFor();assert.equal(await page.getByText('accepted@example.test',{exact:true}).count(),0);
+  const join=page.getByRole('region',{name:'Join requests',exact:true});assert((await join.boundingBox()).y>(await members.boundingBox()).y);
+  const approve=page.getByRole('button',{name:'Approve Riley',exact:true});await page.keyboard.press('Tab');await approve.focus();assert.notEqual(await approve.evaluate(e=>getComputedStyle(e).outlineStyle),'none');assert((await approve.boundingBox()).height>=44);await capture(page,'people-refined-'+width);
+  const requestsBefore=state.calls.filter(c=>c.path.endsWith('/get_project_join_access')).length;await page.waitForTimeout(400);assert.equal(state.calls.filter(c=>c.path.endsWith('/get_project_join_access')).length,requestsBefore);
+  await page.keyboard.press('Enter');await members.getByRole('heading',{name:'Riley',exact:true}).waitFor();assert.equal(await page.getByRole('button',{name:'Approve Riley',exact:true}).count(),0);
+  await page.getByRole('button',{name:'Decline Jordan',exact:true}).click();await page.getByText('Access request declined.',{exact:true}).waitFor();assert.equal(await members.getByRole('heading',{name:'Jordan',exact:true}).count(),0);assert.equal(await page.getByText('No pending join requests.',{exact:true}).count(),0);
+  await context.grantPermissions(['clipboard-read','clipboard-write']);await page.getByRole('button',{name:'Copy invite link',exact:true}).click();await page.getByText('Invite link copied.',{exact:true}).waitFor();assert((await page.evaluate(()=>navigator.clipboard.readText())).endsWith('/join/'+state.linkToken));
+  const trigger=page.getByRole('button',{name:'Create invitation',exact:true});await trigger.focus();await page.keyboard.press('Enter');const dialog=page.getByRole('dialog');await dialog.getByLabel('Email address').waitFor();for(let i=0;i<8;i++){await page.keyboard.press('Tab');assert(await dialog.evaluate(d=>d.contains(document.activeElement)));}await capture(page,'people-invite-dialog-'+width);await page.keyboard.press('Escape');await page.waitForTimeout(250);assert(await trigger.evaluate(e=>e===document.activeElement));
+  await page.getByRole('link',{name:'My payment preferences',exact:true}).click();await page.waitForURL('**/settings#payment-links-settings');
+  await go(page,'/app/projects/'+state.project.id+'/people');
+  for(const resource of ['get_project_join_access','invitations','v_member_directory']){
+    state.failResource=resource;await page.reload();const retry=page.getByRole('button',{name:resource==='get_project_join_access'?'Retry':'Try again',exact:true});await retry.waitFor({timeout:20000});
+    assert(!(await page.locator('body').innerText()).includes('PRIVATE'));await page.getByRole('link',{name:'Overview',exact:true}).waitFor();
+    if(resource==='v_member_directory')await page.getByText('Revoked · Viewer',{exact:true}).waitFor();else await members.getByRole('heading',{name:'Beta · You',exact:true}).waitFor();
+    await capture(page,'people-error-'+resource+'-'+width);state.failResource=null;await retry.click();await retry.waitFor({state:'hidden'});
+  }
+ },{viewport:{width,height}});
+ await test('People viewer and member permissions',async({page,state})=>{
+   populated(state);state.role='viewer';await login(page);
+   for(const role of ['viewer','member']){state.role=role;state.roster[0].role=role;await page.goto(origin+'/app/projects/'+state.project.id+'/people');await page.getByRole('heading',{name:'Members',exact:true}).waitFor();await page.getByText('Alexandra with a very long family name',{exact:true}).waitFor();assert.equal(await page.getByRole('button',{name:/Approve|Decline|Copy invite link|Create invitation|Remove/}).count(),0);assert.equal(await page.getByLabel(/Manage /).count(),0);await page.getByRole('link',{name:'My payment preferences',exact:true}).waitFor();}
+ });
+ await test('People join pagination and clipboard fallback',async({page,state})=>{
+   populated(state);state.requests=Array.from({length:26},(_,i)=>({id:crypto.randomUUID(),display_name:'Requester '+(i+1),requested_at:'2026-10-24T10:00:00Z'}));await login(page);await go(page,'/app/projects/'+state.project.id+'/people');await page.getByRole('button',{name:'Approve Requester 25',exact:true}).waitFor();await page.getByRole('button',{name:'Next',exact:true}).click();await page.getByRole('button',{name:'Approve Requester 26',exact:true}).waitFor();assert(await page.getByRole('button',{name:'Next',exact:true}).isDisabled());await page.getByRole('button',{name:'Previous',exact:true}).click();await page.getByRole('button',{name:'Approve Requester 1',exact:true}).waitFor();
+   await page.evaluate(()=>Object.defineProperty(navigator.clipboard,'writeText',{value:async()=>{throw new Error('Fixture clipboard denied');}}));await page.getByRole('button',{name:'Copy invite link',exact:true}).click();await page.getByText('Copy the invite link from the field below.',{exact:true}).waitFor();assert((await page.getByLabel('Join link',{exact:true}).inputValue()).includes('/join/'));
+ });
+ await (await import('node:fs/promises')).writeFile('/tmp/orchestrio-people-runtime.json',JSON.stringify(runtimeReports,null,2));
  console.log(passed+' Budget/People browser scenarios passed.');
 }finally{await browser.close();}
