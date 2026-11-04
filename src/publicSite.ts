@@ -1,7 +1,7 @@
 /** Public product identity. Independent of deployment/auth redirect origins. */
 export const APP_NAME = "Orchestrio";
 export const PUBLIC_CONTACT_EMAIL = "admin@orchestrio.io";
-export const PUBLIC_ORIGIN = "https://orchestrio.io";
+export const PUBLIC_ORIGIN = "https://www.orchestrio.io";
 export const DEFAULT_TITLE = "Orchestrio — Planning and Execution Workspace";
 export const DEFAULT_DESCRIPTION = "Orchestrio brings activities, responsibilities, timelines, budgets, people and recurring processes into one place so groups and teams can plan together and execute clearly.";
 
@@ -34,7 +34,7 @@ export function pageMetadata(path: string, production: boolean, fallbackTitle = 
 
 export function robotsContent(production: boolean) {
   return production
-    ? `User-agent: *\nAllow: /\nDisallow: /app\nDisallow: /admin\nDisallow: /auth/\nDisallow: /invite/\nDisallow: /s/\nDisallow: /join/\n\nSitemap: ${PUBLIC_ORIGIN}/sitemap.xml\n`
+    ? `User-agent: *\nAllow: /\nDisallow: /app\nDisallow: /admin\nDisallow: /auth/\nDisallow: /invite/\nDisallow: /s/\nDisallow: /join/\nDisallow: /login\nDisallow: /signup\nDisallow: /forgot-password\nDisallow: /reset-password\nDisallow: /access-denied\n\nSitemap: ${PUBLIC_ORIGIN}/sitemap.xml\n`
     : "User-agent: *\nDisallow: /\n";
 }
 

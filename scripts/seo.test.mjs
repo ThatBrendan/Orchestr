@@ -8,6 +8,7 @@ async function load(entry) {
   return import(`data:text/javascript;base64,${Buffer.from(output.output.find((item) => item.type === "chunk").code).toString("base64")}`);
 }
 const { pageMetadata, PUBLIC_PAGES, PUBLIC_ORIGIN, robotsContent, sitemapContent } = await load("src/publicSite.ts");
+assert.equal(PUBLIC_ORIGIN, "https://www.orchestrio.io");
 const { analyticsPath } = await load("src/lib/analyticsPrivacy.ts");
 const titles = new Set();
 for (const [path, page] of Object.entries(PUBLIC_PAGES)) {
@@ -49,6 +50,9 @@ assert.equal(robotsContent(false), "User-agent: *\nDisallow: /\n");
 assert(robotsContent(true).includes("Allow: /\n"));
 assert(robotsContent(true).includes(`Sitemap: ${PUBLIC_ORIGIN}/sitemap.xml`));
 assert(!robotsContent(true).includes("Disallow: /\n"));
+for (const route of ["/app", "/admin", "/auth/", "/invite/", "/join/", "/s/", "/login", "/signup", "/forgot-password", "/reset-password", "/access-denied"]) {
+  assert(robotsContent(true).includes(`Disallow: ${route}\n`), `robots.txt must exclude ${route}`);
+}
 const sitemap = await readFile("dist/sitemap.xml", "utf8");
 assert.equal(sitemap, sitemapContent());
 assert.deepEqual([...sitemap.matchAll(/<loc>(.*?)<\/loc>/g)].map((m) => m[1]), ["/", "/about", "/privacy", "/terms"].map((p) => PUBLIC_ORIGIN + p));
@@ -66,6 +70,12 @@ assert(spa.includes('content="noindex, nofollow"'));
 assert(!spa.includes('rel="canonical"'));
 const routing = JSON.parse(await readFile("vercel.json", "utf8"));
 assert.equal(routing.cleanUrls, true);
+assert.deepEqual(routing.redirects, [{
+  source: "/:path*",
+  has: [{ type: "host", value: "orchestrio.io" }],
+  destination: "https://www.orchestrio.io/:path*",
+  permanent: true,
+}]);
 assert(routing.rewrites.every((rule) => rule.destination === "/spa"));
 assert(!routing.rewrites.some((rule) => rule.source === "/(.*)"));
 const { toAuthAppError } = await load("src/lib/errors.ts");
