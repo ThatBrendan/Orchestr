@@ -2,6 +2,14 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
+  "redirects": [
+    {
+      "source": "/:path*",
+      "has": [{ "type": "host", "value": "orchestrio.io" }],
+      "destination": "https://www.orchestrio.io/:path*",
+      "permanent": true
+    }
+  ],
   "rewrites": [
     {
       "source": "/app/:path*",
