@@ -46,6 +46,13 @@ const CONSTRAINT_MESSAGES: Record<string, string> = {
 };
 
 export function fromPostgrestError(err: PostgrestError): AppError {
+  // postgrest-js wraps rejected fetches in a PostgrestError with an empty code.
+  // Classify the common browser transport messages as network failures so query
+  // retries, offline UI and fail-closed route handling work as intended.
+  if (err.code === "" && /^(?:TypeError|FetchError|NetworkError):/i.test(err.message)
+    && /failed to fetch|load failed|network error|network request failed|fetch failed/i.test(err.message)) {
+    return new AppError("network", "Network problem — check your connection.", { cause: err });
+  }
   const orchestr = parseOrchestrMessage(err.message);
   if (orchestr) {
     const permissionCodes = new Set([

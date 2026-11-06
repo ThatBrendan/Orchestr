@@ -7,7 +7,7 @@ async function load(entry) {
   return import(`data:text/javascript;base64,${Buffer.from(output.output.find(item => item.type === 'chunk').code).toString('base64')}`);
 }
 const { safeRedirect, passwordError, authCallbackUrl, readAuthLink, RECOVERY_SENT } = await load('src/lib/authPolicy.ts');
-const { toAuthAppError } = await load('src/lib/errors.ts');
+const { toAuthAppError, toAppError } = await load('src/lib/errors.ts');
 for (const path of ['/app', '/app/projects/123?tab=people#members', '/invite/abc-123', '/admin/users']) assert.equal(safeRedirect(path), path);
 for (const path of [null, [], '', 'https://evil.example', '//evil.example/app', '/\\evil.example', '/app\\evil', '/app/../login', '/app/%2e%2e/login', '/app/%252e%252e/login', '/%2f%2fevil.example', '/app/%5cevil', '/app\n', '/app?x=%0d%0a', '/app/%', '/login', '/signup', '/auth/callback', '/reset-password', '/invite/', '/application', '/app/../../app']) assert.equal(safeRedirect(path), null, String(path));
 assert.equal(authCallbackUrl('https://orchestrio.io/', '/invite/token', 'signup'), 'https://orchestrio.io/auth/callback?redirect=%2Finvite%2Ftoken&mode=signup');
@@ -29,6 +29,11 @@ assert.equal(toAuthAppError({code:'reauthentication_needed'}, 'password').code, 
 assert.equal(toAuthAppError({code:'over_email_send_rate_limit'}, 'email').kind, 'rate_limit');
 assert.equal(toAuthAppError(new Error('AuthApiError raw provider detail'), 'email').message, 'Unable to send the email right now. Try again shortly.');
 assert(RECOVERY_SENT.startsWith('If an account exists'));
+for (const message of ['TypeError: Failed to fetch', 'TypeError: Load failed', 'FetchError: fetch failed']) {
+  const error = toAppError({ message, code: '', details: '', hint: '' });
+  assert.equal(error.kind, 'network');
+  assert.equal(error.message, 'Network problem — check your connection.');
+}
 console.log('PASS: auth redirects, environment callbacks, password policy, link parsing, safe errors and recovery copy.');
 
 const joinPath = '/join/' + 'a'.repeat(64);

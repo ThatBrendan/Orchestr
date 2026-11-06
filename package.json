@@ -13,6 +13,7 @@
     "db:status": "supabase status",
     "db:test": "supabase test db",
     "seo:test": "node scripts/seo.test.mjs",
+    "pwa:test": "node scripts/pwa.test.mjs",
     "env:test": "node scripts/environment.test.mjs",
     "db:check-target": "node scripts/check-db-target.mjs",
     "auth:test": "node scripts/auth.test.mjs",

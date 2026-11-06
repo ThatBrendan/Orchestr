@@ -4,6 +4,7 @@ import { renderToString } from "@vue/server-renderer";
 import { createPinia } from "pinia";
 import { createMemoryHistory, createRouter, RouterView } from "vue-router";
 import LandingView from "./views/LandingView.vue";
+import PlanningLandingView from "./views/PlanningLandingView.vue";
 import PublicInfoView from "./views/PublicInfoView.vue";
 import NotFoundView from "./views/NotFoundView.vue";
 export { pageMetadata, PUBLIC_PAGES, robotsContent, sitemapContent } from "./publicSite";
@@ -14,6 +15,8 @@ export async function render(path: string) {
     history: createMemoryHistory(),
     routes: [
       { path: "/", name: "landing", component: LandingView },
+      { path: "/group-trip-planning", name: "group-trip-planning", component: PlanningLandingView },
+      { path: "/group-event-planning", name: "group-event-planning", component: PlanningLandingView },
       ...["about", "privacy", "terms"].map((name) => ({ path: `/${name}`, name, component: PublicInfoView })),
       { path: "/login", name: "login", component: { render: () => null } },
       { path: "/signup", name: "signup", component: { render: () => null } },

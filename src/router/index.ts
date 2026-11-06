@@ -13,6 +13,8 @@ const routes: RouteRecordRaw[] = [
     component: () => import("@/views/LandingView.vue"),
     meta: { public: true, title: DEFAULT_TITLE },
   },
+  { path: "/group-trip-planning", name: "group-trip-planning", component: () => import("@/views/PlanningLandingView.vue"), meta: { public: true, title: "Group trip planning" } },
+  { path: "/group-event-planning", name: "group-event-planning", component: () => import("@/views/PlanningLandingView.vue"), meta: { public: true, title: "Group event planning" } },
   {
     path: "/about",
     name: "about",

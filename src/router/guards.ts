@@ -53,7 +53,12 @@ export const requirePlatformAdmin: NavigationGuardWithThis<undefined> = async (t
     if (!isAdmin) return { name: "access-denied" };
     return true;
   } catch (e) {
-    if (toAppError(e).kind === "permission") return { name: "access-denied" };
+    const appError = toAppError(e);
+    if (appError.kind === "permission") return { name: "access-denied" };
+    // Keep a failed cold launch from leaving the app unmounted on an initial route error.
+    // The dashboard remains behind the normal authenticated route guard and displays its
+    // own network error states; no project data or authorization decision is cached here.
+    if (appError.kind === "network") return { name: "dashboard" };
     throw e;
   }
 };
@@ -119,7 +124,10 @@ export async function hydrateProjectContext(to: RouteLocationNormalized) {
     });
     return true;
   } catch (e) {
-    if (toAppError(e).kind === "not_found") return { name: "not-found" };
+    const appError = toAppError(e);
+    if (appError.kind === "not_found") return { name: "not-found" };
+    // Fail closed to the authenticated dashboard if project access cannot be verified.
+    if (appError.kind === "network") return { name: "dashboard" };
     throw e;
   }
 }
