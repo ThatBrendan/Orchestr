@@ -11,10 +11,13 @@ import PageContainer from "@/components/ui/PageContainer.vue";
 import ErrorState from "@/components/ui/ErrorState.vue";
 import SkeletonBlock from "@/components/ui/SkeletonBlock.vue";
 import AppButton from "@/components/ui/AppButton.vue";
+import { usePwaInstall } from "@/composables/usePwaInstall";
 
 const { profile, isPending, isError, error, refetch } = useMyProfile();
 const updateName = useUpdateMyDisplayName();
 const toast = useToast();
+const pwa = usePwaInstall();
+const unavailableInstallExplanation = ref(false);
 const editing = ref(false);
 const nameInput = ref<HTMLInputElement | null>(null);
 const editButton = ref<InstanceType<typeof AppButton> | null>(null);
@@ -64,6 +67,18 @@ async function saveName() {
   } catch (e) {
     fieldError.value = toAppError(e).message;
   }
+}
+
+async function handleInstallAction() {
+  if (pwa.isIos.value) {
+    pwa.openInstructions();
+    return;
+  }
+  if (pwa.nativeAvailable.value) {
+    await pwa.installOrchestrio();
+    return;
+  }
+  unavailableInstallExplanation.value = true;
 }
 </script>
 
@@ -172,6 +187,42 @@ async function saveName() {
         </div>
       </div>
     </div>
+    <section
+      v-if="!pwa.isInstalled.value"
+      class="mt-8 border-t border-line pt-6"
+      aria-labelledby="pwa-install-title"
+    >
+      <h2
+        id="pwa-install-title"
+        class="mb-4 text-section-heading font-semibold"
+      >
+        App installation
+      </h2>
+      <div class="flex flex-col gap-4 rounded-xl border border-line bg-surface p-5 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p class="text-sm font-medium">
+            Install Orchestrio
+          </p>
+          <p class="mt-1 text-sm text-ink-soft">
+            Add Orchestrio to your device for quicker access.
+          </p>
+          <p
+            v-if="unavailableInstallExplanation"
+            role="status"
+            class="mt-3 text-sm text-ink-soft"
+          >
+            This browser does not offer automatic installation. Look for “Install app,” “Add to Home Screen,” or a similar option in the browser menu.
+          </p>
+        </div>
+        <AppButton
+          size="sm"
+          :loading="pwa.installing.value"
+          @click="handleInstallAction"
+        >
+          {{ pwa.isIos.value ? "View installation steps" : "Install Orchestrio" }}
+        </AppButton>
+      </div>
+    </section>
     <section
       class="mt-8 border-t border-line pt-6"
       aria-labelledby="change-password-title"
