@@ -13,6 +13,7 @@ import ErrorState from "@/components/ui/ErrorState.vue";
 import AppButton from "@/components/ui/AppButton.vue";
 import DashboardProjectCard from "@/components/projects/DashboardProjectCard.vue";
 import AttentionRow from "@/components/health/AttentionRow.vue";
+import { usePwaInstall } from "@/composables/usePwaInstall";
 
 const pageTitle = ref<HTMLElement | null>(null);
 onMounted(() => pageTitle.value?.focus({ preventScroll: true }));
@@ -26,6 +27,7 @@ function openNewProject(event: MouseEvent) {
 const { profile } = useMyProfile();
 const { activeProjects: projects, isPending, isError, error, refetch } = useMyProjects();
 const attention = useDashboardAttention();
+const pwa = usePwaInstall();
 
 const greeting = computed(() => {
   const h = new Date().getHours();
@@ -69,6 +71,41 @@ const attentionLine = computed(() => {
         />New project
       </AppButton>
     </header>
+
+    <section
+      v-if="pwa.canOfferDashboardCard.value"
+      aria-labelledby="install-orchestrio-heading"
+      class="mt-6 flex flex-col gap-4 rounded-xl border border-line bg-surface p-4 sm:flex-row sm:items-center sm:justify-between"
+    >
+      <div class="min-w-0">
+        <h2
+          id="install-orchestrio-heading"
+          class="text-sm font-semibold"
+        >
+          Take Orchestrio with you.
+        </h2>
+        <p class="mt-1 text-sm text-ink-soft">
+          Add Orchestrio to your Home Screen for quicker access to your projects and plans.
+        </p>
+      </div>
+      <div class="flex shrink-0 items-center gap-2">
+        <AppButton
+          size="sm"
+          :loading="pwa.installing.value"
+          @click="pwa.installOrchestrio()"
+        >
+          {{ pwa.isIos.value ? "View installation steps" : "Install Orchestrio" }}
+        </AppButton>
+        <AppButton
+          variant="ghost"
+          size="sm"
+          aria-label="Dismiss installation card"
+          @click="pwa.dismissInstall()"
+        >
+          Dismiss
+        </AppButton>
+      </div>
+    </section>
 
     <!-- needs attention (aggregated — one set-based call) -->
     <div
