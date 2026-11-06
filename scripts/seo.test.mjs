@@ -18,7 +18,7 @@ for (const [path, page] of Object.entries(PUBLIC_PAGES)) {
   assert.equal(pageMetadata(path, false).robots, "noindex, nofollow");
   assert(!titles.has(m.title)); titles.add(m.title);
   const html = await readFile(`dist/${path === "/" ? "index" : path.slice(1)}.html`, "utf8");
-  assert(html.includes(`<title>${m.title}</title>`));
+  assert(html.includes(`<title>${m.title.replaceAll("&", "&amp;").replaceAll('"', "&quot;").replaceAll("<", "&lt;").replaceAll(">", "&gt;")}</title>`));
   assert(html.includes(`rel="canonical" href="${m.canonical}"`));
   assert(html.includes('property="og:site_name" content="Orchestrio"'));
   assert(html.includes('name="twitter:card" content="summary"'));
@@ -55,7 +55,20 @@ for (const route of ["/app", "/admin", "/auth/", "/invite/", "/join/", "/s/", "/
 }
 const sitemap = await readFile("dist/sitemap.xml", "utf8");
 assert.equal(sitemap, sitemapContent());
-assert.deepEqual([...sitemap.matchAll(/<loc>(.*?)<\/loc>/g)].map((m) => m[1]), ["/", "/about", "/privacy", "/terms"].map((p) => PUBLIC_ORIGIN + p));
+assert.deepEqual([...sitemap.matchAll(/<loc>(.*?)<\/loc>/g)].map((m) => m[1]), ["/", "/group-trip-planning", "/group-event-planning", "/about", "/privacy", "/terms"].map((p) => PUBLIC_ORIGIN + p));
+for (const [path, sibling] of [["/group-trip-planning", "/group-event-planning"], ["/group-event-planning", "/group-trip-planning"]]) {
+  const html = await readFile(`dist/${path.slice(1)}.html`, "utf8");
+  assert(html.includes(`<a href="${sibling}"`), `Missing contextual cross-link on ${path}`);
+  assert(html.includes('<a href="/"'), `Missing homepage link on ${path}`);
+  assert.equal(pageMetadata(path, true).robots, "index, follow");
+}
+for (const path of ["/group-trip-planning", "/group-event-planning"]) {
+  const html = await readFile(`dist/${path.slice(1)}.html`, "utf8");
+  assert(html.includes("<h1"));
+}
+const homeLinks = await readFile("dist/index.html", "utf8");
+assert(homeLinks.includes('<a href="/group-trip-planning"'));
+assert(homeLinks.includes('<a href="/group-event-planning"'));
 const home = await readFile("dist/index.html", "utf8");
 const json = JSON.parse(home.match(/<script[^>]*type="application\/ld\+json">(.*?)<\/script>/s)[1]);
 assert.equal(json["@graph"][0].email, "admin@orchestrio.io");

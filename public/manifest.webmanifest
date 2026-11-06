@@ -1,0 +1,18 @@
+{
+  "id": "/",
+  "name": "Orchestrio",
+  "short_name": "Orchestrio",
+  "description": "A shared workspace to organise plans and coordinate action together.",
+  "start_url": "/app",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["standalone"],
+  "orientation": "any",
+  "theme_color": "#ffffff",
+  "background_color": "#ffffff",
+  "icons": [
+    { "src": "/icons/orchestrio-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/orchestrio-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/orchestrio-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

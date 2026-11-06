@@ -2,11 +2,13 @@
 export const APP_NAME = "Orchestrio";
 export const PUBLIC_CONTACT_EMAIL = "admin@orchestrio.io";
 export const PUBLIC_ORIGIN = "https://www.orchestrio.io";
-export const DEFAULT_TITLE = "Orchestrio — Planning and Execution Workspace";
-export const DEFAULT_DESCRIPTION = "Orchestrio brings activities, responsibilities, timelines, budgets, people and recurring processes into one place so groups and teams can plan together and execute clearly.";
+export const DEFAULT_TITLE = "Group Planning App for Shared Plans | Orchestrio";
+export const DEFAULT_DESCRIPTION = "Plan together in one shared workspace. Orchestrio keeps people, activities, decisions, dates and shared costs connected beyond the group chat.";
 
 export const PUBLIC_PAGES: Record<string, { title: string; description: string; indexable: boolean }> = {
   "/": { title: DEFAULT_TITLE, description: DEFAULT_DESCRIPTION, indexable: true },
+  "/group-trip-planning": { title: "Group Trip Planner for Friends & Family | Orchestrio", description: "Plan a group trip together with shared activities, decisions, dates, responsibilities and cost tracking in one workspace." , indexable: true },
+  "/group-event-planning": { title: "Group Event Planning App | Orchestrio", description: "Organise a celebration together with shared activities, decisions, responsibilities, dates and cost tracking in one workspace." , indexable: true },
   "/about": { title: "About Orchestrio | Orchestrio", description: "Learn why Orchestrio brings scattered plans into one workspace for groups and teams to coordinate people, activities, timelines and costs.", indexable: true },
   "/privacy": { title: "Privacy Policy | Orchestrio", description: "Read how Orchestrio handles account and project information, service providers and privacy enquiries.", indexable: true },
   "/terms": { title: "Terms of Service | Orchestrio", description: "Read the terms for using Orchestrio, including account responsibilities, shared content and acceptable use.", indexable: true },
